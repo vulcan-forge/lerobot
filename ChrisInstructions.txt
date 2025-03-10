@@ -1,0 +1,6 @@
+source ~/miniconda3/etc/profile.d/conda.sh
+
+conda activate lerobot
+
+conda activate vulcan-lerobot
+
