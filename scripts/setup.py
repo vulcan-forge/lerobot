@@ -62,8 +62,8 @@ def setup_venv():
         # Create virtual environment with Python 3.10
         subprocess.run(["uv", "venv", "-p", "3.10"], check=True)
 
-        # Install dependencies
-        subprocess.run(["uv", "pip", "install", "-r", "requirements.txt"], check=True)
+        # Install dependencies with feetech extras
+        subprocess.run(["uv", "pip", "install", "-e", ".[feetech]"], check=True)
 
         print("Virtual environment created successfully!")
         return True
