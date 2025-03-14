@@ -3,6 +3,7 @@ import subprocess
 import sys
 import shutil
 from pathlib import Path
+import json
 
 def install_uv():
     """Install UV if not present"""
@@ -76,6 +77,46 @@ def setup_venv():
 
     return True
 
+def setup_vscode_settings():
+    """Setup VS Code settings to automatically activate the Python environment"""
+    vscode_dir = Path('.vscode')
+    settings_file = vscode_dir / 'settings.json'
+
+    # Create .vscode directory if it doesn't exist
+    vscode_dir.mkdir(exist_ok=True)
+
+    # Set the correct interpreter path based on OS
+    # Unix-like systems (Linux, macOS)
+    interpreter_path = "${workspaceFolder}/.venv/bin/python"
+    if os.name == 'nt':  # Windows
+        interpreter_path = "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+
+    # Default settings to add
+    python_settings = {
+        "python.defaultInterpreterPath": interpreter_path,
+        "python.terminal.activateEnvironment": True
+    }
+
+    # Read existing settings if file exists
+    if settings_file.exists():
+        with open(settings_file, 'r') as f:
+            try:
+                settings = json.loads(f.read() or '{}')
+            except json.JSONDecodeError:
+                settings = {}
+    else:
+        settings = {}
+
+    # Update settings
+    settings.update(python_settings)
+
+    # Write updated settings with proper JSON formatting
+    with open(settings_file, 'w') as f:
+        json.dump(settings, f, indent=4)
+
+    print("VS Code settings updated successfully!")
+    return True
+
 def main():
     """Main setup function"""
     print("Starting repository setup...")
@@ -88,6 +129,10 @@ def main():
     # Setup virtual environment
     if not setup_venv():
         sys.exit(1)
+
+    # Setup VS Code settings
+    if not setup_vscode_settings():
+        print("Warning: Failed to setup VS Code settings")
 
     print("\nSetup complete!")
     print("\nTo finish setup, please:")
