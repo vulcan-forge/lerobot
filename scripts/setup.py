@@ -66,7 +66,7 @@ def setup_venv():
 
     try:
         # Create virtual environment with Python 3.10
-        subprocess.run(["uv", "venv", "--name", ".venv", "-p", "3.10"], check=True)
+        subprocess.run(["uv", "venv", ".venv", "-p", "3.10"], check=True)
 
         # Install dependencies with feetech extras
         subprocess.run(["uv", "pip", "install", "-e", ".[feetech]"], check=True)
@@ -95,17 +95,7 @@ def setup_vscode_settings():
     python_settings = {
         "python.defaultInterpreterPath": interpreter_path,
         "python.terminal.activateEnvironment": True,
-        "python.terminal.activateEnvInCurrentTerminal": True,
     }
-
-    if os.name == 'nt':
-        python_settings["terminal.integrated.profiles.windows"] = {
-            "Git Bash": {
-                "path": ["C:\\Program Files\\Git\\bin\\bash.exe"],
-                "icon": "terminal-bash"
-            }
-        }
-        python_settings["terminal.integrated.defaultProfile.windows"] = "Git Bash"
 
     # Read existing settings if file exists
     if settings_file.exists():
