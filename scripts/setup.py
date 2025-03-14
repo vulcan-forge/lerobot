@@ -65,11 +65,14 @@ def setup_venv():
             return True  # User chose to keep existing venv
 
     try:
+        # Get parent directory of where setup.py is located
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
         # Create virtual environment with Python 3.10
-        subprocess.run(["uv", "venv", ".venv", "-p", "3.10"], check=True)
+        subprocess.run(["uv", "venv", ".venv", "-p", "3.10"], check=True, cwd=parent_dir)
 
         # Install dependencies with feetech extras
-        subprocess.run(["uv", "pip", "install", "-e", ".[feetech]"], check=True)
+        subprocess.run(["uv", "pip", "install", "-e", ".[feetech]"], check=True, cwd=parent_dir)
 
         print("Virtual environment created successfully!")
         return True
@@ -78,6 +81,7 @@ def setup_venv():
         return False
 
 def setup_vscode_settings():
+
     """Setup VS Code settings to automatically activate the Python environment"""
     vscode_dir = Path('.vscode')
     settings_file = vscode_dir / 'settings.json'
@@ -89,7 +93,7 @@ def setup_vscode_settings():
     # Unix-like systems (Linux, macOS)
     interpreter_path = "${workspaceFolder}/.venv/bin/python"
     if os.name == 'nt':  # Windows
-        interpreter_path = "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+        interpreter_path = "${workspaceFolder}/.venv/Scripts/python"
 
     # Default settings to add
     python_settings = {
