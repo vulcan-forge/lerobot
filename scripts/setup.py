@@ -88,10 +88,18 @@ def setup_vscode_settings():
     # Default settings to add
     python_settings = {
         "python.defaultInterpreterPath": interpreter_path,
-        # We don't need to activate automatically since python is using the .venv as a default interpreter
-        # Commenting to showcase the command to automatically activate the environment if needed
-        # "python.terminal.activateEnvironment": True
+        "python.terminal.activateEnvironment": True,
+        "python.terminal.activateEnvInCurrentTerminal": True,
     }
+
+    if os.name == 'nt':
+        python_settings["terminal.integrated.profiles.windows"] = {
+            "Git Bash": {
+                "path": ["C:\\Program Files\\Git\\bin\\bash.exe"],
+                "icon": "terminal-bash"
+            }
+        }
+        python_settings["terminal.integrated.defaultProfile.windows"] = "Git Bash"
 
     # Read existing settings if file exists
     if settings_file.exists():
