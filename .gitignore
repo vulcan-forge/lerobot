@@ -1,3 +1,4 @@
+```
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,7 +79,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-!tests/data
+!tests/artifacts
 htmlcov/
 .tox/
 .nox/
@@ -171,3 +172,5 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+```
