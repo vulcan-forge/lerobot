@@ -58,9 +58,15 @@ def handle_existing_venv():
 def setup_venv():
     """Setup virtual environment using UV"""
     print("Setting up virtual environment...")
+
+    # Check if venv exists and handle accordingly
+    if check_venv_exists():
+        if handle_existing_venv():
+            return True  # User chose to keep existing venv
+
     try:
         # Create virtual environment with Python 3.10
-        subprocess.run(["uv", "venv", "-p", "3.10"], check=True)
+        subprocess.run(["uv", "venv", "--name", ".venv", "-p", "3.10"], check=True)
 
         # Install dependencies with feetech extras
         subprocess.run(["uv", "pip", "install", "-e", ".[feetech]"], check=True)
