@@ -56,26 +56,20 @@ def handle_existing_venv():
             print("Invalid choice. Please choose 1, 2, or 3.")
 
 def setup_venv():
-    """Create and setup virtual environment using UV"""
-    venv_exists = check_venv_exists()
+    """Setup virtual environment using UV"""
+    print("Setting up virtual environment...")
+    try:
+        # Create virtual environment with Python 3.10
+        subprocess.run(["uv", "venv", "-p", "3.10"], check=True)
 
-    if venv_exists:
-        venv_exists = handle_existing_venv()
+        # Install dependencies
+        subprocess.run(["uv", "pip", "install", "-r", "requirements.txt"], check=True)
 
-    if not venv_exists:
-        try:
-            # Create venv
-            subprocess.run(['uv', 'venv', '.venv'], check=True)
-
-            # Install requirements
-            subprocess.run(['uv', 'pip', 'install', '-e', '.'], check=True)
-
-            print("Virtual environment created successfully!")
-        except subprocess.CalledProcessError as e:
-            print(f"Error setting up virtual environment: {e}")
-            return False
-
-    return True
+        print("Virtual environment created successfully!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error setting up virtual environment: {e}")
+        return False
 
 def setup_vscode_settings():
     """Setup VS Code settings to automatically activate the Python environment"""
