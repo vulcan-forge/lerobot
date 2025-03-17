@@ -14,13 +14,25 @@ def install_uv():
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("UV not found. Installing UV...")
         try:
-            subprocess.run([sys.executable, '-m', 'pip', 'install', 'uv'], check=True)
-            print("\nUV installed successfully!")
-            print("\nPlease:")
-            print("1. Close and reopen your terminal")
-            print("2. Run this script again to complete setup")
-            print("This is needed for UV to be available in your path.")
-            sys.exit(0)
+            # First, check if we're on a Debian-based system
+            is_debian = os.path.exists('/etc/debian_version')
+
+            if is_debian:
+                print("\nDetected Debian-based system (like Raspberry Pi OS)")
+                print("Please install the following packages first:")
+                print("1. sudo apt install python3-full python3-pip pipx")
+                print("2. pipx install uv")
+                print("\nThen run this script again.")
+                sys.exit(1)
+            else:
+                # Original behavior for non-Debian systems
+                subprocess.run([sys.executable, '-m', 'pip', 'install', 'uv'], check=True)
+                print("\nUV installed successfully!")
+                print("\nPlease:")
+                print("1. Close and reopen your terminal")
+                print("2. Run this script again to complete setup")
+                print("This is needed for UV to be available in your path.")
+                sys.exit(0)
         except subprocess.CalledProcessError as e:
             print(f"Error installing UV: {e}")
             return False
