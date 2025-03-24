@@ -443,7 +443,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="COM17",
+                port="COM11",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -460,7 +460,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="COM16",
+                port="COM12",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -533,7 +533,7 @@ class LeKiwiRobotConfig(RobotConfig):
     max_relative_target: int | None = None
 
     # Network Configuration
-    ip: str = "192.168.0.193"
+    ip: str = "192.168.1.190"
     port: int = 5555
     video_port: int = 5556
 
@@ -553,7 +553,7 @@ class LeKiwiRobotConfig(RobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="COM17",
+                port="COM11",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -570,7 +570,7 @@ class LeKiwiRobotConfig(RobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="COM16",
+                port="/dev/ttyUSB0",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
