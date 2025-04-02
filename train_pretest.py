@@ -48,16 +48,14 @@ def print_system_info(rank, world_size):
 
 def setup_ddp(rank, world_size):
     print(f"\n[Node {rank}] Setting up DDP with rank {rank} and world_size {world_size}")
-    os.environ['MASTER_ADDR'] = '192.168.1.155'  # Changed to your computer's IP
+    os.environ['MASTER_ADDR'] = '192.168.1.155'
     os.environ['MASTER_PORT'] = '29500'
-    
-    # Print system information before attempting connection
-    print_system_info(rank, world_size)
     
     try:
         print(f"\n[Node {rank}] Attempting to initialize process group...")
         dist.init_process_group(
             "nccl",
+            init_method=f"tcp://{os.environ['MASTER_ADDR']}:{os.environ['MASTER_PORT']}",
             rank=rank,
             world_size=world_size,
             timeout=datetime.timedelta(seconds=60)
@@ -134,8 +132,9 @@ def train(rank, world_size, args):
             print(f"[Node {rank}] Completed epoch {epoch}")
             print(f"[Node {rank}] Total samples processed: {total_samples}")
             
-            # Synchronize after each epoch
+            print(f"[Node {rank}] Waiting at barrier after epoch {epoch}")
             dist.barrier()
+            print(f"[Node {rank}] Passed barrier after epoch {epoch}")
             
     except Exception as e:
         print(f"[Node {rank}] Training failed with error: {str(e)}")
