@@ -23,7 +23,7 @@ def setup_distributed(rank, world_size):
     
     # Initialize process group
     dist.init_process_group(
-        backend="nccl",  # Back to NCCL for GPU
+        backend="nccl",  # Using NCCL for GPU
         init_method=f"tcp://{os.environ['MASTER_ADDR']}:{os.environ['MASTER_PORT']}",
         world_size=world_size,
         rank=rank
@@ -50,13 +50,12 @@ def train(rank, world_size, args):
             dataset,
             batch_size=args.batch_size,
             sampler=sampler,
-            pin_memory=True
+            pin_memory=True  # Back to True for GPU
         )
         
-        # Create model (remove .to(device) since we're using CPU)
-        policy = RobotPolicy()
-        # Wrap in DDP without device_ids for CPU
-        policy = DDP(policy)
+        # Create model
+        policy = RobotPolicy().to(device)  # Move to GPU
+        policy = DDP(policy, device_ids=[0])  # Use GPU
         
         # Setup training
         optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
