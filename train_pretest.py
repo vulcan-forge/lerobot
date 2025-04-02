@@ -48,7 +48,7 @@ def print_system_info(rank, world_size):
 
 def setup_ddp(rank, world_size):
     print(f"\n[Node {rank}] Setting up DDP with rank {rank} and world_size {world_size}")
-    os.environ['MASTER_ADDR'] = '192.168.1.159'  # IP address of the master node
+    os.environ['MASTER_ADDR'] = '192.168.1.155'  # Changed to your computer's IP
     os.environ['MASTER_PORT'] = '29500'
     
     # Print system information before attempting connection
