@@ -10,3 +10,5 @@ source ~/.bashrc
 source .venv\Scripts\activate
 
 ^ We should make it so this automatically runs in this project
+
+source .venv/bin/activate
