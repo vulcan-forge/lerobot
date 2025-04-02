@@ -104,23 +104,23 @@ def train(rank, world_size, args):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--rank', type=int, required=True)
+    parser.add_argument('--world_size', type=int, required=True)
     parser.add_argument('--data_root', type=str, default='/mnt/so100_test3')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--epochs', type=int, default=1)  # Just 1 epoch for testing
+    parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--log_interval', type=int, default=10)
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     
     args = parser.parse_args()
     
-    # Launch two processes
-    world_size = 2
-    mp.spawn(
-        train,
-        args=(world_size, args),
-        nprocs=world_size,
-        join=True
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
     )
+    
+    train(args.rank, args.world_size, args)
 
 if __name__ == "__main__":
     main() 
