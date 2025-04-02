@@ -43,46 +43,54 @@ def train(rank, world_size, args):
     device = setup_distributed(rank, world_size)
     
     try:
-        # Create dataset and dataloader
+        logging.info(f"[Rank {rank}] Starting data loading")
         dataset = RobotDataset(args.data_root)
         sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank)
         dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=args.batch_size,
             sampler=sampler,
-            pin_memory=True  # Back to True for GPU
+            pin_memory=True
         )
+        logging.info(f"[Rank {rank}] Dataset size: {len(dataset)}, Batch size: {args.batch_size}")
         
-        # Create model
-        policy = RobotPolicy().to(device)  # Move to GPU
-        policy = DDP(policy, device_ids=[0])  # Use GPU
+        logging.info(f"[Rank {rank}] Creating model on {device}")
+        policy = RobotPolicy().to(device)
+        policy = DDP(policy, device_ids=[0])
         
-        # Setup training
         optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
         
-        # Training loop
+        logging.info(f"[Rank {rank}] Starting training")
         for epoch in range(args.epochs):
             sampler.set_epoch(epoch)
+            total_loss = 0
+            batch_count = 0
+            
             for batch_idx, batch in enumerate(dataloader):
-                # Move batch to device
                 batch = {k: v.to(device) for k, v in batch.items()}
                 
-                # Forward pass
-                loss, output_dict = policy(batch)
-                
-                # Backward pass
                 optimizer.zero_grad()
+                loss, output_dict = policy(batch)
                 loss.backward()
+                
+                # Add gradient clipping
+                torch.nn.utils.clip_grad_norm_(policy.parameters(), max_norm=1.0)
+                
                 optimizer.step()
                 
-                if rank == 0 and batch_idx % args.log_interval == 0:
-                    logging.info(f"Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item():.4f}")
+                total_loss += loss.item()
+                batch_count += 1
+                
+                if batch_idx % args.log_interval == 0:
+                    logging.info(f"[Rank {rank}] Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item():.4f}")
+            
+            avg_loss = total_loss / batch_count
+            logging.info(f"[Rank {rank}] Completed epoch {epoch}, Average loss: {avg_loss:.4f}")
             
             # Synchronize at epoch end
             dist.barrier()
-            
             if rank == 0:
-                logging.info(f"Completed epoch {epoch}")
+                logging.info(f"All ranks completed epoch {epoch}")
                 
                 # Save checkpoint
                 if args.save_dir:
@@ -92,7 +100,7 @@ def train(rank, world_size, args):
                         'epoch': epoch,
                         'model_state_dict': policy.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': loss.item(),
+                        'loss': avg_loss,
                     }, save_dir / f'checkpoint_epoch_{epoch}.pt')
     
     except Exception as e:
@@ -108,7 +116,7 @@ def main():
     parser.add_argument('--data_root', type=str, default='/mnt/so100_test3')
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--learning_rate', type=float, default=0.0001)
     parser.add_argument('--log_interval', type=int, default=10)
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     
