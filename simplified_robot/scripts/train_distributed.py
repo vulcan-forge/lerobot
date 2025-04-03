@@ -13,13 +13,13 @@ import torch.multiprocessing as mp
 from simplified_robot.datasets.robot_dataset import RobotDataset
 from simplified_robot.models.robot_policy import RobotPolicy
 
-def setup_distributed(rank, world_size):
+def setup_distributed(rank, world_size, master_addr=None, master_port=None):
     """Initialize distributed training."""
     logging.info(f"Setting up distributed training for rank {rank}/{world_size}")
     
     # Set environment variables
-    os.environ['MASTER_ADDR'] = '192.168.1.155'  # Master machine's IP
-    os.environ['MASTER_PORT'] = '29500'
+    os.environ['MASTER_ADDR'] = master_addr or '192.168.1.40'  # Default to master machine's IP
+    os.environ['MASTER_PORT'] = master_port or '29500'
     
     # Initialize process group
     dist.init_process_group(
@@ -40,7 +40,7 @@ def cleanup():
         dist.destroy_process_group()
 
 def train(rank, world_size, args):
-    device = setup_distributed(rank, world_size)
+    device = setup_distributed(rank, world_size, args.master_addr, args.master_port)
     
     try:
         logging.info(f"[Rank {rank}] Starting data loading")
@@ -113,7 +113,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--rank', type=int, required=True)
     parser.add_argument('--world_size', type=int, required=True)
-    parser.add_argument('--data_root', type=str, default='/mnt/so100_test3')
+    parser.add_argument('--master_addr', type=str, default='192.168.1.40')
+    parser.add_argument('--master_port', type=str, default='29500')
+    parser.add_argument('--data_root', type=str, default='/mnt/robotdata')
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.0001)
