@@ -68,6 +68,7 @@ def train(rank, world_size, args):
         step = 0
         total_loss = 0
         batch_count = 0
+        avg_loss = 0  # Initialize avg_loss
         
         while step < args.steps:
             # Get next batch from infinite iterator
@@ -85,8 +86,10 @@ def train(rank, world_size, args):
             batch_count += 1
             step += 1
             
+            # Calculate avg_loss every time for checkpointing
+            avg_loss = total_loss / batch_count
+            
             if step % args.log_interval == 0:
-                avg_loss = total_loss / batch_count
                 logging.info(f"[Rank {rank}] Step: {step}/{args.steps}, Loss: {loss.item():.4f}, Avg Loss: {avg_loss:.4f}")
             
             # Synchronize periodically
