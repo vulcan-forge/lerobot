@@ -102,16 +102,17 @@ def train(rank, world_size, args):
                 if rank == 0:
                     logging.info(f"All ranks completed step {step}")
                     
-                    # Save checkpoint
-                    if args.save_dir:
-                        save_dir = Path(args.save_dir)
-                        save_dir.mkdir(parents=True, exist_ok=True)
-                        torch.save({
-                            'step': step,
-                            'model_state_dict': policy.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),
-                            'loss': avg_loss,
-                        }, save_dir / f'checkpoint_step_{step}.pt')
+                    # Only save checkpoint at checkpoint_interval
+                    if args.checkpoint_interval > 0 and step % args.checkpoint_interval == 0:
+                        if args.save_dir:
+                            save_dir = Path(args.save_dir)
+                            save_dir.mkdir(parents=True, exist_ok=True)
+                            torch.save({
+                                'step': step,
+                                'model_state_dict': policy.state_dict(),
+                                'optimizer_state_dict': optimizer.state_dict(),
+                                'loss': avg_loss,
+                            }, save_dir / f'checkpoint_step_{step}.pt')
 
     except Exception as e:
         logging.error(f"Rank {rank} failed with error: {str(e)}")
@@ -134,6 +135,8 @@ def main():
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     parser.add_argument('--model', type=str, default='simple', choices=['simple', 'act'],
                        help='Which model to use: simple (default) or act (transformer)')
+    parser.add_argument('--checkpoint_interval', type=int, default=10000, 
+                       help='Save checkpoints every N steps. Set to 0 to disable checkpoints.')
     
     args = parser.parse_args()
     
