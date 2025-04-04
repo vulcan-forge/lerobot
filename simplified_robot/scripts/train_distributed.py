@@ -13,6 +13,7 @@ from itertools import cycle
 
 from simplified_robot.datasets.robot_dataset import RobotDataset
 from simplified_robot.models.robot_policy import RobotPolicy
+from simplified_robot.models.robot_policy_act import RobotPolicyACT
 
 def setup_distributed(rank, world_size, master_addr=None, master_port=None):
     """Initialize distributed training."""
@@ -59,7 +60,10 @@ def train(rank, world_size, args):
         logging.info(f"[Rank {rank}] Dataset size: {len(dataset)}, Batch size: {args.batch_size}")
         
         logging.info(f"[Rank {rank}] Creating model on {device}")
-        policy = RobotPolicy().to(device)
+        if args.model == 'act':
+            policy = RobotPolicyACT().to(device)
+        else:
+            policy = RobotPolicy().to(device)
         policy = DDP(policy, device_ids=[0])
         
         optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
@@ -128,6 +132,8 @@ def main():
     parser.add_argument('--log_interval', type=int, default=200)
     parser.add_argument('--sync_interval', type=int, default=100)  # How often to sync between processes
     parser.add_argument('--save_dir', type=str, default='checkpoints')
+    parser.add_argument('--model', type=str, default='simple', choices=['simple', 'act'],
+                       help='Which model to use: simple (default) or act (transformer)')
     
     args = parser.parse_args()
     
