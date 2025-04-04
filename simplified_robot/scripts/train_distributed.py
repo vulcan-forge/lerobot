@@ -9,6 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 import torch.multiprocessing as mp
+from itertools import cycle
 
 from simplified_robot.datasets.robot_dataset import RobotDataset
 from simplified_robot.models.robot_policy import RobotPolicy
@@ -52,6 +53,9 @@ def train(rank, world_size, args):
             sampler=sampler,
             pin_memory=True
         )
+        # Create infinite data loader like in train.py
+        dl_iter = iter(cycle(dataloader))
+        
         logging.info(f"[Rank {rank}] Dataset size: {len(dataset)}, Batch size: {args.batch_size}")
         
         logging.info(f"[Rank {rank}] Creating model on {device}")
@@ -61,48 +65,47 @@ def train(rank, world_size, args):
         optimizer = torch.optim.Adam(policy.parameters(), lr=args.learning_rate)
         
         logging.info(f"[Rank {rank}] Starting training")
-        for epoch in range(args.epochs):
-            sampler.set_epoch(epoch)
-            total_loss = 0
-            batch_count = 0
+        step = 0
+        total_loss = 0
+        batch_count = 0
+        
+        while step < args.steps:
+            # Get next batch from infinite iterator
+            batch = next(dl_iter)
+            batch = {k: v.to(device) for k, v in batch.items()}
             
-            for batch_idx, batch in enumerate(dataloader):
-                batch = {k: v.to(device) for k, v in batch.items()}
-                
-                optimizer.zero_grad()
-                loss, output_dict = policy(batch)
-                loss.backward()
-                
-                # Add gradient clipping
-                torch.nn.utils.clip_grad_norm_(policy.parameters(), max_norm=1.0)
-                
-                optimizer.step()
-                
-                total_loss += loss.item()
-                batch_count += 1
-                
-                if batch_idx % args.log_interval == 0:
-                    logging.info(f"[Rank {rank}] Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item():.4f}")
+            optimizer.zero_grad()
+            loss, output_dict = policy(batch)
+            loss.backward()
             
-            avg_loss = total_loss / batch_count
-            logging.info(f"[Rank {rank}] Completed epoch {epoch}, Average loss: {avg_loss:.4f}")
+            torch.nn.utils.clip_grad_norm_(policy.parameters(), max_norm=1.0)
+            optimizer.step()
             
-            # Synchronize at epoch end
-            dist.barrier()
-            if rank == 0:
-                logging.info(f"All ranks completed epoch {epoch}")
-                
-                # Save checkpoint
-                if args.save_dir:
-                    save_dir = Path(args.save_dir)
-                    save_dir.mkdir(parents=True, exist_ok=True)
-                    torch.save({
-                        'epoch': epoch,
-                        'model_state_dict': policy.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': avg_loss,
-                    }, save_dir / f'checkpoint_epoch_{epoch}.pt')
-    
+            total_loss += loss.item()
+            batch_count += 1
+            step += 1
+            
+            if step % args.log_interval == 0:
+                avg_loss = total_loss / batch_count
+                logging.info(f"[Rank {rank}] Step: {step}/{args.steps}, Loss: {loss.item():.4f}, Avg Loss: {avg_loss:.4f}")
+            
+            # Synchronize periodically
+            if step % args.sync_interval == 0:
+                dist.barrier()
+                if rank == 0:
+                    logging.info(f"All ranks completed step {step}")
+                    
+                    # Save checkpoint
+                    if args.save_dir:
+                        save_dir = Path(args.save_dir)
+                        save_dir.mkdir(parents=True, exist_ok=True)
+                        torch.save({
+                            'step': step,
+                            'model_state_dict': policy.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'loss': avg_loss,
+                        }, save_dir / f'checkpoint_step_{step}.pt')
+
     except Exception as e:
         logging.error(f"Rank {rank} failed with error: {str(e)}")
         raise e
@@ -113,13 +116,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--rank', type=int, required=True)
     parser.add_argument('--world_size', type=int, required=True)
-    parser.add_argument('--master_addr', type=str, default='192.168.1.40')
+    parser.add_argument('--master_addr', type=str, default='192.168.1.155')
     parser.add_argument('--master_port', type=str, default='29500')
     parser.add_argument('--data_root', type=str, default='/mnt/robotdata')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--steps', type=int, default=18000)  # Instead of epochs
     parser.add_argument('--learning_rate', type=float, default=0.0001)
-    parser.add_argument('--log_interval', type=int, default=10)
+    parser.add_argument('--log_interval', type=int, default=200)
+    parser.add_argument('--sync_interval', type=int, default=100)  # How often to sync between processes
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     
     args = parser.parse_args()
