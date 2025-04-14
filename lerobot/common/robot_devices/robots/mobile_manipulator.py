@@ -47,7 +47,6 @@ except Exception as e:
     PYNPUT_AVAILABLE = False
     print(f"Could not import pynput: {e}")
 
-
 class MobileManipulator:
     """
     MobileManipulator is a class for connecting to and controlling a remote mobile manipulator robot.
@@ -598,11 +597,11 @@ class MobileManipulator:
 
         # Define the wheel mounting angles (defined from y axis cw)
         angles = np.radians(np.array([300, 180, 60]))
-        # Build the kinematic matrix: each row maps body velocities to a wheel’s linear speed.
+        # Build the kinematic matrix: each row maps body velocities to a wheel's linear speed.
         # The third column (base_radius) accounts for the effect of rotation.
         m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
 
-        # Compute each wheel’s linear speed (m/s) and then its angular speed (rad/s).
+        # Compute each wheel's linear speed (m/s) and then its angular speed (rad/s).
         wheel_linear_speeds = m.dot(velocity_vector)
         wheel_angular_speeds = wheel_linear_speeds / wheel_radius
 
@@ -617,7 +616,7 @@ class MobileManipulator:
             scale = max_raw / max_raw_computed
             wheel_degps = wheel_degps * scale
 
-        # Convert each wheel’s angular speed (deg/s) to a raw integer.
+        # Convert each wheel's angular speed (deg/s) to a raw integer.
         wheel_raw = [MobileManipulator.degps_to_raw(deg) for deg in wheel_degps]
 
         return {"left_wheel": wheel_raw[0], "back_wheel": wheel_raw[1], "right_wheel": wheel_raw[2]}
@@ -650,7 +649,7 @@ class MobileManipulator:
         wheel_degps = np.array([MobileManipulator.raw_to_degps(r) for r in raw_list])
         # Convert from deg/s to rad/s.
         wheel_radps = wheel_degps * (np.pi / 180.0)
-        # Compute each wheel’s linear speed (m/s) from its angular speed.
+        # Compute each wheel's linear speed (m/s) from its angular speed.
         wheel_linear_speeds = wheel_radps * wheel_radius
 
         # Define the wheel mounting angles (defined from y axis cw)
@@ -701,3 +700,145 @@ class LeKiwi:
         """Stops the robot by setting all motor speeds to zero."""
         self.motor_bus.write("Goal_Speed", [0, 0, 0], self.motor_ids)
         print("Motors stopped.")
+
+class SourcceyVBeta:
+    def __init__(self):
+        """
+        Initializes the SourcceyVBeta with DC motors using Jetson Nano GPIO.
+        """
+        try:
+            import Jetson.GPIO as GPIO
+            self.GPIO = GPIO
+            self.mock_mode = False
+        except ImportError:
+            print("Warning: Jetson.GPIO not found. Running in mock mode.")
+            # Create a mock GPIO for development
+            from unittest.mock import MagicMock
+            self.GPIO = MagicMock()
+            self.mock_mode = True
+
+        # Set up GPIO
+        self.GPIO.setmode(self.GPIO.BOARD)
+
+        # Define pin configurations for each motor
+        self.motors = {
+            "back_left_wheel": {
+                "pwm_pin": 32,  # PWM pin
+                "dir_1": 36,    # Direction pin 1
+                "dir_2": 38,    # Direction pin 2
+                "pwm": None     # PWM object (initialized below)
+            },
+            "back_right_wheel": {
+                "pwm_pin": 33,
+                "dir_1": 35,
+                "dir_2": 37,
+                "pwm": None
+            },
+            "front_left_wheel": {
+                "pwm_pin": 12,
+                "dir_1": 16,
+                "dir_2": 18,
+                "pwm": None
+            },
+            "front_right_wheel": {
+                "pwm_pin": 13,
+                "dir_1": 15,
+                "dir_2": 19,
+                "pwm": None
+            }
+        }
+
+        # Initialize all pins and PWM
+        self._setup_gpio()
+
+        # Add a dictionary to store last commanded speeds
+        self.last_commanded_speeds = {
+            "back_left_wheel": 0,
+            "back_right_wheel": 0,
+            "front_left_wheel": 0,
+            "front_right_wheel": 0
+        }
+
+        print("DC Motors initialized in velocity mode.")
+
+    def _setup_gpio(self):
+        """Set up GPIO pins and PWM for all motors"""
+        PWM_FREQ = 1000  # 1 KHz frequency for PWM
+
+        for motor_config in self.motors.values():
+            # Setup PWM pin
+            self.GPIO.setup(motor_config["pwm_pin"], self.GPIO.OUT)
+            motor_config["pwm"] = self.GPIO.PWM(motor_config["pwm_pin"], PWM_FREQ)
+            motor_config["pwm"].start(0)  # Start with 0% duty cycle
+
+            # Setup direction pins
+            self.GPIO.setup(motor_config["dir_1"], self.GPIO.OUT)
+            self.GPIO.setup(motor_config["dir_2"], self.GPIO.OUT)
+
+            # Initialize direction pins to stop
+            self.GPIO.output(motor_config["dir_1"], self.GPIO.LOW)
+            self.GPIO.output(motor_config["dir_2"], self.GPIO.LOW)
+
+    def _set_motor_direction(self, motor_config, speed):
+        """Helper function to set motor direction based on speed sign"""
+        if speed > 0:
+            self.GPIO.output(motor_config["dir_1"], self.GPIO.HIGH)
+            self.GPIO.output(motor_config["dir_2"], self.GPIO.LOW)
+        elif speed < 0:
+            self.GPIO.output(motor_config["dir_1"], self.GPIO.LOW)
+            self.GPIO.output(motor_config["dir_2"], self.GPIO.HIGH)
+        else:
+            self.GPIO.output(motor_config["dir_1"], self.GPIO.LOW)
+            self.GPIO.output(motor_config["dir_2"], self.GPIO.LOW)
+
+    def set_velocity(self, command_speeds):
+        """
+        Sets the velocity for each motor using PWM.
+        command_speeds should be a list of 4 values between -100 and 100,
+        representing the speed percentage and direction for each motor.
+        """
+        motor_names = ["back_left_wheel", "back_right_wheel",
+                      "front_left_wheel", "front_right_wheel"]
+
+        for motor_name, speed in zip(motor_names, command_speeds):
+            motor_config = self.motors[motor_name]
+
+            # Clamp speed between -100 and 100
+            speed = max(min(speed, 100), -100)
+
+            # Store the commanded speed
+            self.last_commanded_speeds[motor_name] = speed
+
+            # Set direction
+            self._set_motor_direction(motor_config, speed)
+
+            # Set PWM duty cycle (absolute value since direction is handled by dir pins)
+            duty_cycle = abs(speed)
+            motor_config["pwm"].ChangeDutyCycle(duty_cycle)
+
+    def read_velocity(self):
+        """
+        Returns the last commanded speeds as a percentage.
+        Values range from -100 to 100, with the sign indicating direction.
+        """
+        return self.last_commanded_speeds
+
+    def stop(self):
+        """Stops all motors"""
+        for motor_name, motor_config in self.motors.items():
+            motor_config["pwm"].ChangeDutyCycle(0)
+            self.GPIO.output(motor_config["dir_1"], self.GPIO.LOW)
+            self.GPIO.output(motor_config["dir_2"], self.GPIO.LOW)
+            # Update last commanded speeds to 0
+            self.last_commanded_speeds[motor_name] = 0
+        print("Motors stopped.")
+
+    def __del__(self):
+        """Cleanup GPIO on object destruction"""
+        try:
+            for motor_config in self.motors.values():
+                motor_config["pwm"].stop()
+            self.GPIO.cleanup()
+        except:
+            # In case GPIO was never initialized
+            pass
