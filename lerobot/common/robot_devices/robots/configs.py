@@ -664,6 +664,7 @@ class SourcceyVBetaRobotConfig(RobotConfig):
                     "wrist_flex": [4, "sts3215"],
                     "wrist_roll": [5, "sts3215"],
                     "gripper": [6, "sts3215"],
+                    "turn_table": [7, "sts3215"],
                 },
             ),
         }
