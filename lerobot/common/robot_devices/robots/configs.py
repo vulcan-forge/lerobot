@@ -635,22 +635,22 @@ class SourcceyVBetaRobotConfig(RobotConfig):
 
     calibration_dir: str = ".cache/calibration/sourccey_vbeta"
 
-    leader_arms: dict[str, MotorsBusConfig] = field(
-        default_factory=lambda: {
-            "main": FeetechMotorsBusConfig(
-                port="COM11",
-                motors={
-                    # name: (index, model)
-                    "shoulder_pan": [1, "sts3215"],
-                    "shoulder_lift": [2, "sts3215"],
-                    "elbow_flex": [3, "sts3215"],
-                    "wrist_flex": [4, "sts3215"],
-                    "wrist_roll": [5, "sts3215"],
-                    "gripper": [6, "sts3215"],
-                },
-            ),
-        }
-    )
+    # leader_arms: dict[str, MotorsBusConfig] = field(
+    #     default_factory=lambda: {
+    #         "main": FeetechMotorsBusConfig(
+    #             port="COM11",
+    #             motors={
+    #                 # name: (index, model)
+    #                 "shoulder_pan": [1, "sts3215"],
+    #                 "shoulder_lift": [2, "sts3215"],
+    #                 "elbow_flex": [3, "sts3215"],
+    #                 "wrist_flex": [4, "sts3215"],
+    #                 "wrist_roll": [5, "sts3215"],
+    #                 "gripper": [6, "sts3215"],
+    #             },
+    #         ),
+    #     }
+    # )
 
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
@@ -658,13 +658,17 @@ class SourcceyVBetaRobotConfig(RobotConfig):
                 port='/dev/ttyUSB0',
                 motors={
                     # name: (index, model)
-                    "shoulder_pan": [1, "sts3215"],
-                    "shoulder_lift": [2, "sts3215"],
-                    "elbow_flex": [3, "sts3215"],
-                    "wrist_flex": [4, "sts3215"],
-                    "wrist_roll": [5, "sts3215"],
-                    "gripper": [6, "sts3215"],
-                    "turn_table": [7, "sts3215"],
+                    # "shoulder_pan": [1, "sts3215"],
+                    # "shoulder_lift": [2, "sts3215"],
+                    # "elbow_flex": [3, "sts3215"],
+                    # "wrist_flex": [4, "sts3215"],
+                    # "wrist_roll": [5, "sts3215"],
+                    # "gripper": [6, "sts3215"],
+                    # "turn_table": [7, "sts3215"],
+                    "back_left_wheel": (8, "sts3215"),
+                    "back_right_wheel": (9, "sts3215"),
+                    "front_left_wheel": (10, "sts3215"),
+                    "front_right_wheel": (11, "sts3215"),
                 },
             ),
         }
