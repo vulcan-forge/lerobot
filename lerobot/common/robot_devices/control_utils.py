@@ -228,6 +228,8 @@ def control_loop(
     if not robot.is_connected:
         robot.connect()
 
+    print(f"control_loop: {robot.robot_type}")
+
     if events is None:
         events = {"exit_early": False}
 
@@ -245,6 +247,7 @@ def control_loop(
 
     timestamp = 0
     start_episode_t = time.perf_counter()
+    print(f"start loop")
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
 

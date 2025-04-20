@@ -200,6 +200,7 @@ class MobileManipulator:
             # Quit teleoperation
             elif key.char == self.teleop_keys["quit"]:
                 self.running = False
+                print(f"Quitting teleoperation")
                 return False
 
             # Speed control
@@ -393,23 +394,31 @@ class MobileManipulator:
     def teleop_step(
         self, record_data: bool = False
     ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+
+        print(f"teleop_step")
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("MobileManipulator is not connected. Run `connect()` first.")
 
+        print("here 1")
         speed_setting = self.speed_levels[self.speed_index]
+        print("here 2")
         xy_speed = speed_setting["xy"]  # e.g. 0.1, 0.25, or 0.4
+        print("here 3")
         theta_speed = speed_setting["theta"]  # e.g. 30, 60, or 90
+        print("here 4")
 
         # Prepare to assign the position of the leader to the follower
-        arm_positions = []
-        for name in self.leader_arms:
-            pos = self.leader_arms[name].read("Present_Position")
-            pos_tensor = torch.from_numpy(pos).float()
-            arm_positions.extend(pos_tensor.tolist())
+        # arm_positions = []
+        # for name in self.leader_arms:
+        #     pos = self.leader_arms[name].read("Present_Position")
+        #     pos_tensor = torch.from_numpy(pos).float()
+        #     arm_positions.extend(pos_tensor.tolist())
 
+        print("here 5")
         y_cmd = 0.0  # m/s forward/backward
         x_cmd = 0.0  # m/s lateral
         theta_cmd = 0.0  # deg/s rotation
+        print("here 6")
         if self.pressed_keys["forward"]:
             y_cmd += xy_speed
         if self.pressed_keys["backward"]:
@@ -423,17 +432,20 @@ class MobileManipulator:
         if self.pressed_keys["rotate_right"]:
             theta_cmd -= theta_speed
 
+        print("here 7")
         wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
-
-        message = {"raw_velocity": wheel_commands, "arm_positions": arm_positions}
+        print("here 8", wheel_commands)
+        message = {"raw_velocity": wheel_commands } #, "arm_positions": arm_positions}
+        print("here 9")
+        print(f"message: {message}")
         self.cmd_socket.send_string(json.dumps(message))
 
         if not record_data:
             return
 
-        obs_dict = self.capture_observation()
+        # obs_dict = self.capture_observation()
 
-        arm_state_tensor = torch.tensor(arm_positions, dtype=torch.float32)
+        # arm_state_tensor = torch.tensor(arm_positions, dtype=torch.float32)
 
         wheel_velocity_tuple = self.wheel_raw_to_body(wheel_commands)
         wheel_velocity_mm = (
@@ -442,7 +454,8 @@ class MobileManipulator:
             wheel_velocity_tuple[2],
         )
         wheel_tensor = torch.tensor(wheel_velocity_mm, dtype=torch.float32)
-        action_tensor = torch.cat([arm_state_tensor, wheel_tensor])
+        #action_tensor = torch.cat([arm_state_tensor, wheel_tensor])
+        action_tensor = torch.cat([wheel_tensor])
         action_dict = {"action": action_tensor}
 
         return obs_dict, action_dict
@@ -570,7 +583,7 @@ class MobileManipulator:
         max_raw: int = 3000,
     ) -> dict:
         """
-        Convert desired body-frame velocities into wheel raw commands.
+        Convert desired body-frame velocities into wheel raw commands for a 4-wheeled robot.
 
         Parameters:
           x_cmd      : Linear velocity in x (m/s).
@@ -582,13 +595,8 @@ class MobileManipulator:
 
         Returns:
           A dictionary with wheel raw commands:
-             {"left_wheel": value, "back_wheel": value, "right_wheel": value}.
-
-        Notes:
-          - Internally, the method converts theta_cmd to rad/s for the kinematics.
-          - The raw command is computed from the wheels angular speed in deg/s
-            using degps_to_raw(). If any command exceeds max_raw, all commands
-            are scaled down proportionally.
+             {"back_left_wheel": value, "back_right_wheel": value, 
+              "front_left_wheel": value, "front_right_wheel": value}.
         """
         # Convert rotational velocity from deg/s to rad/s.
         theta_rad = theta_cmd * (np.pi / 180.0)
@@ -596,7 +604,9 @@ class MobileManipulator:
         velocity_vector = np.array([x_cmd, y_cmd, theta_rad])
 
         # Define the wheel mounting angles (defined from y axis cw)
-        angles = np.radians(np.array([300, 180, 60]))
+        # For 4 wheels: back-left, back-right, front-left, front-right
+        angles = np.radians(np.array([225, 315, 135, 45]))
+        
         # Build the kinematic matrix: each row maps body velocities to a wheel's linear speed.
         # The third column (base_radius) accounts for the effect of rotation.
         m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
@@ -619,16 +629,23 @@ class MobileManipulator:
         # Convert each wheel's angular speed (deg/s) to a raw integer.
         wheel_raw = [MobileManipulator.degps_to_raw(deg) for deg in wheel_degps]
 
-        return {"left_wheel": wheel_raw[0], "back_wheel": wheel_raw[1], "right_wheel": wheel_raw[2]}
+        return {
+            "back_left_wheel": wheel_raw[0],
+            "back_right_wheel": wheel_raw[1],
+            "front_left_wheel": wheel_raw[2],
+            "front_right_wheel": wheel_raw[3]
+        }
 
     def wheel_raw_to_body(
         self, wheel_raw: dict, wheel_radius: float = 0.05, base_radius: float = 0.125
     ) -> tuple:
         """
-        Convert wheel raw command feedback back into body-frame velocities.
+        Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled robot.
 
         Parameters:
-          wheel_raw   : Dictionary with raw wheel commands (keys: "left_wheel", "back_wheel", "right_wheel").
+          wheel_raw   : Dictionary with raw wheel commands 
+                       (keys: "back_left_wheel", "back_right_wheel", 
+                             "front_left_wheel", "front_right_wheel").
           wheel_radius: Radius of each wheel (meters).
           base_radius : Distance from the robot center to each wheel (meters).
 
@@ -640,9 +657,10 @@ class MobileManipulator:
         """
         # Extract the raw values in order.
         raw_list = [
-            int(wheel_raw.get("left_wheel", 0)),
-            int(wheel_raw.get("back_wheel", 0)),
-            int(wheel_raw.get("right_wheel", 0)),
+            int(wheel_raw.get("back_left_wheel", 0)),
+            int(wheel_raw.get("back_right_wheel", 0)),
+            int(wheel_raw.get("front_left_wheel", 0)),
+            int(wheel_raw.get("front_right_wheel", 0)),
         ]
 
         # Convert each raw command back to an angular speed in deg/s.
@@ -653,11 +671,12 @@ class MobileManipulator:
         wheel_linear_speeds = wheel_radps * wheel_radius
 
         # Define the wheel mounting angles (defined from y axis cw)
-        angles = np.radians(np.array([300, 180, 60]))
+        angles = np.radians(np.array([225, 315, 135, 45]))
         m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
 
         # Solve the inverse kinematics: body_velocity = M⁻¹ · wheel_linear_speeds.
-        m_inv = np.linalg.inv(m)
+        # Using pseudoinverse since we have an overdetermined system with 4 wheels
+        m_inv = np.linalg.pinv(m)
         velocity_vector = m_inv.dot(wheel_linear_speeds)
         x_cmd, y_cmd, theta_rad = velocity_vector
         theta_cmd = theta_rad * (180.0 / np.pi)
@@ -833,6 +852,115 @@ class SourcceyVBeta:
             self.last_commanded_speeds[motor_name] = 0
         print("Motors stopped.")
 
+    def body_to_wheel_raw(
+        self,
+        x_cmd: float,
+        y_cmd: float,
+        theta_cmd: float,
+        wheel_radius: float = 0.05,
+        base_radius: float = 0.125,
+        max_raw: int = 3000,
+    ) -> dict:
+        """
+        Convert desired body-frame velocities into wheel raw commands for a 4-wheeled robot.
+
+        Parameters:
+          x_cmd      : Linear velocity in x (m/s).
+          y_cmd      : Linear velocity in y (m/s).
+          theta_cmd  : Rotational velocity (deg/s).
+          wheel_radius: Radius of each wheel (meters).
+          base_radius : Distance from the center of rotation to each wheel (meters).
+          max_raw    : Maximum allowed raw command (ticks) per wheel.
+
+        Returns:
+          A dictionary with wheel raw commands:
+             {"back_left_wheel": value, "back_right_wheel": value, 
+              "front_left_wheel": value, "front_right_wheel": value}.
+        """
+        # Convert rotational velocity from deg/s to rad/s.
+        theta_rad = theta_cmd * (np.pi / 180.0)
+        # Create the body velocity vector [x, y, theta_rad].
+        velocity_vector = np.array([x_cmd, y_cmd, theta_rad])
+
+        # Define the wheel mounting angles (defined from y axis cw)
+        # For 4 wheels: back-left, back-right, front-left, front-right
+        angles = np.radians(np.array([225, 315, 135, 45]))
+        
+        # Build the kinematic matrix: each row maps body velocities to a wheel's linear speed.
+        # The third column (base_radius) accounts for the effect of rotation.
+        m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
+
+        # Compute each wheel's linear speed (m/s) and then its angular speed (rad/s).
+        wheel_linear_speeds = m.dot(velocity_vector)
+        wheel_angular_speeds = wheel_linear_speeds / wheel_radius
+
+        # Convert wheel angular speeds from rad/s to deg/s.
+        wheel_degps = wheel_angular_speeds * (180.0 / np.pi)
+
+        # Scaling
+        steps_per_deg = 4096.0 / 360.0
+        raw_floats = [abs(degps) * steps_per_deg for degps in wheel_degps]
+        max_raw_computed = max(raw_floats)
+        if max_raw_computed > max_raw:
+            scale = max_raw / max_raw_computed
+            wheel_degps = wheel_degps * scale
+
+        # Convert each wheel's angular speed (deg/s) to a raw integer.
+        wheel_raw = [MobileManipulator.degps_to_raw(deg) for deg in wheel_degps]
+
+        return {
+            "back_left_wheel": wheel_raw[0],
+            "back_right_wheel": wheel_raw[1],
+            "front_left_wheel": wheel_raw[2],
+            "front_right_wheel": wheel_raw[3]
+        }
+
+    def wheel_raw_to_body(
+        self, wheel_raw: dict, wheel_radius: float = 0.05, base_radius: float = 0.125
+    ) -> tuple:
+        """
+        Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled robot.
+
+        Parameters:
+          wheel_raw   : Dictionary with raw wheel commands 
+                       (keys: "back_left_wheel", "back_right_wheel", 
+                             "front_left_wheel", "front_right_wheel").
+          wheel_radius: Radius of each wheel (meters).
+          base_radius : Distance from the robot center to each wheel (meters).
+
+        Returns:
+          A tuple (x_cmd, y_cmd, theta_cmd) where:
+             x_cmd      : Linear velocity in x (m/s).
+             y_cmd      : Linear velocity in y (m/s).
+             theta_cmd  : Rotational velocity in deg/s.
+        """
+        # Extract the raw values in order.
+        raw_list = [
+            int(wheel_raw.get("back_left_wheel", 0)),
+            int(wheel_raw.get("back_right_wheel", 0)),
+            int(wheel_raw.get("front_left_wheel", 0)),
+            int(wheel_raw.get("front_right_wheel", 0)),
+        ]
+
+        # Convert each raw command back to an angular speed in deg/s.
+        wheel_degps = np.array([MobileManipulator.raw_to_degps(r) for r in raw_list])
+        # Convert from deg/s to rad/s.
+        wheel_radps = wheel_degps * (np.pi / 180.0)
+        # Compute each wheel's linear speed (m/s) from its angular speed.
+        wheel_linear_speeds = wheel_radps * wheel_radius
+
+        # Define the wheel mounting angles (defined from y axis cw)
+        angles = np.radians(np.array([225, 315, 135, 45]))
+        m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
+
+        # Solve the inverse kinematics: body_velocity = M⁻¹ · wheel_linear_speeds.
+        # Using pseudoinverse since we have an overdetermined system with 4 wheels
+        m_inv = np.linalg.pinv(m)
+        velocity_vector = m_inv.dot(wheel_linear_speeds)
+        x_cmd, y_cmd, theta_rad = velocity_vector
+        theta_cmd = theta_rad * (180.0 / np.pi)
+        return (x_cmd, y_cmd, theta_cmd)
+    
     def __del__(self):
         """Cleanup GPIO on object destruction"""
         try:
