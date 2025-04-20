@@ -248,48 +248,53 @@ def control_loop(
     timestamp = 0
     start_episode_t = time.perf_counter()
     print(f"start loop")
-    while timestamp < control_time_s:
-        start_loop_t = time.perf_counter()
 
-        if teleoperate:
-            observation, action = robot.teleop_step(record_data=True)
-        else:
-            observation = robot.capture_observation()
+    try:
+        while timestamp < control_time_s:
+            start_loop_t = time.perf_counter()
 
-            if policy is not None:
-                pred_action = predict_action(
-                    observation, policy, get_safe_torch_device(policy.config.device), policy.config.use_amp
-                )
-                # Action can eventually be clipped using `max_relative_target`,
-                # so action actually sent is saved in the dataset.
-                action = robot.send_action(pred_action)
-                action = {"action": action}
+            if teleoperate:
+                observation, action = robot.teleop_step(record_data=True)
+            else:
+                observation = robot.capture_observation()
 
-        if dataset is not None:
-            frame = {**observation, **action, "task": single_task}
-            dataset.add_frame(frame)
+                if policy is not None:
+                    pred_action = predict_action(
+                        observation, policy, get_safe_torch_device(policy.config.device), policy.config.use_amp
+                    )
+                    # Action can eventually be clipped using `max_relative_target`,
+                    # so action actually sent is saved in the dataset.
+                    action = robot.send_action(pred_action)
+                    action = {"action": action}
 
-        # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
-        if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi")):
-            for k, v in action.items():
-                for i, vv in enumerate(v):
-                    rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
+            if dataset is not None:
+                frame = {**observation, **action, "task": single_task}
+                dataset.add_frame(frame)
 
-            image_keys = [key for key in observation if "image" in key]
-            for key in image_keys:
-                rr.log(key, rr.Image(observation[key].numpy()), static=True)
+            # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
+            if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi")):
+                for k, v in action.items():
+                    for i, vv in enumerate(v):
+                        rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
 
-        if fps is not None:
+                image_keys = [key for key in observation if "image" in key]
+                for key in image_keys:
+                    rr.log(key, rr.Image(observation[key].numpy()), static=True)
+
+            if fps is not None:
+                dt_s = time.perf_counter() - start_loop_t
+                busy_wait(1 / fps - dt_s)
+
             dt_s = time.perf_counter() - start_loop_t
-            busy_wait(1 / fps - dt_s)
+            log_control_info(robot, dt_s, fps=fps)
 
-        dt_s = time.perf_counter() - start_loop_t
-        log_control_info(robot, dt_s, fps=fps)
-
-        timestamp = time.perf_counter() - start_episode_t
-        if events["exit_early"]:
-            events["exit_early"] = False
-            break
+            timestamp = time.perf_counter() - start_episode_t
+            if events["exit_early"]:
+                events["exit_early"] = False
+                break
+    except Exception as e:
+        print(f"Error in control_loop: {e}")
+        traceback.print_exc()
 
 
 def reset_environment(robot, events, reset_time_s, fps):
