@@ -100,7 +100,7 @@ def run_sourccey_vbeta(robot_config):
     robot = SourcceyVBeta(motors_bus)
 
     # Define the expected arm motor IDs.
-    arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+    arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
 
     # Disable torque for each arm motor.
     for motor in arm_motor_ids:
