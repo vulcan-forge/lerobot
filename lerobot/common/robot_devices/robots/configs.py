@@ -620,17 +620,17 @@ class SourcceyVBetaRobotConfig(RobotConfig):
     video_port: int = 5556
 
     cameras: dict[str, CameraConfig] = field(
-        # default_factory=lambda: {
-        #     "front_one": OpenCVCameraConfig(
-        #         camera_index="/dev/video0", fps=30, width=640, height=480, rotation=90
-        #     ),
-        #     "front_two": OpenCVCameraConfig(
-        #         camera_index="/dev/video1", fps=30, width=640, height=480, rotation=90
-        #     ),
-        #     "wrist": OpenCVCameraConfig(
-        #         camera_index="/dev/video2", fps=30, width=640, height=480, rotation=180
-        #     ),
-        # }
+        default_factory=lambda: {
+            # "front_one": OpenCVCameraConfig(
+            #     camera_index="/dev/video0", fps=30, width=640, height=480, rotation=90
+            # ),
+            # "front_two": OpenCVCameraConfig(
+            #     camera_index="/dev/video1", fps=30, width=640, height=480, rotation=90
+            # ),
+            # "wrist": OpenCVCameraConfig(
+            #     camera_index="/dev/video2", fps=30, width=640, height=480, rotation=180
+            # ),
+        }
     )
 
     calibration_dir: str = ".cache/calibration/sourccey_vbeta"
