@@ -36,6 +36,7 @@ def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):
         time.sleep(0.01)
 
 def calibrate_follower_arm(motors_bus, calib_dir_str):
+    return
     """
     Calibrates the follower arm. Attempts to load an existing calibration file;
     if not found, runs manual calibration and saves the result.

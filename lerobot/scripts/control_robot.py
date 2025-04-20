@@ -407,7 +407,9 @@ def control_robot(cfg: ControlPipelineConfig):
     init_logging()
     logging.info(pformat(asdict(cfg)))
 
+    print("here 1")
     robot = make_robot_from_config(cfg.robot)
+    print(f"Running robot: {robot.robot_type}")
 
     # TODO(Steven): Blueprint for fixed window size
 
@@ -422,7 +424,6 @@ def control_robot(cfg: ControlPipelineConfig):
     elif isinstance(cfg.control, ReplayControlConfig):
         replay(robot, cfg.control)
     elif isinstance(cfg.control, RemoteRobotConfig):
-        print(f"Running remote robot: {cfg.robot.robot_type}")
         if cfg.robot.robot_type == "lekiwi":
             from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
 

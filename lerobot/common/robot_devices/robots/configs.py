@@ -609,13 +609,14 @@ class LeKiwiRobotConfig(RobotConfig):
 @RobotConfig.register_subclass("sourccey_vbeta")
 @dataclass
 class SourcceyVBetaRobotConfig(RobotConfig):
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
+    # Add the robot_type attribute
+    robot_type: str = "sourccey_vbeta"
+    
+    # Existing configuration
     max_relative_target: int | None = None
 
     # Network Configuration
-    ip: str = "127.0.0.1" # "192.168.1.190"
+    ip: str = "127.0.0.1"
     port: int = 5555
     video_port: int = 5556
 

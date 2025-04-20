@@ -719,7 +719,7 @@ class SourcceyVBeta:
 
         # Initialize motors in velocity mode.
         self.motor_bus.write("Lock", 0)
-        self.motor_bus.write("Mode", [1, 1, 1], self.motor_ids)
+        self.motor_bus.write("Mode", [1, 1, 1, 1], self.motor_ids)
         self.motor_bus.write("Lock", 1)
         print("Motors set to velocity mode.")
 
