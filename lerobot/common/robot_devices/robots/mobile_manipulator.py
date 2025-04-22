@@ -26,7 +26,7 @@ import zmq
 from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
 from lerobot.common.robot_devices.motors.feetech import TorqueMode
 from lerobot.common.robot_devices.motors.utils import MotorsBus, make_motors_buses_from_configs
-from lerobot.common.robot_devices.robots.configs import LeKiwiRobotConfig
+from lerobot.common.robot_devices.robots.configs import MobileManipulatorRobotConfig
 from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
 from lerobot.common.robot_devices.robots.utils import get_arm_id
 from lerobot.common.robot_devices.utils import RobotDeviceNotConnectedError
@@ -56,7 +56,7 @@ class MobileManipulator:
     In parallel, keyboard teleoperation is used to generate raw velocity commands for the wheels.
     """
 
-    def __init__(self, config: LeKiwiRobotConfig):
+    def __init__(self, config: MobileManipulatorRobotConfig):
         """
         Expected keys in config:
           - ip, port, video_port for the remote connection.
@@ -205,7 +205,7 @@ class MobileManipulator:
 
             # Speed control
             elif key.char == self.teleop_keys["speed_up"]:
-                self.speed_index = min(self.speed_index + 1, 2)
+                self.speed_index = min(self.speed_index + 1, 4)
                 print(f"Speed index increased to {self.speed_index}")
             elif key.char == self.teleop_keys["speed_down"]:
                 self.speed_index = max(self.speed_index - 1, 0)

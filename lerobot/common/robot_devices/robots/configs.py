@@ -524,9 +524,25 @@ class StretchRobotConfig(RobotConfig):
     mock: bool = False
 
 
+
+@RobotConfig.register_subclass("mobile_manipulator")
+@dataclass
+class MobileManipulatorRobotConfig(RobotConfig):
+    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
+    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
+    # the number of motors in your follower arms.
+    max_relative_target: int | None = None
+
+    # Network Configuration
+    ip: str = "127.0.0.1"
+    port: int = 5555
+    video_port: int = 5556
+
+
+
 @RobotConfig.register_subclass("lekiwi")
 @dataclass
-class LeKiwiRobotConfig(RobotConfig):
+class LeKiwiRobotConfig(MobileManipulatorRobotConfig):
     # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
     # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
     # the number of motors in your follower arms.
@@ -608,7 +624,7 @@ class LeKiwiRobotConfig(RobotConfig):
 
 @RobotConfig.register_subclass("sourccey_vbeta")
 @dataclass
-class SourcceyVBetaRobotConfig(RobotConfig):
+class SourcceyVBetaRobotConfig(MobileManipulatorRobotConfig):
     # Add the robot_type attribute
     robot_type: str = "sourccey_vbeta"
 
@@ -656,7 +672,7 @@ class SourcceyVBetaRobotConfig(RobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port='COM14',
+                port='COM16',
                 motors={
                     # name: (index, model)
                     # "shoulder_pan": [1, "sts3215"],
