@@ -430,7 +430,7 @@ def control_robot(cfg: ControlPipelineConfig):
             _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
             run_lekiwi(cfg.robot)
         elif cfg.robot.robot_type == "sourccey_vbeta":
-            from lerobot.common.robot_devices.robots.sourccey_remote import run_sourccey_vbeta
+            from lerobot.common.robot_devices.robots.sourccey.sourccey_remote import run_sourccey_vbeta
 
             _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
             run_sourccey_vbeta(cfg.robot)

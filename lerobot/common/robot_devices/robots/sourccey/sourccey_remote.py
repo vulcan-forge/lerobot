@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import zmq
 
-from lerobot.common.robot_devices.robots.mobile_manipulator import SourcceyVBeta
+from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBeta
 
 def setup_zmq_sockets(config):
     context = zmq.Context()
