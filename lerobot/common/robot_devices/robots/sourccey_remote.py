@@ -36,6 +36,7 @@ def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):
         time.sleep(0.01)
 
 def calibrate_follower_arm(motors_bus, calib_dir_str):
+    return
     """
     Calibrates the follower arm. Attempts to load an existing calibration file;
     if not found, runs manual calibration and saves the result.
@@ -99,7 +100,7 @@ def run_sourccey_vbeta(robot_config):
     robot = SourcceyVBeta(motors_bus)
 
     # Define the expected arm motor IDs.
-    arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+    arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
 
     # Disable torque for each arm motor.
     for motor in arm_motor_ids:

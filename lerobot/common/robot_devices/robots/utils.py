@@ -19,11 +19,12 @@ from lerobot.common.robot_devices.robots.configs import (
     KochBimanualRobotConfig,
     KochRobotConfig,
     LeKiwiRobotConfig,
+    SourcceyVBetaRobotConfig,
     ManipulatorRobotConfig,
     MossRobotConfig,
     RobotConfig,
     So100RobotConfig,
-    StretchRobotConfig,
+    # StretchRobotConfig,
 )
 
 
@@ -58,10 +59,12 @@ def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
         return MossRobotConfig(**kwargs)
     elif robot_type == "so100":
         return So100RobotConfig(**kwargs)
-    elif robot_type == "stretch":
-        return StretchRobotConfig(**kwargs)
+    # elif robot_type == "stretch":
+    #     return StretchRobotConfig(**kwargs)
     elif robot_type == "lekiwi":
         return LeKiwiRobotConfig(**kwargs)
+    elif robot_type == "sourccey_vbeta":
+        return SourcceyVBetaRobotConfig(**kwargs)
     else:
         raise ValueError(f"Robot type '{robot_type}' is not available.")
 
@@ -75,10 +78,14 @@ def make_robot_from_config(config: RobotConfig):
         from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
 
         return MobileManipulator(config)
-    else:
-        from lerobot.common.robot_devices.robots.stretch import StretchRobot
+    elif isinstance(config, SourcceyVBetaRobotConfig):
+        from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
 
-        return StretchRobot(config)
+        return MobileManipulator(config)
+    # else:
+    #     from lerobot.common.robot_devices.robots.stretch import StretchRobot
+
+    #     return StretchRobot(config)
 
 
 def make_robot(robot_type: str, **kwargs) -> Robot:

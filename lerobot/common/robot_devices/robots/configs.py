@@ -609,27 +609,28 @@ class LeKiwiRobotConfig(RobotConfig):
 @RobotConfig.register_subclass("sourccey_vbeta")
 @dataclass
 class SourcceyVBetaRobotConfig(RobotConfig):
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
+    # Add the robot_type attribute
+    robot_type: str = "sourccey_vbeta"
+    
+    # Existing configuration
     max_relative_target: int | None = None
 
     # Network Configuration
-    ip: str = "192.168.1.190"
+    ip: str = "127.0.0.1"
     port: int = 5555
     video_port: int = 5556
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "front_one": OpenCVCameraConfig(
-                camera_index="/dev/video0", fps=30, width=640, height=480, rotation=90
-            ),
-            "front_two": OpenCVCameraConfig(
-                camera_index="/dev/video1", fps=30, width=640, height=480, rotation=90
-            ),
-            "wrist": OpenCVCameraConfig(
-                camera_index="/dev/video2", fps=30, width=640, height=480, rotation=180
-            ),
+            # "front_one": OpenCVCameraConfig(
+            #     camera_index="/dev/video0", fps=30, width=640, height=480, rotation=90
+            # ),
+            # "front_two": OpenCVCameraConfig(
+            #     camera_index="/dev/video1", fps=30, width=640, height=480, rotation=90
+            # ),
+            # "wrist": OpenCVCameraConfig(
+            #     camera_index="/dev/video2", fps=30, width=640, height=480, rotation=180
+            # ),
         }
     )
 
@@ -638,7 +639,7 @@ class SourcceyVBetaRobotConfig(RobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="COM11",
+                port="COM9",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -655,16 +656,20 @@ class SourcceyVBetaRobotConfig(RobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port='/dev/ttyUSB0',
+                port='COM8',
                 motors={
                     # name: (index, model)
-                    "shoulder_pan": [1, "sts3215"],
-                    "shoulder_lift": [2, "sts3215"],
-                    "elbow_flex": [3, "sts3215"],
-                    "wrist_flex": [4, "sts3215"],
-                    "wrist_roll": [5, "sts3215"],
-                    "gripper": [6, "sts3215"],
-                    "turn_table": [7, "sts3215"],
+                    # "shoulder_pan": [1, "sts3215"],
+                    # "shoulder_lift": [2, "sts3215"],
+                    # "elbow_flex": [3, "sts3215"],
+                    # "wrist_flex": [4, "sts3215"],
+                    # "wrist_roll": [5, "sts3215"],
+                    # "gripper": [6, "sts3215"],
+                    # "turn_table": [7, "sts3215"],
+                    "back_left_wheel": [8, "sts3215"],
+                    "back_right_wheel": [9, "sts3215"],
+                    "front_left_wheel": [10, "sts3215"],
+                    "front_right_wheel": [11, "sts3215"],
                 },
             ),
         }
