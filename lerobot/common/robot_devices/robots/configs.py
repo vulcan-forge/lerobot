@@ -611,7 +611,7 @@ class LeKiwiRobotConfig(RobotConfig):
 class SourcceyVBetaRobotConfig(RobotConfig):
     # Add the robot_type attribute
     robot_type: str = "sourccey_vbeta"
-    
+
     # Existing configuration
     max_relative_target: int | None = None
 
@@ -656,7 +656,7 @@ class SourcceyVBetaRobotConfig(RobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port='COM8',
+                port='COM14',
                 motors={
                     # name: (index, model)
                     # "shoulder_pan": [1, "sts3215"],

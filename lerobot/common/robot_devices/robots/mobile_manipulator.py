@@ -240,7 +240,7 @@ class MobileManipulator:
             raise ValueError("MobileManipulator has no leader arm to connect.")
         for name in self.leader_arms:
             print(f"Connecting {name} leader arm.")
-            self.calibrate_leader()
+            #self.calibrate_leader()
 
         # Set up ZeroMQ sockets to communicate with the remote mobile robot.
         self.context = zmq.Context()
@@ -584,7 +584,7 @@ class MobileManipulator:
 
         Returns:
           A dictionary with wheel raw commands:
-             {"back_left_wheel": value, "back_right_wheel": value, 
+             {"back_left_wheel": value, "back_right_wheel": value,
               "front_left_wheel": value, "front_right_wheel": value}.
         """
         # Convert rotational velocity from deg/s to rad/s.
@@ -595,7 +595,7 @@ class MobileManipulator:
         # Define the wheel mounting angles (defined from y axis cw)
         # For 4 wheels: back-left, back-right, front-left, front-right
         angles = np.radians(np.array([225, 315, 135, 45]))
-        
+
         # Build the kinematic matrix: each row maps body velocities to a wheel's linear speed.
         # The third column (base_radius) accounts for the effect of rotation.
         m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
@@ -632,8 +632,8 @@ class MobileManipulator:
         Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled robot.
 
         Parameters:
-          wheel_raw   : Dictionary with raw wheel commands 
-                       (keys: "back_left_wheel", "back_right_wheel", 
+          wheel_raw   : Dictionary with raw wheel commands
+                       (keys: "back_left_wheel", "back_right_wheel",
                              "front_left_wheel", "front_right_wheel").
           wheel_radius: Radius of each wheel (meters).
           base_radius : Distance from the robot center to each wheel (meters).
@@ -746,7 +746,7 @@ class SourcceyVBeta:
         """Stops the robot by setting all motor speeds to zero."""
         self.motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.motor_ids)
         print("Motors stopped.")
-    
+
     def body_to_wheel_raw(
         self,
         x_cmd: float,
@@ -769,7 +769,7 @@ class SourcceyVBeta:
 
         Returns:
           A dictionary with wheel raw commands:
-             {"back_left_wheel": value, "back_right_wheel": value, 
+             {"back_left_wheel": value, "back_right_wheel": value,
               "front_left_wheel": value, "front_right_wheel": value}.
         """
         # Convert rotational velocity from deg/s to rad/s.
@@ -780,7 +780,7 @@ class SourcceyVBeta:
         # Define the wheel mounting angles (defined from y axis cw)
         # For 4 wheels: back-left, back-right, front-left, front-right
         angles = np.radians(np.array([225, 315, 135, 45]))
-        
+
         # Build the kinematic matrix: each row maps body velocities to a wheel's linear speed.
         # The third column (base_radius) accounts for the effect of rotation.
         m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
@@ -817,8 +817,8 @@ class SourcceyVBeta:
         Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled robot.
 
         Parameters:
-          wheel_raw   : Dictionary with raw wheel commands 
-                       (keys: "back_left_wheel", "back_right_wheel", 
+          wheel_raw   : Dictionary with raw wheel commands
+                       (keys: "back_left_wheel", "back_right_wheel",
                              "front_left_wheel", "front_right_wheel").
           wheel_radius: Radius of each wheel (meters).
           base_radius : Distance from the robot center to each wheel (meters).
