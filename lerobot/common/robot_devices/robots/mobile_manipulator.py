@@ -205,7 +205,7 @@ class MobileManipulator:
 
             # Speed control
             elif key.char == self.teleop_keys["speed_up"]:
-                self.speed_index = min(self.speed_index + 1, 4)
+                self.speed_index = min(self.speed_index + 1, 2)
                 print(f"Speed index increased to {self.speed_index}")
             elif key.char == self.teleop_keys["speed_down"]:
                 self.speed_index = max(self.speed_index - 1, 0)
@@ -426,6 +426,7 @@ class MobileManipulator:
             theta_cmd -= theta_speed
 
         wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
+
         message = {"raw_velocity": wheel_commands } #, "arm_positions": arm_positions}
         self.cmd_socket.send_string(json.dumps(message))
 

@@ -27,7 +27,6 @@ from lerobot.common.robot_devices.robots.configs import (
     # StretchRobotConfig,
 )
 
-
 def get_arm_id(name, arm_type):
     """Returns the string identifier of a robot arm. For instance, for a bimanual manipulator
     like Aloha, it could be left_follower, right_follower, left_leader, or right_leader.
@@ -79,9 +78,9 @@ def make_robot_from_config(config: RobotConfig):
 
         return MobileManipulator(config)
     elif isinstance(config, SourcceyVBetaRobotConfig):
-        from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
+        from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBetaManipulator
 
-        return MobileManipulator(config)
+        return SourcceyVBetaManipulator(config)
     # else:
     #     from lerobot.common.robot_devices.robots.stretch import StretchRobot
 
