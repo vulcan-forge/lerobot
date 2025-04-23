@@ -31,6 +31,7 @@ class SourcceyVBetaManipulator(MobileManipulator):
         """
         # Initialize parent class with the config
         super().__init__(config)
+        self.speed_index = 2
 
     def body_to_wheel_raw(
         self,
@@ -61,14 +62,16 @@ class SourcceyVBetaManipulator(MobileManipulator):
         # Convert rotational velocity from deg/s to rad/s
         theta_rad = theta_cmd * (np.pi / 180.0)
 
-        # For mecanum wheels, the kinematic matrix is different
-        # Each wheel's velocity is a combination of x, y, and rotation
-        # The matrix accounts for the 45-degree mounting angle of the rollers
+        # For mecanum wheels:
+        # x: strafing (left/right)
+        # y: forward/back (already working)
+        # theta: rotation
+        scale = 1.0
         m = np.array([
-            [ 1,  1, -base_radius],    # back_left
-            [-1,  1, -base_radius],    # back_right
-            [-1,  1,  base_radius],    # front_left
-            [ 1,  1,  base_radius]     # front_right
+            [scale, -scale, -base_radius],    # back_left
+            [scale,  scale, -base_radius],    # back_right
+            [scale, -scale,  base_radius],    # front_left
+            [scale,  scale,  base_radius]     # front_right
         ])
 
         # Compute wheel velocities
@@ -133,11 +136,12 @@ class SourcceyVBetaManipulator(MobileManipulator):
         # Compute each wheel's linear speed (m/s) from its angular speed
         wheel_linear_speeds = wheel_radps * wheel_radius
 
-        # For mecanum wheels, the inverse kinematic matrix is different
+        # For mecanum wheels, the inverse kinematic matrix
+        scale = 1
         m_inv = np.array([
-            [ 0.25,  -0.25,  -0.25,   0.25],   # x component
-            [ 0.25,   0.25,   0.25,   0.25],   # y component
-            [-0.25/base_radius, -0.25/base_radius, 0.25/base_radius, 0.25/base_radius]  # theta component
+            [scale,  scale,  scale, scale],    # x: [back_left, back_right, front_left, front_right]
+            [-scale, scale, -scale, scale],    # y: [back_left, back_right, front_left, front_right]
+            [-1/base_radius, -1/base_radius, 1/base_radius, 1/base_radius]  # theta: [back_left, back_right, front_left, front_right]
         ])
 
         # Calculate body velocities
