@@ -632,7 +632,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
     max_relative_target: int | None = None
 
     # Network Configuration
-    ip: str = "127.0.0.1"
+    ip: str = "192.168.1.191" # Jetson Orin Nano: "192.168.1.191" # Local: "127.0.0.1"
     port: int = 5555
     video_port: int = 5556
 
