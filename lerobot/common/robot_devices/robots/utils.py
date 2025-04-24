@@ -19,13 +19,13 @@ from lerobot.common.robot_devices.robots.configs import (
     KochBimanualRobotConfig,
     KochRobotConfig,
     LeKiwiRobotConfig,
+    SourcceyV1BetaRobotConfig,
     ManipulatorRobotConfig,
     MossRobotConfig,
     RobotConfig,
     So100RobotConfig,
-    StretchRobotConfig,
+    # StretchRobotConfig,
 )
-
 
 def get_arm_id(name, arm_type):
     """Returns the string identifier of a robot arm. For instance, for a bimanual manipulator
@@ -58,10 +58,12 @@ def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
         return MossRobotConfig(**kwargs)
     elif robot_type == "so100":
         return So100RobotConfig(**kwargs)
-    elif robot_type == "stretch":
-        return StretchRobotConfig(**kwargs)
+    # elif robot_type == "stretch":
+    #     return StretchRobotConfig(**kwargs)
     elif robot_type == "lekiwi":
         return LeKiwiRobotConfig(**kwargs)
+    elif robot_type == "sourccey_v1beta":
+        return SourcceyV1BetaRobotConfig(**kwargs)
     else:
         raise ValueError(f"Robot type '{robot_type}' is not available.")
 
@@ -75,10 +77,14 @@ def make_robot_from_config(config: RobotConfig):
         from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
 
         return MobileManipulator(config)
-    else:
-        from lerobot.common.robot_devices.robots.stretch import StretchRobot
+    elif isinstance(config, SourcceyV1BetaRobotConfig):
+        from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBetaManipulator
 
-        return StretchRobot(config)
+        return SourcceyVBetaManipulator(config)
+    # else:
+    #     from lerobot.common.robot_devices.robots.stretch import StretchRobot
+
+    #     return StretchRobot(config)
 
 
 def make_robot(robot_type: str, **kwargs) -> Robot:
