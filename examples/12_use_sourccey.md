@@ -2,7 +2,7 @@ To teleoperate SSH into your Raspberry Pi, and run `conda activate lerobot` and 
 
 ```bash
 python lerobot/scripts/control_robot.py \
-  --robot.type=sourccey_vbeta \
+  --robot.type=sourccey_v1beta \
   --control.type=remote_robot
 ```
 
@@ -10,7 +10,7 @@ Then on your laptop, also run `conda activate lerobot` and this script:
 
 ```bash
 python lerobot/scripts/control_robot.py \
-  --robot.type=sourccey_vbeta \
+  --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
   --control.fps=30
 ```

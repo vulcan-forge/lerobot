@@ -66,7 +66,7 @@ def calibrate_follower_arm(motors_bus, calib_dir_str):
     except Exception as e:
         print(f"[WARNING] Could not apply calibration: {e}")
 
-def run_sourccey_vbeta(robot_config):
+def run_sourccey_v1beta(robot_config):
     """
     Runs the SourcceyVBeta robot:
       - Sets up cameras and connects them.

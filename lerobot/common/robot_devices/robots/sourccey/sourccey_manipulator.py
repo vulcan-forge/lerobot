@@ -3,7 +3,7 @@ import sys
 import numpy as np
 from pathlib import Path
 
-from lerobot.common.robot_devices.robots.configs import SourcceyVBetaRobotConfig
+from lerobot.common.robot_devices.robots.configs import SourcceyV1BetaRobotConfig
 from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
 
 
@@ -25,7 +25,7 @@ except Exception as e:
 
 
 class SourcceyVBetaManipulator(MobileManipulator):
-    def __init__(self, config: SourcceyVBetaRobotConfig):
+    def __init__(self, config: SourcceyV1BetaRobotConfig):
         """
         Initializes the SourcceyVBetaManipulator with Feetech motors bus.
         """

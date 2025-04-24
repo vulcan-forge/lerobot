@@ -19,7 +19,7 @@ from lerobot.common.robot_devices.robots.configs import (
     KochBimanualRobotConfig,
     KochRobotConfig,
     LeKiwiRobotConfig,
-    SourcceyVBetaRobotConfig,
+    SourcceyV1BetaRobotConfig,
     ManipulatorRobotConfig,
     MossRobotConfig,
     RobotConfig,
@@ -62,8 +62,8 @@ def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
     #     return StretchRobotConfig(**kwargs)
     elif robot_type == "lekiwi":
         return LeKiwiRobotConfig(**kwargs)
-    elif robot_type == "sourccey_vbeta":
-        return SourcceyVBetaRobotConfig(**kwargs)
+    elif robot_type == "sourccey_v1beta":
+        return SourcceyV1BetaRobotConfig(**kwargs)
     else:
         raise ValueError(f"Robot type '{robot_type}' is not available.")
 
@@ -77,7 +77,7 @@ def make_robot_from_config(config: RobotConfig):
         from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
 
         return MobileManipulator(config)
-    elif isinstance(config, SourcceyVBetaRobotConfig):
+    elif isinstance(config, SourcceyV1BetaRobotConfig):
         from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBetaManipulator
 
         return SourcceyVBetaManipulator(config)

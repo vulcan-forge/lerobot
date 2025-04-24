@@ -622,11 +622,11 @@ class LeKiwiRobotConfig(MobileManipulatorRobotConfig):
 
     mock: bool = False
 
-@RobotConfig.register_subclass("sourccey_vbeta")
+@RobotConfig.register_subclass("sourccey_v1beta")
 @dataclass
-class SourcceyVBetaRobotConfig(MobileManipulatorRobotConfig):
+class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
     # Add the robot_type attribute
-    robot_type: str = "sourccey_vbeta"
+    robot_type: str = "sourccey_v1beta"
 
     # Existing configuration
     max_relative_target: int | None = None
@@ -650,7 +650,7 @@ class SourcceyVBetaRobotConfig(MobileManipulatorRobotConfig):
         }
     )
 
-    calibration_dir: str = ".cache/calibration/sourccey_vbeta"
+    calibration_dir: str = ".cache/calibration/sourccey_v1beta"
 
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
