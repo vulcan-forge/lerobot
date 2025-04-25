@@ -160,9 +160,13 @@ class SourcceyVBeta:
         self.motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
 
         # Initialize motors in velocity mode.
+        print("before write")
         self.motor_bus.write("Lock", 0)
+        print("after write")
         self.motor_bus.write("Mode", [1, 1, 1, 1], self.motor_ids)
+        print("after write mode")
         self.motor_bus.write("Lock", 1)
+        print("after write lock")
         print("Motors set to velocity mode.")
 
     def read_velocity(self):
