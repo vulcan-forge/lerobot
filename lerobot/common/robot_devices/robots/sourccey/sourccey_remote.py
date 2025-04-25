@@ -112,6 +112,8 @@ def run_sourccey_v1beta(robot_config):
 
         print("here 8")
 
+        import pdb; pdb.set_trace()
+
         # Calibrate the follower arm.
         # calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
 
