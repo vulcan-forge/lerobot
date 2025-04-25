@@ -10,15 +10,25 @@ import zmq
 from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBeta
 
 def setup_zmq_sockets(config):
+    print("Starting ZMQ socket setup...")
     context = zmq.Context()
+    print("Created ZMQ context")
+
+    print(f"Creating PULL socket for commands on port {config.port}...")
     cmd_socket = context.socket(zmq.PULL)
     cmd_socket.setsockopt(zmq.CONFLATE, 1)
+    print(f"Attempting to bind command socket to tcp://*:{config.port}")
     cmd_socket.bind(f"tcp://*:{config.port}")
+    print("Successfully bound command socket")
 
+    print(f"Creating PUSH socket for video on port {config.video_port}...")
     video_socket = context.socket(zmq.PUSH)
     video_socket.setsockopt(zmq.CONFLATE, 1)
+    print(f"Attempting to bind video socket to tcp://*:{config.video_port}")
     video_socket.bind(f"tcp://*:{config.video_port}")
+    print("Successfully bound video socket")
 
+    print("ZMQ socket setup complete")
     return context, cmd_socket, video_socket
 
 def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):

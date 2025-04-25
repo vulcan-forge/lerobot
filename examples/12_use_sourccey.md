@@ -16,3 +16,8 @@ python lerobot/scripts/control_robot.py \
 ```
 
 --/dev/ttyGS0
+
+```
+sudo iptables -I DOCKER-USER -p tcp --dport 5555 -j ACCEPT
+sudo iptables -I DOCKER-USER -p tcp --dport 5556 -j ACCEPT
+```
