@@ -424,6 +424,8 @@ def control_robot(cfg: ControlPipelineConfig):
     elif isinstance(cfg.control, ReplayControlConfig):
         replay(robot, cfg.control)
     elif isinstance(cfg.control, RemoteRobotConfig):
+        print("here 2")
+
         if cfg.robot.robot_type == "lekiwi":
             from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
 
@@ -431,6 +433,8 @@ def control_robot(cfg: ControlPipelineConfig):
             run_lekiwi(cfg.robot)
         elif cfg.robot.robot_type == "sourccey_v1beta":
             from lerobot.common.robot_devices.robots.sourccey.sourccey_remote import run_sourccey_v1beta
+
+            print("here 3")
 
             _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
             run_sourccey_v1beta(cfg.robot)
