@@ -87,14 +87,20 @@ def run_sourccey_v1beta(robot_config):
     """
 
     try:
+        print("here 5")
+
         # Import helper functions and classes
         from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
         from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
+
+        print("here 6")
 
         # Initialize cameras from the robot configuration.
         cameras = make_cameras_from_configs(robot_config.cameras)
         for cam in cameras.values():
             cam.connect()
+
+        print("here 7")
 
         # Initialize the motors bus using the follower arm configuration.
         motor_config = robot_config.follower_arms.get("main")
@@ -104,11 +110,15 @@ def run_sourccey_v1beta(robot_config):
         motors_bus = FeetechMotorsBus(motor_config)
         motors_bus.connect()
 
+        print("here 8")
+
         # Calibrate the follower arm.
         calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
 
         # Create the SourcceyVBeta robot instance.
         robot = SourcceyVBeta(motors_bus)
+
+        print("here 9")
 
         # Define the expected arm motor IDs.
         arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -116,6 +126,8 @@ def run_sourccey_v1beta(robot_config):
         # Disable torque for each arm motor.
         for motor in arm_motor_ids:
             motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+
+        print("here 10")
 
         # Set up ZeroMQ sockets.
         context, cmd_socket, video_socket = setup_zmq_sockets(robot_config)
@@ -128,6 +140,8 @@ def run_sourccey_v1beta(robot_config):
             target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
         )
         cam_thread.start()
+
+        print("here 11")
 
         last_cmd_time = time.time()
         print("SourcceyVBeta robot server started. Waiting for commands...")
