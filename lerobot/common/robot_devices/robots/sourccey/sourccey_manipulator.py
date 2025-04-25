@@ -68,10 +68,10 @@ class SourcceyVBetaManipulator(MobileManipulator):
         # theta: rotation
         scale = 1.0
         m = np.array([
-            [scale, -scale, -base_radius],    # back_left
-            [scale,  scale, -base_radius],    # back_right
-            [scale, -scale,  base_radius],    # front_left
-            [scale,  scale,  base_radius]     # front_right
+            [-scale, scale,  base_radius],    # back_left
+            [ scale, scale, -base_radius],    # back_right
+            [ scale, scale,  base_radius],    # front_left
+            [-scale, scale, -base_radius]     # front_right
         ])
 
         # Compute wheel velocities
@@ -139,9 +139,9 @@ class SourcceyVBetaManipulator(MobileManipulator):
         # For mecanum wheels, the inverse kinematic matrix
         scale = 1
         m_inv = np.array([
-            [scale,  scale,  scale, scale],    # x: [back_left, back_right, front_left, front_right]
-            [-scale, scale, -scale, scale],    # y: [back_left, back_right, front_left, front_right]
-            [-1/base_radius, -1/base_radius, 1/base_radius, 1/base_radius]  # theta: [back_left, back_right, front_left, front_right]
+            [ -scale, scale,  scale, -scale],    # x: [back_left, back_right, front_left, front_right]
+            [  scale, scale,  scale,  scale],    # y: [back_left, back_right, front_left, front_right]
+            [ 1/base_radius, -1/base_radius, 1/base_radius, -1/base_radius]  # theta: [back_left, back_right, front_left, front_right]
         ])
 
         # Calculate body velocities
