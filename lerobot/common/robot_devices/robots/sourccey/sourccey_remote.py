@@ -86,50 +86,54 @@ def run_sourccey_v1beta(robot_config):
       - Processes incoming commands (arm and wheel commands) and sends back sensor and camera data.
     """
 
-    # Import helper functions and classes
-    from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
-    from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
+    try:
+        # Import helper functions and classes
+        from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
+        from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
 
-    # Initialize cameras from the robot configuration.
-    cameras = make_cameras_from_configs(robot_config.cameras)
-    for cam in cameras.values():
-        cam.connect()
+        # Initialize cameras from the robot configuration.
+        cameras = make_cameras_from_configs(robot_config.cameras)
+        for cam in cameras.values():
+            cam.connect()
 
-    # Initialize the motors bus using the follower arm configuration.
-    motor_config = robot_config.follower_arms.get("main")
-    if motor_config is None:
-        print("[ERROR] Follower arm 'main' configuration not found.")
+        # Initialize the motors bus using the follower arm configuration.
+        motor_config = robot_config.follower_arms.get("main")
+        if motor_config is None:
+            print("[ERROR] Follower arm 'main' configuration not found.")
+            return
+        motors_bus = FeetechMotorsBus(motor_config)
+        motors_bus.connect()
+
+        # Calibrate the follower arm.
+        calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
+
+        # Create the SourcceyVBeta robot instance.
+        robot = SourcceyVBeta(motors_bus)
+
+        # Define the expected arm motor IDs.
+        arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+
+        # Disable torque for each arm motor.
+        for motor in arm_motor_ids:
+            motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+
+        # Set up ZeroMQ sockets.
+        context, cmd_socket, video_socket = setup_zmq_sockets(robot_config)
+
+        # Start the camera capture thread.
+        latest_images_dict = {}
+        images_lock = threading.Lock()
+        stop_event = threading.Event()
+        cam_thread = threading.Thread(
+            target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
+        )
+        cam_thread.start()
+
+        last_cmd_time = time.time()
+        print("SourcceyVBeta robot server started. Waiting for commands...")
+    except Exception as e:
+        print(f"[ERROR] Error starting SourcceyVBeta robot server: {e}")
         return
-    motors_bus = FeetechMotorsBus(motor_config)
-    motors_bus.connect()
-
-    # Calibrate the follower arm.
-    calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
-
-    # Create the SourcceyVBeta robot instance.
-    robot = SourcceyVBeta(motors_bus)
-
-    # Define the expected arm motor IDs.
-    arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
-
-    # Disable torque for each arm motor.
-    for motor in arm_motor_ids:
-        motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
-
-    # Set up ZeroMQ sockets.
-    context, cmd_socket, video_socket = setup_zmq_sockets(robot_config)
-
-    # Start the camera capture thread.
-    latest_images_dict = {}
-    images_lock = threading.Lock()
-    stop_event = threading.Event()
-    cam_thread = threading.Thread(
-        target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
-    )
-    cam_thread.start()
-
-    last_cmd_time = time.time()
-    print("SourcceyVBeta robot server started. Waiting for commands...")
 
     try:
         while True:
