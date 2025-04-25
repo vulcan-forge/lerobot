@@ -14,3 +14,5 @@ python lerobot/scripts/control_robot.py \
   --control.type=teleoperate \
   --control.fps=30
 ```
+
+--/dev/ttyGS0
