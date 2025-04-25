@@ -436,7 +436,12 @@ def control_robot(cfg: ControlPipelineConfig):
 
             print("here 3")
 
-            _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
+            try:
+                _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
+            except Exception as e:
+                print(f"Error running rerun SourcceyV1Beta: {e}")
+
+            print("here 4")
             run_sourccey_v1beta(cfg.robot)
         else:
             raise ValueError(f"Unknown remote robot type: {cfg.robot.robot_type}")
