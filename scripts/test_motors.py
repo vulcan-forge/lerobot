@@ -1,13 +1,14 @@
 import time
 from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus
+from lerobot.common.robot_devices.motors.configs import FeetechMotorsBusConfig
 
-def test_motor_connection(port, baudrate=1000000):
-    """Test motor communication on a specific port."""
-    print(f"\n=== Testing motor connection on {port} at {baudrate} baud ===")
+def test_motor_connection(port_path, baudrate=1000000):
+    """Test motor connection on a specific port."""
+    print(f"\n=== Testing motor connection on {port_path} at {baudrate} baud ===")
 
-    # Create motor bus configuration
-    bus = FeetechMotorsBus(
-        port=port,
+    # Create proper config object
+    config = FeetechMotorsBusConfig(
+        port=port_path,
         motors={
             "back_left_wheel": [8, "sts3215"],
             "back_right_wheel": [10, "sts3215"],
@@ -15,6 +16,9 @@ def test_motor_connection(port, baudrate=1000000):
             "front_right_wheel": [11, "sts3215"]
         }
     )
+
+    # Create motor bus with config
+    bus = FeetechMotorsBus(config)
 
     try:
         print("1. Attempting to connect...")
