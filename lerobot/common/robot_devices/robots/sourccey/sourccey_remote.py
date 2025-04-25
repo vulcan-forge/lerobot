@@ -113,7 +113,7 @@ def run_sourccey_v1beta(robot_config):
         print("here 8")
 
         # Calibrate the follower arm.
-        calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
+        # calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
 
         # Create the SourcceyVBeta robot instance.
         robot = SourcceyVBeta(motors_bus)
