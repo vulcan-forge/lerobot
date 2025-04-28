@@ -79,22 +79,22 @@ def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
     except Exception as e:
         print(f"[WARNING] Could not apply calibration: {e}")
 
-    if calib_right_file.exists():
-        with open(calib_right_file) as f:
-            calibration = json.load(f)
-        print(f"[INFO] Loaded calibration from {calib_right_file}")
-    else:
-        print("[INFO] Calibration file not found. Running manual calibration...")
-        calibration = run_arm_manual_calibration(right_motors_bus, "sourccey_v1beta", "right_follower", "follower")
-        print(f"[INFO] Calibration complete. Saving to {calib_right_file}")
-        with open(calib_right_file, "w") as f:
-            json.dump(calibration, f)
+    # if calib_right_file.exists():
+    #     with open(calib_right_file) as f:
+    #         calibration = json.load(f)
+    #     print(f"[INFO] Loaded calibration from {calib_right_file}")
+    # else:
+    #     print("[INFO] Calibration file not found. Running manual calibration...")
+    #     calibration = run_arm_manual_calibration(right_motors_bus, "sourccey_v1beta", "right_follower", "follower")
+    #     print(f"[INFO] Calibration complete. Saving to {calib_right_file}")
+    #     with open(calib_right_file, "w") as f:
+    #         json.dump(calibration, f)
 
-    try:
-        right_motors_bus.set_calibration(calibration)
-        print("[INFO] Applied calibration for right follower arm.")
-    except Exception as e:
-        print(f"[WARNING] Could not apply calibration: {e}")
+    # try:
+    #     right_motors_bus.set_calibration(calibration)
+    #     print("[INFO] Applied calibration for right follower arm.")
+    # except Exception as e:
+    #     print(f"[WARNING] Could not apply calibration: {e}")
 
 
 def run_sourccey_v1beta(robot_config):
