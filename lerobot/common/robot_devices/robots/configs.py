@@ -684,7 +684,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "right": FeetechMotorsBusConfig(
-                port= '/dev/ttyUSB0', #/dev/ttyTHS2 #COM16
+                port= '/dev/ttyUSB1', #/dev/ttyTHS2 #COM16
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -697,7 +697,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
                 },
             ),
             "left": FeetechMotorsBusConfig(
-                port= '/dev/ttyUSB1', #/dev/ttyTHS2 #COM16
+                port= '/dev/ttyUSB0', #/dev/ttyTHS2 #COM16
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
