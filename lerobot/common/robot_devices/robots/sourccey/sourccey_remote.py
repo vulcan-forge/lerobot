@@ -46,7 +46,6 @@ def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):
         time.sleep(0.01)
 
 def calibrate_follower_arm(motors_bus, calib_dir_str):
-    return
     """
     Calibrates the follower arm. Attempts to load an existing calibration file;
     if not found, runs manual calibration and saves the result.
@@ -66,7 +65,7 @@ def calibrate_follower_arm(motors_bus, calib_dir_str):
         print(f"[INFO] Loaded calibration from {calib_file}")
     else:
         print("[INFO] Calibration file not found. Running manual calibration...")
-        calibration = run_arm_manual_calibration(motors_bus, "lekiwi", "follower_arm", "follower")
+        calibration = run_arm_manual_calibration(motors_bus, "sourccey_v1beta", "follower_arm", "follower")
         print(f"[INFO] Calibration complete. Saving to {calib_file}")
         with open(calib_file, "w") as f:
             json.dump(calibration, f)
@@ -113,7 +112,7 @@ def run_sourccey_v1beta(robot_config):
         print("here 8")
 
         # Calibrate the follower arm.
-        # calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
+        calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
 
         # Create the SourcceyVBeta robot instance.
         robot = SourcceyVBeta(motors_bus)
@@ -121,7 +120,7 @@ def run_sourccey_v1beta(robot_config):
         print("here 9")
 
         # Define the expected arm motor IDs.
-        arm_motor_ids = [] # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+        arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
 
         # Disable torque for each arm motor.
         for motor in arm_motor_ids:
