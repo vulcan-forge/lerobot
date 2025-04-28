@@ -15,6 +15,22 @@ python lerobot/scripts/control_robot.py \
   --control.fps=30
 ```
 
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=sourccey_v1beta \
+  --robot.cameras='{}' \
+  --control.type=calibrate \
+  --control.arms='["left_follower"]'
+```
+
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=sourccey_v1beta \
+  --robot.cameras='{}' \
+  --control.type=calibrate \
+  --control.arms='["right_follower"]'
+```
+
 --/dev/ttyGS0
 
 ```
