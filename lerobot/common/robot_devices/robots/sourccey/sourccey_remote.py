@@ -200,9 +200,17 @@ def run_sourccey_v1beta(robot_config):
                                 f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids)}"
                             )
                         else:
-                            for motor, pos in zip(arm_motor_ids, arm_positions, strict=False):
-                                left_motors_bus.write("Goal_Position", pos, motor)
+                            # The first 6 positions are for right follower arm
+                            # The last 6 positions are for left follower arm
+                            right_arm_positions = arm_positions[:6]
+                            left_arm_positions = arm_positions[6:]
+
+                            for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
                                 right_motors_bus.write("Goal_Position", pos, motor)
+
+                            for motor, pos in zip(arm_motor_ids, left_arm_positions, strict=False):
+                                left_motors_bus.write("Goal_Position", pos, motor)
+
                     # Process wheel (base) commands.
                     if "raw_velocity" in data:
                         raw_command = data["raw_velocity"]
