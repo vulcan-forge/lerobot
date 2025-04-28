@@ -45,36 +45,57 @@ def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):
             latest_images_dict.update(local_dict)
         time.sleep(0.01)
 
-def calibrate_follower_arm(motors_bus, calib_dir_str):
+def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
     """
     Calibrates the follower arm. Attempts to load an existing calibration file;
     if not found, runs manual calibration and saves the result.
     """
     calib_dir = Path(calib_dir_str)
     calib_dir.mkdir(parents=True, exist_ok=True)
-    calib_file = calib_dir / "main_follower.json"
-    print(f"[INFO] Calibration file: {calib_file}")
+    calib_left_file = calib_dir / "left_follower.json"
+    calib_right_file = calib_dir / "right_follower.json"
+    print(f"[INFO] Calibration file: {calib_left_file}")
+    print(f"[INFO] Calibration file: {calib_right_file}")
     try:
         from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
     except ImportError:
         print("[WARNING] Calibration function not available. Skipping calibration.")
         return
 
-    if calib_file.exists():
-        with open(calib_file) as f:
+    if calib_left_file.exists():
+        with open(calib_left_file) as f:
             calibration = json.load(f)
-        print(f"[INFO] Loaded calibration from {calib_file}")
+        print(f"[INFO] Loaded calibration from {calib_left_file}")
     else:
         print("[INFO] Calibration file not found. Running manual calibration...")
-        calibration = run_arm_manual_calibration(motors_bus, "sourccey_v1beta", "follower_arm", "follower")
-        print(f"[INFO] Calibration complete. Saving to {calib_file}")
-        with open(calib_file, "w") as f:
+        calibration = run_arm_manual_calibration(left_motors_bus, "sourccey_v1beta", "left_follower", "follower")
+        print(f"[INFO] Calibration complete. Saving to {calib_left_file}")
+        with open(calib_left_file, "w") as f:
             json.dump(calibration, f)
+
     try:
-        motors_bus.set_calibration(calibration)
-        print("[INFO] Applied calibration for follower arm.")
+        left_motors_bus.set_calibration(calibration)
+        print("[INFO] Applied calibration for left follower arm.")
     except Exception as e:
         print(f"[WARNING] Could not apply calibration: {e}")
+
+    if calib_right_file.exists():
+        with open(calib_right_file) as f:
+            calibration = json.load(f)
+        print(f"[INFO] Loaded calibration from {calib_right_file}")
+    else:
+        print("[INFO] Calibration file not found. Running manual calibration...")
+        calibration = run_arm_manual_calibration(right_motors_bus, "sourccey_v1beta", "right_follower", "follower")
+        print(f"[INFO] Calibration complete. Saving to {calib_right_file}")
+        with open(calib_right_file, "w") as f:
+            json.dump(calibration, f)
+
+    try:
+        right_motors_bus.set_calibration(calibration)
+        print("[INFO] Applied calibration for right follower arm.")
+    except Exception as e:
+        print(f"[WARNING] Could not apply calibration: {e}")
+
 
 def run_sourccey_v1beta(robot_config):
     """
@@ -103,20 +124,27 @@ def run_sourccey_v1beta(robot_config):
         print("here 7")
 
         # Initialize the motors bus using the follower arm configuration.
-        motor_config = robot_config.follower_arms.get("main")
-        if motor_config is None:
-            print("[ERROR] Follower arm 'main' configuration not found.")
+        left_motor_config = robot_config.follower_arms.get("left")
+        right_motor_config = robot_config.follower_arms.get("right")
+        if left_motor_config is None:
+            print("[ERROR] Follower arm 'left' configuration not found.")
             return
-        motors_bus = FeetechMotorsBus(motor_config)
-        motors_bus.connect()
+        if right_motor_config is None:
+            print("[ERROR] Follower arm 'right' configuration not found.")
+            return
+
+        left_motors_bus = FeetechMotorsBus(left_motor_config)
+        right_motors_bus = FeetechMotorsBus(right_motor_config)
+        left_motors_bus.connect()
+        right_motors_bus.connect()
 
         print("here 8")
 
         # Calibrate the follower arm.
-        calibrate_follower_arm(motors_bus, robot_config.calibration_dir)
+        calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
 
         # Create the SourcceyVBeta robot instance.
-        robot = SourcceyVBeta(motors_bus)
+        robot = SourcceyVBeta(left_motors_bus, right_motors_bus)
 
         print("here 9")
 
@@ -125,7 +153,8 @@ def run_sourccey_v1beta(robot_config):
 
         # Disable torque for each arm motor.
         for motor in arm_motor_ids:
-            motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+            left_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+            right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
 
         print("here 10")
 
@@ -172,7 +201,8 @@ def run_sourccey_v1beta(robot_config):
                             )
                         else:
                             for motor, pos in zip(arm_motor_ids, arm_positions, strict=False):
-                                motors_bus.write("Goal_Position", pos, motor)
+                                left_motors_bus.write("Goal_Position", pos, motor)
+                                right_motors_bus.write("Goal_Position", pos, motor)
                     # Process wheel (base) commands.
                     if "raw_velocity" in data:
                         raw_command = data["raw_velocity"]
@@ -201,7 +231,7 @@ def run_sourccey_v1beta(robot_config):
             follower_arm_state = []
             for motor in arm_motor_ids:
                 try:
-                    pos = motors_bus.read("Present_Position", motor)
+                    pos = left_motors_bus.read("Present_Position", motor)
                     # Convert the position to a float (or use as is if already numeric).
                     follower_arm_state.append(float(pos) if not isinstance(pos, (int, float)) else pos)
                 except Exception as e:
@@ -231,7 +261,8 @@ def run_sourccey_v1beta(robot_config):
         stop_event.set()
         cam_thread.join()
         robot.stop()
-        motors_bus.disconnect()
+        left_motors_bus.disconnect()
+        right_motors_bus.disconnect()
         cmd_socket.close()
         video_socket.close()
         context.term()

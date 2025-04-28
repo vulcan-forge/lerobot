@@ -152,28 +152,35 @@ class SourcceyVBetaManipulator(MobileManipulator):
 
 
 class SourcceyVBeta:
-    def __init__(self, motor_bus):
+    def __init__(self, left_motor_bus, right_motor_bus):
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
         """
-        self.motor_bus = motor_bus
-        self.motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
+        self.left_motor_bus = left_motor_bus
+        self.right_motor_bus = right_motor_bus
+        self.wheel_motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
+        self.turn_table_motor_ids = ["turn_table"]
 
-        # Initialize motors in velocity mode.
+        # Initialize wheel motors in velocity mode.
         print("before write")
-        self.motor_bus.write("Lock", 0)
+        self.left_motor_bus.write("Lock", 0)
         print("after write")
-        self.motor_bus.write("Mode", [1, 1, 1, 1], self.motor_ids)
+        self.left_motor_bus.write("Mode", [1, 1, 1, 1], self.wheel_motor_ids)
         print("after write mode")
-        self.motor_bus.write("Lock", 1)
+        self.left_motor_bus.write("Lock", 1)
         print("after write lock")
+
+        # Initialize turn table motor in velocity mode.
+        self.right_motor_bus.write("Lock", 0)
+        self.right_motor_bus.write("Mode", [1], self.turn_table_motor_ids)
+        self.right_motor_bus.write("Lock", 1)
         print("Motors set to velocity mode.")
 
     def read_velocity(self):
         """
         Reads the raw speeds for all wheels. Returns a dictionary with motor names:
         """
-        raw_speeds = self.motor_bus.read("Present_Speed", self.motor_ids)
+        raw_speeds = self.left_motor_bus.read("Present_Speed", self.wheel_motor_ids)
         return {
             "back_left_wheel": int(raw_speeds[0]),
             "back_right_wheel": int(raw_speeds[1]),
@@ -186,9 +193,11 @@ class SourcceyVBeta:
         Sends raw velocity commands (16-bit encoded values) directly to the motor bus.
         The order of speeds must correspond to self.motor_ids.
         """
-        self.motor_bus.write("Goal_Speed", command_speeds, self.motor_ids)
+        self.left_motor_bus.write("Goal_Speed", command_speeds, self.wheel_motor_ids)
+        # self.right_motor_bus.write("Goal_Speed", command_speeds, self.turn_table_motor_ids)
 
     def stop(self):
         """Stops the robot by setting all motor speeds to zero."""
-        self.motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.motor_ids)
+        self.left_motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.wheel_motor_ids)
+        # self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
         print("Motors stopped.")
