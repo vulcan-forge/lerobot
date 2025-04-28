@@ -23,7 +23,7 @@ python lerobot/scripts/control_robot.py \
   --control.arms='["left_follower", "right_follower"]'
 ```
 
-```
+```bash
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --robot.cameras='{}' \
