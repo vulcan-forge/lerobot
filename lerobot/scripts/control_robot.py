@@ -223,14 +223,14 @@ def calibrate(robot: Robot, cfg: CalibrateControlConfig):
         robot.calibrate_leader()
         return
 
-    if robot.robot_type.startswith("sourccey_v1beta") and "right_follower" in arms:
-        print("Calibrating only the sourccey follower arm 'right_follower'...")
+    if robot.robot_type.startswith("sourccey_v1beta") and "left_follower" in arms:
+        print("Calibrating only the sourccey leader arm 'left_follower'...")
         robot.calibrate_follower()
         return
 
-    if robot.robot_type.startswith("sourccey_v1beta") and "left_follower" in arms:
-        print("Calibrating only the sourccey leader arm 'left_follower'...")
-        robot.calibrate_leader()
+    if robot.robot_type.startswith("sourccey_v1beta") and "right_follower" in arms:
+        print("Calibrating only the sourccey follower arm 'right_follower'...")
+        robot.calibrate_follower()
         return
 
     # Calling `connect` automatically runs calibration
