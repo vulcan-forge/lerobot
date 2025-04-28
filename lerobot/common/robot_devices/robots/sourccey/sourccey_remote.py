@@ -53,6 +53,7 @@ def calibrate_follower_arm(motors_bus, calib_dir_str):
     calib_dir = Path(calib_dir_str)
     calib_dir.mkdir(parents=True, exist_ok=True)
     calib_file = calib_dir / "main_follower.json"
+    print(f"[INFO] Calibration file: {calib_file}")
     try:
         from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
     except ImportError:
