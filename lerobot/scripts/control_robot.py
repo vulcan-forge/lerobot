@@ -224,7 +224,7 @@ def calibrate(robot: Robot, cfg: CalibrateControlConfig):
         return
 
     if robot.robot_type.startswith("sourccey_v1beta") and "left_follower" in arms:
-        print("Calibrating only the sourccey leader arm 'left_follower'...")
+        print("Calibrating only the sourccey follower arm 'left_follower'...")
         robot.calibrate_follower()
         return
 
