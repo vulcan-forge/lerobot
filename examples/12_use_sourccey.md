@@ -12,7 +12,8 @@ Then on your laptop, also run `conda activate lerobot` and this script:
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
-  --control.fps=30
+  --control.fps=30 \
+  --control.display_data=true
 ```
 
 ```bash
