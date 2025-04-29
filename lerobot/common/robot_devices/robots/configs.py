@@ -651,7 +651,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
             #     camera_index="/dev/video0", fps=30, width=640, height=480, rotation=None
             # ),
             "test": OpenCVCameraConfig(
-                camera_index="/dev/video0", fps=30, width=640, height=480, rotation=None
+                camera_index="/dev/video4", fps=30, width=640, height=480, rotation=None
             ),
         }
     )
