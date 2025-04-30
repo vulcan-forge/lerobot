@@ -5,6 +5,10 @@
 # git add start/start_robot.sh
 # git commit -m "Add robot start script with executable permissions"
 
+# Kill any existing robot control processes
+echo "Stopping any existing robot servers..."
+pkill -f "control_robot.py" || true
+
 # Activate the virtual environment
 source .venv/bin/activate
 
