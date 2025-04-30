@@ -4,6 +4,9 @@ import numpy as np
 from pathlib import Path
 import json
 import torch
+import zmq
+import base64
+import cv2
 
 from lerobot.common.robot_devices.robots.configs import SourcceyV1BetaRobotConfig
 from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
@@ -266,6 +269,113 @@ class SourcceyVBetaManipulator(MobileManipulator):
             obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
 
         return obs_dict
+
+    def _get_data(self):
+        """
+        Polls the video socket for up to 15 ms. If data arrives, decode only
+        the *latest* message, returning frames, speed, and arm state. If
+        nothing arrives for any field, use the last known values.
+        """
+        frames = {}
+        present_speed = {}
+        remote_arm_state_tensor = torch.zeros(12, dtype=torch.float32)  # Changed from 6 to 12
+
+        # Poll up to 15 ms
+        poller = zmq.Poller()
+        poller.register(self.video_socket, zmq.POLLIN)
+        socks = dict(poller.poll(15))
+        if self.video_socket not in socks or socks[self.video_socket] != zmq.POLLIN:
+            # No new data arrived → reuse ALL old data
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+
+        # Drain all messages, keep only the last
+        last_msg = None
+        while True:
+            try:
+                obs_string = self.video_socket.recv_string(zmq.NOBLOCK)
+                last_msg = obs_string
+            except zmq.Again:
+                break
+
+        if not last_msg:
+            # No new message → also reuse old
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+
+        # Decode only the final message
+        try:
+            observation = json.loads(last_msg)
+
+            images_dict = observation.get("images", {})
+            new_speed = observation.get("present_speed", {})
+            new_arm_state = observation.get("follower_arm_state", None)
+
+            # Convert images
+            for cam_name, image_b64 in images_dict.items():
+                if image_b64:
+                    jpg_data = base64.b64decode(image_b64)
+                    np_arr = np.frombuffer(jpg_data, dtype=np.uint8)
+                    frame_candidate = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                    if frame_candidate is not None:
+                        frames[cam_name] = frame_candidate
+
+            # If remote_arm_state is None and frames is None there is no message then use the previous message
+            if new_arm_state is not None and frames is not None:
+                self.last_frames = frames
+
+                # Ensure we have 12 values for the arm state
+                if len(new_arm_state) < 12:
+                    # Pad with zeros if we don't have enough values
+                    padded_state = new_arm_state + [0] * (12 - len(new_arm_state))
+                    remote_arm_state_tensor = torch.tensor(padded_state, dtype=torch.float32)
+                else:
+                    remote_arm_state_tensor = torch.tensor(new_arm_state, dtype=torch.float32)
+                self.last_remote_arm_state = remote_arm_state_tensor
+
+                present_speed = new_speed
+                self.last_present_speed = new_speed
+            else:
+                frames = self.last_frames
+                remote_arm_state_tensor = self.last_remote_arm_state
+                present_speed = self.last_present_speed
+
+        except Exception as e:
+            print(f"[DEBUG] Error decoding video message: {e}")
+            # If decode fails, fall back to old data
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+
+        return frames, present_speed, remote_arm_state_tensor
+
+    def teleop_step(
+        self, record_data: bool = False
+    ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+
+        if not self.is_connected:
+            raise RobotDeviceNotConnectedError("SourcceyVBetaManipulator is not connected. Run `connect()` first.")
+
+        # Prepare to assign the position of the leader to the follower
+        arm_positions = []
+        for name in self.leader_arms:
+            pos = self.leader_arms[name].read("Present_Position")
+            pos_tensor = torch.from_numpy(pos).float()
+            arm_positions.extend(pos_tensor.tolist())
+
+        # Ensure we have 12 values for the arm positions
+        if len(arm_positions) < 12:
+            # Pad with zeros if we don't have enough values
+            arm_positions = arm_positions + [0] * (12 - len(arm_positions))
+
+        # Create and send the message with only arm positions
+        message = {"arm_positions": arm_positions}
+        self.cmd_socket.send_string(json.dumps(message))
+
+        if not record_data:
+            return
+
+        obs_dict = self.capture_observation()
+        action_tensor = torch.tensor(arm_positions, dtype=torch.float32)
+        action_dict = {"action": action_tensor}
+
+        return obs_dict, action_dict
 
 
 class SourcceyVBeta:
