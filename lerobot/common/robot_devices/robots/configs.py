@@ -658,7 +658,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "right": FeetechMotorsBusConfig(
-                port="COM18",
+                port="COM15",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -670,7 +670,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
                 },
             ),
             "left": FeetechMotorsBusConfig(
-                port="COM17",
+                port="COM14",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],

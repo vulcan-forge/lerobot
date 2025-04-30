@@ -104,7 +104,7 @@ def run_sourccey_v1beta(robot_config):
       - Initializes the follower arm motors.
       - Calibrates the follower arm if necessary.
       - Creates ZeroMQ sockets for receiving commands and streaming observations.
-      - Processes incoming commands (arm and wheel commands) and sends back sensor and camera data.
+      - Processes incoming commands (arm positions) and sends back sensor and camera data.
     """
 
     try:
@@ -142,9 +142,6 @@ def run_sourccey_v1beta(robot_config):
 
         # Calibrate the follower arm.
         calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
-
-        # Create the SourcceyVBeta robot instance.
-        robot = SourcceyVBeta(left_motors_bus, right_motors_bus)
 
         print("here 9")
 
@@ -195,15 +192,15 @@ def run_sourccey_v1beta(robot_config):
                         arm_positions = data["arm_positions"]
                         if not isinstance(arm_positions, list):
                             print(f"[ERROR] Invalid arm_positions: {arm_positions}")
-                        elif len(arm_positions) < len(arm_motor_ids):
+                        elif len(arm_positions) < len(arm_motor_ids) * 2:
                             print(
-                                f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids)}"
+                                f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids) * 2}"
                             )
                         else:
                             # The first 6 positions are for right follower arm
                             # The last 6 positions are for left follower arm
                             right_arm_positions = arm_positions[:6]
-                            left_arm_positions = arm_positions[6:]
+                            left_arm_positions = arm_positions[6:12]
 
                             for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
                                 right_motors_bus.write("Goal_Position", pos, motor)
@@ -211,29 +208,8 @@ def run_sourccey_v1beta(robot_config):
                             for motor, pos in zip(arm_motor_ids, left_arm_positions, strict=False):
                                 left_motors_bus.write("Goal_Position", pos, motor)
 
-                    # Process wheel (base) commands.
-                    if "raw_velocity" in data:
-                        raw_command = data["raw_velocity"]
-                        # Expect keys: "back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel".
-                        command_speeds = [
-                            int(raw_command.get("back_left_wheel", 0)),
-                            int(raw_command.get("back_right_wheel", 0)),
-                            int(raw_command.get("front_left_wheel", 0)),
-                            int(raw_command.get("front_right_wheel", 0)),
-                        ]
-                        robot.set_velocity(command_speeds)
-                        last_cmd_time = time.time()
                 except Exception as e:
                     print(f"[ERROR] Parsing message failed: {e}")
-
-            # Watchdog: stop the robot if no command is received for over 0.5 seconds.
-            now = time.time()
-            if now - last_cmd_time > 0.5:
-                robot.stop()
-                last_cmd_time = now
-
-            # Read current wheel speeds from the robot.
-            current_velocity = robot.read_velocity()
 
             # Read the follower arm state from the motors bus.
             follower_arm_state = []
@@ -252,7 +228,6 @@ def run_sourccey_v1beta(robot_config):
             # Build the observation dictionary.
             observation = {
                 "images": images_dict_copy,
-                "present_speed": current_velocity,
                 "follower_arm_state": follower_arm_state,
             }
             # Send the observation over the video socket.
@@ -268,7 +243,6 @@ def run_sourccey_v1beta(robot_config):
     finally:
         stop_event.set()
         cam_thread.join()
-        robot.stop()
         left_motors_bus.disconnect()
         right_motors_bus.disconnect()
         cmd_socket.close()

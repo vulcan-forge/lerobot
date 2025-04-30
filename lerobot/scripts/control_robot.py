@@ -369,7 +369,7 @@ def replay(
         start_episode_t = time.perf_counter()
 
         action = actions[idx]["action"]
-        robot.send_action(action)
+        robot.send_action(action, control_type="replay")
 
         dt_s = time.perf_counter() - start_episode_t
         busy_wait(1 / cfg.fps - dt_s)
