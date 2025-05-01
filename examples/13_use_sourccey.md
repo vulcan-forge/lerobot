@@ -29,7 +29,7 @@ python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --robot.cameras='{}' \
   --control.type=calibrate \
-  --control.arms='["right_follower"]'
+  --control.arms='["left_leader", "right_leader"]'
 ```
 
 --/dev/ttyGS0
