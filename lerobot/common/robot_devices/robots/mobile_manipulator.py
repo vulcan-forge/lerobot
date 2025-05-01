@@ -182,7 +182,6 @@ class MobileManipulator:
         return available
 
     def on_press(self, key):
-        print(f"Key pressed: {key}")
         try:
             # Movement
             if key.char == self.teleop_keys["forward"]:
@@ -417,7 +416,6 @@ class MobileManipulator:
         x_cmd = 0.0  # m/s lateral
         theta_cmd = 0.0  # deg/s rotation
         if self.pressed_keys["forward"]:
-            print("forward")
             y_cmd += xy_speed
         if self.pressed_keys["backward"]:
             y_cmd -= xy_speed

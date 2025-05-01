@@ -336,19 +336,14 @@ class SourcceyV1Beta:
         self.turn_table_motor_ids = ["turn_table"]
 
         # Initialize wheel motors in velocity mode.
-        print("before write")
         self.left_motor_bus.write("Lock", 0)
-        print("after write")
         self.left_motor_bus.write("Mode", [1, 1, 1, 1], self.wheel_motor_ids)
-        print("after write mode")
         self.left_motor_bus.write("Lock", 1)
-        print("after write lock")
 
         # Initialize turn table motor in velocity mode.
         self.right_motor_bus.write("Lock", 0)
         self.right_motor_bus.write("Mode", [1], self.turn_table_motor_ids)
         self.right_motor_bus.write("Lock", 1)
-        print("Motors set to velocity mode.")
 
     def read_velocity(self):
         """
