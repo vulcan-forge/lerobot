@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import zmq
 
-from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBeta
+from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyV1Beta
 
 def setup_zmq_sockets(config):
     print("Starting ZMQ socket setup...")
@@ -99,7 +99,7 @@ def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
 
 def run_sourccey_v1beta(robot_config):
     """
-    Runs the SourcceyVBeta robot:
+    Runs the SourcceyV1Beta robot:
       - Sets up cameras and connects them.
       - Initializes the follower arm motors.
       - Calibrates the follower arm if necessary.
@@ -107,73 +107,71 @@ def run_sourccey_v1beta(robot_config):
       - Processes incoming commands (arm positions) and sends back sensor and camera data.
     """
 
-    try:
-        print("here 5")
+    print("here 5")
 
-        # Import helper functions and classes
-        from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
-        from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
+    # Import helper functions and classes
+    from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
+    from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
 
-        print("here 6")
+    print("here 6")
 
-        # Initialize cameras from the robot configuration.
-        cameras = make_cameras_from_configs(robot_config.cameras)
-        for cam in cameras.values():
-            cam.connect()
+    # Initialize cameras from the robot configuration.
+    cameras = make_cameras_from_configs(robot_config.cameras)
+    for cam in cameras.values():
+        cam.connect()
 
-        print("here 7")
+    print("here 7")
 
-        # Initialize the motors bus using the follower arm configuration.
-        left_motor_config = robot_config.follower_arms.get("left")
-        right_motor_config = robot_config.follower_arms.get("right")
-        if left_motor_config is None:
-            print("[ERROR] Follower arm 'left' configuration not found.")
-            return
-        if right_motor_config is None:
-            print("[ERROR] Follower arm 'right' configuration not found.")
-            return
-
-        left_motors_bus = FeetechMotorsBus(left_motor_config)
-        right_motors_bus = FeetechMotorsBus(right_motor_config)
-        left_motors_bus.connect()
-        right_motors_bus.connect()
-
-        print("here 8")
-
-        # Calibrate the follower arm.
-        # calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
-
-        print("here 9")
-
-        # Define the expected arm motor IDs.
-        arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
-
-        # Disable torque for each arm motor.
-        for motor in arm_motor_ids:
-            left_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
-            right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
-
-        print("here 10")
-
-        # Set up ZeroMQ sockets.
-        context, cmd_socket, video_socket = setup_zmq_sockets(robot_config)
-
-        # Start the camera capture thread.
-        latest_images_dict = {}
-        images_lock = threading.Lock()
-        stop_event = threading.Event()
-        cam_thread = threading.Thread(
-            target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
-        )
-        cam_thread.start()
-
-        print("here 11")
-
-        last_cmd_time = time.time()
-        print("SourcceyVBeta robot server started. Waiting for commands...")
-    except Exception as e:
-        print(f"[ERROR] Error starting SourcceyVBeta robot server: {e}")
+    # Initialize the motors bus using the follower arm configuration.
+    left_motor_config = robot_config.follower_arms.get("left")
+    right_motor_config = robot_config.follower_arms.get("right")
+    if left_motor_config is None:
+        print("[ERROR] Follower arm 'left' configuration not found.")
         return
+    if right_motor_config is None:
+        print("[ERROR] Follower arm 'right' configuration not found.")
+        return
+
+    left_motors_bus = FeetechMotorsBus(left_motor_config)
+    right_motors_bus = FeetechMotorsBus(right_motor_config)
+    left_motors_bus.connect()
+    right_motors_bus.connect()
+
+    print("here 8")
+
+    # Calibrate the follower arm.
+    # calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
+
+    print("here 9")
+
+    robot = SourcceyV1Beta(left_motors_bus, right_motors_bus)
+
+    # Define the expected arm motor IDs.
+    arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+
+    # Disable torque for each arm motor.
+    for motor in arm_motor_ids:
+        left_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+        right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+
+    print("here 10")
+
+    # Set up ZeroMQ sockets.
+    context, cmd_socket, video_socket = setup_zmq_sockets(robot_config)
+
+    # Start the camera capture thread.
+    latest_images_dict = {}
+    images_lock = threading.Lock()
+    stop_event = threading.Event()
+    cam_thread = threading.Thread(
+        target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
+    )
+    cam_thread.start()
+
+    print("here 11")
+
+    last_cmd_time = time.time()
+    print("SourcceyV1Beta robot server started. Waiting for commands...")
 
     try:
         while True:
@@ -192,9 +190,9 @@ def run_sourccey_v1beta(robot_config):
                         arm_positions = data["arm_positions"]
                         if not isinstance(arm_positions, list):
                             print(f"[ERROR] Invalid arm_positions: {arm_positions}")
-                        elif len(arm_positions) < len(arm_motor_ids) * 2:
+                        elif len(arm_positions) < len(arm_motor_ids):
                             print(
-                                f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids) * 2}"
+                                f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids)}"
                             )
                         else:
                             # The first 6 positions are for right follower arm
@@ -208,18 +206,41 @@ def run_sourccey_v1beta(robot_config):
                             for motor, pos in zip(arm_motor_ids, left_arm_positions, strict=False):
                                 left_motors_bus.write("Goal_Position", pos, motor)
 
+                    # Process wheel (base) commands.
+                    if "raw_velocity" in data:
+                        raw_command = data["raw_velocity"]
+                        # Expect keys: "back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel".
+                        command_speeds = [
+                            int(raw_command.get("back_left_wheel", 0)),
+                            int(raw_command.get("back_right_wheel", 0)),
+                            int(raw_command.get("front_left_wheel", 0)),
+                            int(raw_command.get("front_right_wheel", 0)),
+                        ]
+                        robot.set_velocity(command_speeds)
+                        last_cmd_time = time.time()
                 except Exception as e:
                     print(f"[ERROR] Parsing message failed: {e}")
 
+            # Watchdog: stop the robot if no command is received for over 0.5 seconds.
+            now = time.time()
+            if now - last_cmd_time > 0.5:
+                robot.stop()
+                last_cmd_time = now
+
+            # Read current wheel speeds from the robot.
+            current_velocity = robot.read_velocity()
+
             # Read the follower arm state from the motors bus.
-            # follower_arm_state = []
-            # for motor in arm_motor_ids:
-            #     try:
-            #         pos = left_motors_bus.read("Present_Position", motor)
-            #         # Convert the position to a float (or use as is if already numeric).
-            #         follower_arm_state.append(float(pos) if not isinstance(pos, (int, float)) else pos)
-            #     except Exception as e:
-            #         print(f"[ERROR] Reading motor {motor} failed: {e}")
+            follower_arm_state = []
+            for motor in arm_motor_ids:
+                try:
+                    left_pos = left_motors_bus.read("Present_Position", motor)
+                    right_pos = right_motors_bus.read("Present_Position", motor)
+                    # Convert the position to a float (or use as is if already numeric).
+                    follower_arm_state.append(float(left_pos) if not isinstance(left_pos, (int, float)) else left_pos)
+                    follower_arm_state.append(float(right_pos) if not isinstance(right_pos, (int, float)) else right_pos)
+                except Exception as e:
+                    print(f"[ERROR] Reading motor {motor} failed: {e}")
 
             # Get the latest camera images.
             with images_lock:
@@ -228,7 +249,8 @@ def run_sourccey_v1beta(robot_config):
             # Build the observation dictionary.
             observation = {
                 "images": images_dict_copy,
-                # "follower_arm_state": follower_arm_state,
+                "present_speed": current_velocity,
+                "follower_arm_state": follower_arm_state,
             }
             # Send the observation over the video socket.
             video_socket.send_string(json.dumps(observation))
@@ -239,10 +261,11 @@ def run_sourccey_v1beta(robot_config):
                 max(0.033 - elapsed, 0)
             )  # If robot jitters increase the sleep and monitor cpu load with `top` in cmd
     except KeyboardInterrupt:
-        print("Shutting down SourcceyVBeta server.")
+        print("Shutting down SourcceyV1Beta server.")
     finally:
         stop_event.set()
         cam_thread.join()
+        robot.stop()
         left_motors_bus.disconnect()
         right_motors_bus.disconnect()
         cmd_socket.close()

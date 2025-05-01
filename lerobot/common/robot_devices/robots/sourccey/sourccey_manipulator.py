@@ -325,39 +325,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         return frames, present_speed, remote_arm_state_tensor
 
-    def teleop_step(
-        self, record_data: bool = False
-    ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
-        if not self.is_connected:
-            raise RobotDeviceNotConnectedError("SourcceyVBetaManipulator is not connected. Run `connect()` first.")
-
-        # Prepare to assign the position of the leader to the follower
-        arm_positions = []
-        for name in self.leader_arms:
-            pos = self.leader_arms[name].read("Present_Position")
-            pos_tensor = torch.from_numpy(pos).float()
-            arm_positions.extend(pos_tensor.tolist())
-
-        # Ensure we have 12 values for the arm positions
-        if len(arm_positions) < 12:
-            # Pad with zeros if we don't have enough values
-            arm_positions = arm_positions + [0] * (12 - len(arm_positions))
-
-        # Create and send the message with only arm positions
-        message = {"arm_positions": arm_positions}
-        self.cmd_socket.send_string(json.dumps(message))
-
-        if not record_data:
-            return
-
-        obs_dict = self.capture_observation()
-        action_tensor = torch.tensor(arm_positions, dtype=torch.float32)
-        action_dict = {"action": action_tensor}
-
-        return obs_dict, action_dict
-
-
-class SourcceyVBeta:
+class SourcceyV1Beta:
     def __init__(self, left_motor_bus, right_motor_bus):
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
