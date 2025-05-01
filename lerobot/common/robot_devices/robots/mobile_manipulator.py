@@ -406,11 +406,11 @@ class MobileManipulator:
         theta_speed = speed_setting["theta"]  # e.g. 30, 60, or 90
 
         # Prepare to assign the position of the leader to the follower
-        # arm_positions = []
-        # for name in self.leader_arms:
-        #     pos = self.leader_arms[name].read("Present_Position")
-        #     pos_tensor = torch.from_numpy(pos).float()
-        #     arm_positions.extend(pos_tensor.tolist())
+        arm_positions = []
+        for name in self.leader_arms:
+            pos = self.leader_arms[name].read("Present_Position")
+            pos_tensor = torch.from_numpy(pos).float()
+            arm_positions.extend(pos_tensor.tolist())
 
         y_cmd = 0.0  # m/s forward/backward
         x_cmd = 0.0  # m/s lateral
@@ -430,7 +430,7 @@ class MobileManipulator:
 
         wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
 
-        message = {"raw_velocity": wheel_commands } #"arm_positions": arm_positions}
+        message = {"raw_velocity": wheel_commands, "arm_positions": arm_positions}
         self.cmd_socket.send_string(json.dumps(message))
 
         if not record_data:
@@ -438,7 +438,7 @@ class MobileManipulator:
 
         obs_dict = self.capture_observation()
 
-        # arm_state_tensor = torch.tensor(arm_positions, dtype=torch.float32)
+        arm_state_tensor = torch.tensor(arm_positions, dtype=torch.float32)
 
         wheel_velocity_tuple = self.wheel_raw_to_body(wheel_commands)
         wheel_velocity_mm = (
@@ -447,7 +447,7 @@ class MobileManipulator:
             wheel_velocity_tuple[2],
         )
         wheel_tensor = torch.tensor(wheel_velocity_mm, dtype=torch.float32)
-        action_tensor = torch.cat([wheel_tensor]) #torch.cat([arm_state_tensor, wheel_tensor])
+        action_tensor = torch.cat([arm_state_tensor, wheel_tensor])
         action_dict = {"action": action_tensor}
 
         return obs_dict, action_dict
