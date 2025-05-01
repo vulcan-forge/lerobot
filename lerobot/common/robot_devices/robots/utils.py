@@ -81,9 +81,9 @@ def make_robot_from_config(config: RobotConfig):
 
         return MobileManipulator(config)
     elif isinstance(config, SourcceyV1BetaRobotConfig):
-        from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyVBetaManipulator
+        from lerobot.common.robot_devices.robots.sourccey.sourccey_manipulator import SourcceyV1BetaManipulator
 
-        return SourcceyVBetaManipulator(config)
+        return SourcceyV1BetaManipulator(config)
     # else:
     #     from lerobot.common.robot_devices.robots.stretch import StretchRobot
 

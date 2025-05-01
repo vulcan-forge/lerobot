@@ -10,6 +10,7 @@ import cv2
 
 from lerobot.common.robot_devices.robots.configs import SourcceyV1BetaRobotConfig
 from lerobot.common.robot_devices.robots.mobile_manipulator import MobileManipulator
+from lerobot.common.robot_devices.utils import RobotDeviceNotConnectedError
 
 
 PYNPUT_AVAILABLE = True
@@ -29,7 +30,7 @@ except Exception as e:
     print(f"Could not import pynput: {e}")
 
 
-class SourcceyVBetaManipulator(MobileManipulator):
+class SourcceyV1BetaManipulator(MobileManipulator):
     def __init__(self, config: SourcceyV1BetaRobotConfig):
         """
         Initializes the SourcceyVBetaManipulator with Feetech motors bus.
@@ -49,13 +50,13 @@ class SourcceyVBetaManipulator(MobileManipulator):
             "wrist_roll",
             "gripper",
         ]
-        
+
         # Combine all motor names for both arms
         combined_names = (
             [f"left_{motor}" for motor in arm_motor_names] +  # Left arm motors
             [f"right_{motor}" for motor in arm_motor_names]  # Right arm motors
         )
-        
+
         return {
             "action": {
                 "dtype": "float32",
@@ -69,65 +70,44 @@ class SourcceyVBetaManipulator(MobileManipulator):
             },
         }
 
-    def send_action(self, action: torch.Tensor, control_type: str = None) -> torch.Tensor:
+    def send_action(self, action: torch.Tensor) -> torch.Tensor:
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
 
-        # For teleoperation, only handle arm motors
-        if control_type == "teleoperate":
-            # Ensure the action tensor has at least 12 elements (6 for each arm)
-            if action.numel() < 12:
-                # Pad with zeros if there are not enough elements
-                padded = torch.zeros(12, dtype=action.dtype)
-                padded[:action.numel()] = action
-                action = padded
+        # For all other control types, handle all motors
+        # Ensure the action tensor has at least 17 elements:
+        #   - First 6: left arm positions
+        #   - Next 6: right arm positions
+        #   - Next 4: wheel commands
+        #   - Last 1: turn table command
+        if action.numel() < 17:
+            padded = torch.zeros(17, dtype=action.dtype)
+            padded[:action.numel()] = action
+            action = padded
 
-            # Extract arm actions
-            left_arm_actions = action[:6].flatten()
-            right_arm_actions = action[6:12].flatten()
+        # Extract arm and base actions
+        left_arm_actions = action[:6].flatten()
+        right_arm_actions = action[6:12].flatten()
+        wheel_actions = action[12:16].flatten()
+        turn_table_action = action[16].flatten()
 
-            # Combine arm positions for both arms
-            arm_positions = left_arm_actions.tolist() + right_arm_actions.tolist()
+        # Convert wheel actions to wheel commands
+        wheel_commands = {
+            "back_left_wheel": int(wheel_actions[0].item()),
+            "back_right_wheel": int(wheel_actions[1].item()),
+            "front_left_wheel": int(wheel_actions[2].item()),
+            "front_right_wheel": int(wheel_actions[3].item()),
+        }
 
-            # Create and send the message with only arm positions
-            message = {
-                "arm_positions": arm_positions,
-            }
-        else:
-            # For all other control types, handle all motors
-            # Ensure the action tensor has at least 17 elements:
-            #   - First 6: left arm positions
-            #   - Next 6: right arm positions
-            #   - Next 4: wheel commands
-            #   - Last 1: turn table command
-            if action.numel() < 17:
-                padded = torch.zeros(17, dtype=action.dtype)
-                padded[:action.numel()] = action
-                action = padded
+        # Combine arm positions for both arms
+        arm_positions = left_arm_actions.tolist() + right_arm_actions.tolist()
 
-            # Extract arm and base actions
-            left_arm_actions = action[:6].flatten()
-            right_arm_actions = action[6:12].flatten()
-            wheel_actions = action[12:16].flatten()
-            turn_table_action = action[16].flatten()
-
-            # Convert wheel actions to wheel commands
-            wheel_commands = {
-                "back_left_wheel": int(wheel_actions[0].item()),
-                "back_right_wheel": int(wheel_actions[1].item()),
-                "front_left_wheel": int(wheel_actions[2].item()),
-                "front_right_wheel": int(wheel_actions[3].item()),
-            }
-
-            # Combine arm positions for both arms
-            arm_positions = left_arm_actions.tolist() + right_arm_actions.tolist()
-
-            # Create and send the message with all commands
-            message = {
-                "raw_velocity": wheel_commands,
-                "arm_positions": arm_positions,
-                "turn_table": int(turn_table_action.item()),
-            }
+        # Create and send the message with all commands
+        message = {
+            "raw_velocity": wheel_commands,
+            "arm_positions": arm_positions,
+            "turn_table": int(turn_table_action.item()),
+        }
 
         self.cmd_socket.send_string(json.dumps(message))
         return action
@@ -348,7 +328,6 @@ class SourcceyVBetaManipulator(MobileManipulator):
     def teleop_step(
         self, record_data: bool = False
     ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
-
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("SourcceyVBetaManipulator is not connected. Run `connect()` first.")
 
