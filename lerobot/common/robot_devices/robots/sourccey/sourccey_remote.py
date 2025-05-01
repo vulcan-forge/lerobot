@@ -141,7 +141,7 @@ def run_sourccey_v1beta(robot_config):
         print("here 8")
 
         # Calibrate the follower arm.
-        calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
+        # calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
 
         print("here 9")
 
@@ -212,14 +212,14 @@ def run_sourccey_v1beta(robot_config):
                     print(f"[ERROR] Parsing message failed: {e}")
 
             # Read the follower arm state from the motors bus.
-            follower_arm_state = []
-            for motor in arm_motor_ids:
-                try:
-                    pos = left_motors_bus.read("Present_Position", motor)
-                    # Convert the position to a float (or use as is if already numeric).
-                    follower_arm_state.append(float(pos) if not isinstance(pos, (int, float)) else pos)
-                except Exception as e:
-                    print(f"[ERROR] Reading motor {motor} failed: {e}")
+            # follower_arm_state = []
+            # for motor in arm_motor_ids:
+            #     try:
+            #         pos = left_motors_bus.read("Present_Position", motor)
+            #         # Convert the position to a float (or use as is if already numeric).
+            #         follower_arm_state.append(float(pos) if not isinstance(pos, (int, float)) else pos)
+            #     except Exception as e:
+            #         print(f"[ERROR] Reading motor {motor} failed: {e}")
 
             # Get the latest camera images.
             with images_lock:
@@ -228,7 +228,7 @@ def run_sourccey_v1beta(robot_config):
             # Build the observation dictionary.
             observation = {
                 "images": images_dict_copy,
-                "follower_arm_state": follower_arm_state,
+                # "follower_arm_state": follower_arm_state,
             }
             # Send the observation over the video socket.
             video_socket.send_string(json.dumps(observation))
