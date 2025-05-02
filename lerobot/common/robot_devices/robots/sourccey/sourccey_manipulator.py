@@ -186,7 +186,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
 
         message = {"raw_velocity": wheel_commands, "left_arm_positions": left_arm_positions, "right_arm_positions": right_arm_positions}
-        print('message', message)
         self.cmd_socket.send_string(json.dumps(message))
 
         if not record_data:
