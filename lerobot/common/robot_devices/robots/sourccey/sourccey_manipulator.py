@@ -162,6 +162,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         message = {"arm_positions": arm_positions}
         self.cmd_socket.send_string(json.dumps(message))
 
+        return {}, {}
+
     def send_action(self, action: torch.Tensor) -> torch.Tensor:
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
