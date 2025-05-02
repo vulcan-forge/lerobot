@@ -162,10 +162,10 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         left_pos_tensor = torch.from_numpy(left_pos).float()
         left_arm_positions = left_pos_tensor.tolist()
 
-        # right_arm_positions = []
-        # right_pos = self.leader_arms["right"].read("Present_Position")
-        # right_pos_tensor = torch.from_numpy(right_pos).float()
-        # right_arm_positions = right_pos_tensor.tolist()
+        right_arm_positions = []
+        right_pos = self.leader_arms["right"].read("Present_Position")
+        right_pos_tensor = torch.from_numpy(right_pos).float()
+        right_arm_positions = right_pos_tensor.tolist()
 
         y_cmd = 0.0  # m/s forward/backward
         x_cmd = 0.0  # m/s lateral
@@ -185,7 +185,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
 
-        message = {"raw_velocity": wheel_commands, "left_arm_positions": left_arm_positions,  "turn_table": 0}
+        message = {"raw_velocity": wheel_commands, "left_arm_positions": left_arm_positions, "right_arm_positions": right_arm_positions}
         self.cmd_socket.send_string(json.dumps(message))
 
         if not record_data:
@@ -194,7 +194,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         obs_dict = self.capture_observation()
 
         left_arm_state_tensor = torch.tensor(left_arm_positions, dtype=torch.float32)
-        # right_arm_state_tensor = torch.tensor(right_arm_positions, dtype=torch.float32)
+        right_arm_state_tensor = torch.tensor(right_arm_positions, dtype=torch.float32)
 
         wheel_velocity_tuple = self.wheel_raw_to_body(wheel_commands)
         wheel_velocity_mm = (
@@ -203,7 +203,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
             wheel_velocity_tuple[2],
         )
         wheel_tensor = torch.tensor(wheel_velocity_mm, dtype=torch.float32)
-        action_tensor = torch.cat([left_arm_state_tensor, wheel_tensor])
+        action_tensor = torch.cat([left_arm_state_tensor, right_arm_state_tensor, wheel_tensor])
         action_dict = {"action": action_tensor}
 
         return obs_dict, action_dict
@@ -241,8 +241,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         message = {
             "raw_velocity": wheel_commands,
             "left_arm_positions": left_arm_actions.tolist(),
-            # "right_arm_positions": right_arm_actions.tolist(),
-            "turn_table": int(turn_table_action.item()),
+            "right_arm_positions": right_arm_actions.tolist(),
+            "turn_table_positions": turn_table_action.tolist(),
         }
 
         self.cmd_socket.send_string(json.dumps(message))
@@ -387,14 +387,13 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         return obs_dict
 
 class SourcceyV1Beta:
-    def __init__(self, left_motor_bus, right_motor_bus = None):
+    def __init__(self, left_motor_bus, right_motor_bus):
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
         """
         self.left_motor_bus = left_motor_bus
-        return
+        self.right_motor_bus = right_motor_bus
 
-        # self.right_motor_bus = right_motor_bus
         self.wheel_motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
         self.turn_table_motor_ids = ["turn_table"]
 
@@ -403,13 +402,7 @@ class SourcceyV1Beta:
         self.left_motor_bus.write("Mode", [1, 1, 1, 1], self.wheel_motor_ids)
         self.left_motor_bus.write("Lock", 1)
 
-        # Initialize turn table motor in velocity mode.
-        # self.right_motor_bus.write("Lock", 0)
-        # self.right_motor_bus.write("Mode", [1], self.turn_table_motor_ids)
-        # self.right_motor_bus.write("Lock", 1)
-
     def read_velocity(self):
-        return {}
         """
         Reads the raw speeds for all wheels. Returns a dictionary with motor names:
         """
@@ -422,19 +415,17 @@ class SourcceyV1Beta:
         }
 
     def set_velocity(self, command_speeds):
-        return
         """
         Sends raw velocity commands (16-bit encoded values) directly to the motor bus.
         The order of speeds must correspond to self.motor_ids.
         """
         self.left_motor_bus.write("Goal_Speed", command_speeds, self.wheel_motor_ids)
         # Set turn table speed to the last element of command_speeds
-        # if len(command_speeds) > 4:
-        #     self.right_motor_bus.write("Goal_Speed", [command_speeds[4]], self.turn_table_motor_ids)
+        if len(command_speeds) > 4:
+            self.right_motor_bus.write("Goal_Speed", [command_speeds[4]], self.turn_table_motor_ids)
 
     def stop(self):
-        return
         """Stops the robot by setting all motor speeds to zero."""
         self.left_motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.wheel_motor_ids)
-        # self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
+        self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
         print("Motors stopped.")

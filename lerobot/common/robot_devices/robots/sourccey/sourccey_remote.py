@@ -53,9 +53,9 @@ def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
     calib_dir = Path(calib_dir_str)
     calib_dir.mkdir(parents=True, exist_ok=True)
     calib_left_file = calib_dir / "left_follower.json"
-    # calib_right_file = calib_dir / "right_follower.json"
+    calib_right_file = calib_dir / "right_follower.json"
     print(f"[INFO] Calibration file: {calib_left_file}")
-    # print(f"[INFO] Calibration file: {calib_right_file}")
+    print(f"[INFO] Calibration file: {calib_right_file}")
     try:
         from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
     except ImportError:
@@ -79,22 +79,22 @@ def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
     except Exception as e:
         print(f"[WARNING] Could not apply calibration: {e}")
 
-    # if calib_right_file.exists():
-    #     with open(calib_right_file) as f:
-    #         calibration = json.load(f)
-    #     print(f"[INFO] Loaded calibration from {calib_right_file}")
-    # else:
-    #     print("[INFO] Calibration file not found. Running manual calibration...")
-    #     calibration = run_arm_manual_calibration(right_motors_bus, "sourccey_v1beta", "right_follower", "follower")
-    #     print(f"[INFO] Calibration complete. Saving to {calib_right_file}")
-    #     with open(calib_right_file, "w") as f:
-    #         json.dump(calibration, f)
+    if calib_right_file.exists():
+        with open(calib_right_file) as f:
+            calibration = json.load(f)
+        print(f"[INFO] Loaded calibration from {calib_right_file}")
+    else:
+        print("[INFO] Calibration file not found. Running manual calibration...")
+        calibration = run_arm_manual_calibration(right_motors_bus, "sourccey_v1beta", "right_follower", "follower")
+        print(f"[INFO] Calibration complete. Saving to {calib_right_file}")
+        with open(calib_right_file, "w") as f:
+            json.dump(calibration, f)
 
-    # try:
-    #     right_motors_bus.set_calibration(calibration)
-    #     print("[INFO] Applied calibration for right follower arm.")
-    # except Exception as e:
-    #     print(f"[WARNING] Could not apply calibration: {e}")
+    try:
+        right_motors_bus.set_calibration(calibration)
+        print("[INFO] Applied calibration for right follower arm.")
+    except Exception as e:
+        print(f"[WARNING] Could not apply calibration: {e}")
 
 
 def run_sourccey_v1beta(robot_config):
@@ -124,27 +124,27 @@ def run_sourccey_v1beta(robot_config):
 
     # Initialize the motors bus using the follower arm configuration.
     left_motor_config = robot_config.follower_arms.get("left")
-    # right_motor_config = robot_config.follower_arms.get("right")
+    right_motor_config = robot_config.follower_arms.get("right")
     if left_motor_config is None:
         print("[ERROR] Follower arm 'left' configuration not found.")
         return
-    # if right_motor_config is None:
-    #     print("[ERROR] Follower arm 'right' configuration not found.")
-    #     return
+    if right_motor_config is None:
+        print("[ERROR] Follower arm 'right' configuration not found.")
+        return
 
     left_motors_bus = FeetechMotorsBus(left_motor_config)
-    # right_motors_bus = FeetechMotorsBus(right_motor_config)
+    right_motors_bus = FeetechMotorsBus(right_motor_config)
     left_motors_bus.connect()
-    # right_motors_bus.connect()
+    right_motors_bus.connect()
 
     print("here 8")
 
     # Calibrate the follower arm.
-    calibrate_follower_arms(left_motors_bus, None, robot_config.calibration_dir) #right_motors_bus
+    calibrate_follower_arms(left_motors_bus, right_motors_bus, robot_config.calibration_dir)
 
     print("here 9")
 
-    robot = SourcceyV1Beta(left_motors_bus, None) #right_motors_bus)
+    robot = SourcceyV1Beta(left_motors_bus, right_motors_bus)
 
     # Define the expected arm motor IDs.
     arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -152,7 +152,7 @@ def run_sourccey_v1beta(robot_config):
     # Disable torque for each arm motor.
     for motor in arm_motor_ids:
         left_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
-        #right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+        right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
 
     print("here 10")
 
@@ -186,26 +186,31 @@ def run_sourccey_v1beta(robot_config):
                 try:
                     data = json.loads(msg)
                     # Process arm position commands.
-                    if "arm_positions" in data:
-                        arm_positions = data["arm_positions"]
-                        if not isinstance(arm_positions, list):
-                            print(f"[ERROR] Invalid arm_positions: {arm_positions}")
-                        elif len(arm_positions) < len(arm_motor_ids):
+                    if "left_arm_positions" in data:
+                        left_arm_positions = data["left_arm_positions"]
+                        if not isinstance(left_arm_positions, list):
+                            print(f"[ERROR] Invalid left_arm_positions: {left_arm_positions}")
+                        elif len(left_arm_positions) < len(arm_motor_ids):
                             print(
-                                f"[WARNING] Received {len(arm_positions)} arm positions, expected {len(arm_motor_ids)}"
+                                f"[WARNING] Received {len(left_arm_positions)} left_arm_positions, expected {len(arm_motor_ids)}"
                             )
                         else:
-                            # The first 6 positions are for right follower arm
-                            # The last 6 positions are for left follower arm
-                            # right_arm_positions = arm_positions[:6]
-                            # left_arm_positions = arm_positions[6:12]
-                            left_arm_positions = arm_positions[:6]
-
-                            # for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
-                            #     right_motors_bus.write("Goal_Position", pos, motor)
-
+                            left_arm_positions = left_arm_positions[:6]
                             for motor, pos in zip(arm_motor_ids, left_arm_positions, strict=False):
                                 left_motors_bus.write("Goal_Position", pos, motor)
+
+                    if "right_arm_positions" in data:
+                        right_arm_positions = data["right_arm_positions"]
+                        if not isinstance(right_arm_positions, list):
+                            print(f"[ERROR] Invalid right_arm_positions: {right_arm_positions}")
+                        elif len(right_arm_positions) < len(arm_motor_ids):
+                            print(
+                                f"[WARNING] Received {len(right_arm_positions)} right_arm_positions, expected {len(arm_motor_ids)}"
+                            )
+                        else:
+                            right_arm_positions = right_arm_positions[:6]
+                            for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
+                                right_motors_bus.write("Goal_Position", pos, motor)
 
                     # Process wheel (base) commands.
                     if "raw_velocity" in data:
@@ -232,14 +237,15 @@ def run_sourccey_v1beta(robot_config):
             current_velocity = robot.read_velocity()
 
             # Read the follower arm state from the motors bus.
-            follower_arm_state = []
+            left_arm_state = []
+            right_arm_state = []
             for motor in arm_motor_ids:
                 try:
                     left_pos = left_motors_bus.read("Present_Position", motor)
-                    # right_pos = right_motors_bus.read("Present_Position", motor)
+                    right_pos = right_motors_bus.read("Present_Position", motor)
                     # Convert the position to a float (or use as is if already numeric).
-                    follower_arm_state.append(float(left_pos) if not isinstance(left_pos, (int, float)) else left_pos)
-                    # follower_arm_state.append(float(right_pos) if not isinstance(right_pos, (int, float)) else right_pos)
+                    left_arm_state.append(float(left_pos) if not isinstance(left_pos, (int, float)) else left_pos)
+                    right_arm_state.append(float(right_pos) if not isinstance(right_pos, (int, float)) else right_pos)
                 except Exception as e:
                     print(f"[ERROR] Reading motor {motor} failed: {e}")
 
@@ -251,7 +257,8 @@ def run_sourccey_v1beta(robot_config):
             observation = {
                 "images": images_dict_copy,
                 "present_speed": current_velocity,
-                "follower_arm_state": follower_arm_state,
+                "left_arm_state": left_arm_state,
+                "right_arm_state": right_arm_state,
             }
             # Send the observation over the video socket.
             video_socket.send_string(json.dumps(observation))
@@ -268,7 +275,7 @@ def run_sourccey_v1beta(robot_config):
         cam_thread.join()
         robot.stop()
         left_motors_bus.disconnect()
-        # right_motors_bus.disconnect()
+        right_motors_bus.disconnect()
         cmd_socket.close()
         video_socket.close()
         context.term()
