@@ -364,11 +364,11 @@ class SourcceyV1Beta:
         """
         self.left_motor_bus.write("Goal_Speed", command_speeds, self.wheel_motor_ids)
         # Set turn table speed to the last element of command_speeds
-        if len(command_speeds) > 4:
-            self.right_motor_bus.write("Goal_Speed", [command_speeds[4]], self.turn_table_motor_ids)
+        # if len(command_speeds) > 4:
+        #     self.right_motor_bus.write("Goal_Speed", [command_speeds[4]], self.turn_table_motor_ids)
 
     def stop(self):
         """Stops the robot by setting all motor speeds to zero."""
         self.left_motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.wheel_motor_ids)
-        self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
+        # self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
         print("Motors stopped.")
