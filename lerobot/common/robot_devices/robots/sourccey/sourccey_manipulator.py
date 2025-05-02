@@ -326,12 +326,12 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         return obs_dict
 
 class SourcceyV1Beta:
-    def __init__(self, left_motor_bus, right_motor_bus):
+    def __init__(self, left_motor_bus, right_motor_bus = None):
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
         """
         self.left_motor_bus = left_motor_bus
-        self.right_motor_bus = right_motor_bus
+        # self.right_motor_bus = right_motor_bus
         self.wheel_motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
         self.turn_table_motor_ids = ["turn_table"]
 
@@ -341,9 +341,9 @@ class SourcceyV1Beta:
         self.left_motor_bus.write("Lock", 1)
 
         # Initialize turn table motor in velocity mode.
-        self.right_motor_bus.write("Lock", 0)
-        self.right_motor_bus.write("Mode", [1], self.turn_table_motor_ids)
-        self.right_motor_bus.write("Lock", 1)
+        # self.right_motor_bus.write("Lock", 0)
+        # self.right_motor_bus.write("Mode", [1], self.turn_table_motor_ids)
+        # self.right_motor_bus.write("Lock", 1)
 
     def read_velocity(self):
         """

@@ -124,18 +124,18 @@ def run_sourccey_v1beta(robot_config):
 
     # Initialize the motors bus using the follower arm configuration.
     left_motor_config = robot_config.follower_arms.get("left")
-    right_motor_config = robot_config.follower_arms.get("right")
+    # right_motor_config = robot_config.follower_arms.get("right")
     if left_motor_config is None:
         print("[ERROR] Follower arm 'left' configuration not found.")
         return
-    if right_motor_config is None:
-        print("[ERROR] Follower arm 'right' configuration not found.")
-        return
+    # if right_motor_config is None:
+    #     print("[ERROR] Follower arm 'right' configuration not found.")
+    #     return
 
     left_motors_bus = FeetechMotorsBus(left_motor_config)
-    right_motors_bus = FeetechMotorsBus(right_motor_config)
+    # right_motors_bus = FeetechMotorsBus(right_motor_config)
     left_motors_bus.connect()
-    right_motors_bus.connect()
+    # right_motors_bus.connect()
 
     print("here 8")
 
@@ -144,7 +144,7 @@ def run_sourccey_v1beta(robot_config):
 
     print("here 9")
 
-    robot = SourcceyV1Beta(left_motors_bus, right_motors_bus)
+    robot = SourcceyV1Beta(left_motors_bus, None) #right_motors_bus)
 
     # Define the expected arm motor IDs.
     arm_motor_ids = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
@@ -152,7 +152,7 @@ def run_sourccey_v1beta(robot_config):
     # Disable torque for each arm motor.
     for motor in arm_motor_ids:
         left_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
-        right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
+        #right_motors_bus.write("Torque_Enable", TorqueMode.DISABLED.value, motor)
 
     print("here 10")
 
@@ -197,11 +197,12 @@ def run_sourccey_v1beta(robot_config):
                         else:
                             # The first 6 positions are for right follower arm
                             # The last 6 positions are for left follower arm
-                            right_arm_positions = arm_positions[:6]
-                            left_arm_positions = arm_positions[6:12]
+                            # right_arm_positions = arm_positions[:6]
+                            # left_arm_positions = arm_positions[6:12]
+                            left_arm_positions = arm_positions[:6]
 
-                            for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
-                                right_motors_bus.write("Goal_Position", pos, motor)
+                            # for motor, pos in zip(arm_motor_ids, right_arm_positions, strict=False):
+                            #     right_motors_bus.write("Goal_Position", pos, motor)
 
                             for motor, pos in zip(arm_motor_ids, left_arm_positions, strict=False):
                                 left_motors_bus.write("Goal_Position", pos, motor)
@@ -235,10 +236,10 @@ def run_sourccey_v1beta(robot_config):
             for motor in arm_motor_ids:
                 try:
                     left_pos = left_motors_bus.read("Present_Position", motor)
-                    right_pos = right_motors_bus.read("Present_Position", motor)
+                    # right_pos = right_motors_bus.read("Present_Position", motor)
                     # Convert the position to a float (or use as is if already numeric).
                     follower_arm_state.append(float(left_pos) if not isinstance(left_pos, (int, float)) else left_pos)
-                    follower_arm_state.append(float(right_pos) if not isinstance(right_pos, (int, float)) else right_pos)
+                    # follower_arm_state.append(float(right_pos) if not isinstance(right_pos, (int, float)) else right_pos)
                 except Exception as e:
                     print(f"[ERROR] Reading motor {motor} failed: {e}")
 
@@ -267,7 +268,7 @@ def run_sourccey_v1beta(robot_config):
         cam_thread.join()
         robot.stop()
         left_motors_bus.disconnect()
-        right_motors_bus.disconnect()
+        # right_motors_bus.disconnect()
         cmd_socket.close()
         video_socket.close()
         context.term()
