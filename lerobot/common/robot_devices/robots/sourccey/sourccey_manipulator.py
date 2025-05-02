@@ -152,21 +152,61 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("MobileManipulator is not connected. Run `connect()` first.")
 
+        speed_setting = self.speed_levels[self.speed_index]
+        xy_speed = speed_setting["xy"]  # e.g. 0.1, 0.25, or 0.4
+        theta_speed = speed_setting["theta"]  # e.g. 30, 60, or 90
+
         # Prepare to assign the position of the leader to the follower
         left_arm_positions = []
         left_pos = self.leader_arms["left"].read("Present_Position")
         left_pos_tensor = torch.from_numpy(left_pos).float()
         left_arm_positions = left_pos_tensor.tolist()
 
-        right_arm_positions = []
-        right_pos = self.leader_arms["right"].read("Present_Position")
-        right_pos_tensor = torch.from_numpy(right_pos).float()
-        right_arm_positions = right_pos_tensor.tolist()
+        # right_arm_positions = []
+        # right_pos = self.leader_arms["right"].read("Present_Position")
+        # right_pos_tensor = torch.from_numpy(right_pos).float()
+        # right_arm_positions = right_pos_tensor.tolist()
 
-        message = {"left_arm_positions": left_arm_positions, "right_arm_positions": right_arm_positions}
+        y_cmd = 0.0  # m/s forward/backward
+        x_cmd = 0.0  # m/s lateral
+        theta_cmd = 0.0  # deg/s rotation
+        if self.pressed_keys["forward"]:
+            y_cmd += xy_speed
+        if self.pressed_keys["backward"]:
+            y_cmd -= xy_speed
+        if self.pressed_keys["left"]:
+            x_cmd += xy_speed
+        if self.pressed_keys["right"]:
+            x_cmd -= xy_speed
+        if self.pressed_keys["rotate_left"]:
+            theta_cmd += theta_speed
+        if self.pressed_keys["rotate_right"]:
+            theta_cmd -= theta_speed
+
+        wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
+
+        message = {"raw_velocity": wheel_commands, "left_arm_positions": left_arm_positions,  "turn_table": 0}
         self.cmd_socket.send_string(json.dumps(message))
 
-        return {}, {}
+        if not record_data:
+            return {}, {}
+
+        obs_dict = self.capture_observation()
+
+        left_arm_state_tensor = torch.tensor(left_arm_positions, dtype=torch.float32)
+        # right_arm_state_tensor = torch.tensor(right_arm_positions, dtype=torch.float32)
+
+        wheel_velocity_tuple = self.wheel_raw_to_body(wheel_commands)
+        wheel_velocity_mm = (
+            wheel_velocity_tuple[0] * 1000.0,
+            wheel_velocity_tuple[1] * 1000.0,
+            wheel_velocity_tuple[2],
+        )
+        wheel_tensor = torch.tensor(wheel_velocity_mm, dtype=torch.float32)
+        action_tensor = torch.cat([left_arm_state_tensor, wheel_tensor])
+        action_dict = {"action": action_tensor}
+
+        return obs_dict, action_dict
 
     def send_action(self, action: torch.Tensor) -> torch.Tensor:
         if not self.is_connected:
@@ -201,7 +241,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         message = {
             "raw_velocity": wheel_commands,
             "left_arm_positions": left_arm_actions.tolist(),
-            "right_arm_positions": right_arm_actions.tolist(),
+            # "right_arm_positions": right_arm_actions.tolist(),
             "turn_table": int(turn_table_action.item()),
         }
 
