@@ -32,6 +32,29 @@ python lerobot/scripts/control_robot.py \
   --control.arms='["left_leader", "right_leader"]'
 ```
 
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=so100 \
+  --robot.cameras='{}' \
+  --control.type=calibrate \
+  --control.arms='["main_follower"]'
+```
+
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=so100 \
+  --robot.cameras='{}' \
+  --control.type=calibrate \
+  --control.arms='["main_leader"]'
+```
+
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=so100 \
+  --control.type=teleoperate \
+  --control.fps=30
+```
+
 --/dev/ttyGS0
 
 ```
