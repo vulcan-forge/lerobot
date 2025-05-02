@@ -344,11 +344,12 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
 class SourcceyV1Beta:
     def __init__(self, left_motor_bus, right_motor_bus = None):
-        return
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
         """
         self.left_motor_bus = left_motor_bus
+        return
+
         # self.right_motor_bus = right_motor_bus
         self.wheel_motor_ids = ["back_left_wheel", "back_right_wheel", "front_left_wheel", "front_right_wheel"]
         self.turn_table_motor_ids = ["turn_table"]
@@ -364,6 +365,7 @@ class SourcceyV1Beta:
         # self.right_motor_bus.write("Lock", 1)
 
     def read_velocity(self):
+        return {}
         """
         Reads the raw speeds for all wheels. Returns a dictionary with motor names:
         """
@@ -376,6 +378,7 @@ class SourcceyV1Beta:
         }
 
     def set_velocity(self, command_speeds):
+        return
         """
         Sends raw velocity commands (16-bit encoded values) directly to the motor bus.
         The order of speeds must correspond to self.motor_ids.
@@ -386,6 +389,7 @@ class SourcceyV1Beta:
         #     self.right_motor_bus.write("Goal_Speed", [command_speeds[4]], self.turn_table_motor_ids)
 
     def stop(self):
+        return
         """Stops the robot by setting all motor speeds to zero."""
         self.left_motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.wheel_motor_ids)
         # self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
