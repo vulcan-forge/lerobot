@@ -344,6 +344,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
 class SourcceyV1Beta:
     def __init__(self, left_motor_bus, right_motor_bus = None):
+        return
         """
         Initializes the SourcceyVBeta with Feetech motors bus.
         """
