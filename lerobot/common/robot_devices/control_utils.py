@@ -272,7 +272,7 @@ def control_loop(
                 dataset.add_frame(frame)
 
             # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
-            if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi")):
+            if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
                 for k, v in action.items():
                     for i, vv in enumerate(v):
                         rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))

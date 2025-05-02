@@ -445,11 +445,7 @@ def control_robot(cfg: ControlPipelineConfig):
             from lerobot.common.robot_devices.robots.sourccey.sourccey_remote import run_sourccey_v1beta
 
             print("here 3")
-
-            try:
-                _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
-            except Exception as e:
-                print(f"Error running rerun SourcceyV1Beta: {e}")
+            _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
 
             print("here 4")
             run_sourccey_v1beta(cfg.robot)

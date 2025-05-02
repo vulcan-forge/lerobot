@@ -145,6 +145,23 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         return frames, present_speed, remote_arm_state_tensor
 
+    def teleop_step(
+        self, record_data: bool = False
+    ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+
+        if not self.is_connected:
+            raise RobotDeviceNotConnectedError("MobileManipulator is not connected. Run `connect()` first.")
+
+        # Prepare to assign the position of the leader to the follower
+        arm_positions = []
+        for name in self.leader_arms:
+            pos = self.leader_arms[name].read("Present_Position")
+            pos_tensor = torch.from_numpy(pos).float()
+            arm_positions.extend(pos_tensor.tolist())
+
+        message = {"arm_positions": arm_positions}
+        self.cmd_socket.send_string(json.dumps(message))
+
     def send_action(self, action: torch.Tensor) -> torch.Tensor:
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
@@ -155,33 +172,33 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         #   - Next 6: right arm positions
         #   - Next 4: wheel commands
         #   - Last 1: turn table command
-        if action.numel() < 17:
-            padded = torch.zeros(17, dtype=action.dtype)
-            padded[:action.numel()] = action
-            action = padded
+        # if action.numel() < 17:
+        #     padded = torch.zeros(17, dtype=action.dtype)
+        #     padded[:action.numel()] = action
+        #     action = padded
 
         # Extract arm and base actions
         left_arm_actions = action[:6].flatten()
-        right_arm_actions = action[6:12].flatten()
-        wheel_actions = action[12:16].flatten()
-        turn_table_action = action[16].flatten()
+        # right_arm_actions = action[6:12].flatten()
+        # wheel_actions = action[12:16].flatten()
+        # turn_table_action = action[16].flatten()
 
         # Convert wheel actions to wheel commands
-        wheel_commands = {
-            "back_left_wheel": int(wheel_actions[0].item()),
-            "back_right_wheel": int(wheel_actions[1].item()),
-            "front_left_wheel": int(wheel_actions[2].item()),
-            "front_right_wheel": int(wheel_actions[3].item()),
-        }
+        # wheel_commands = {
+        #     "back_left_wheel": int(wheel_actions[0].item()),
+        #     "back_right_wheel": int(wheel_actions[1].item()),
+        #     "front_left_wheel": int(wheel_actions[2].item()),
+        #     "front_right_wheel": int(wheel_actions[3].item()),
+        # }
 
         # Combine arm positions for both arms
-        arm_positions = left_arm_actions.tolist() + right_arm_actions.tolist()
+        arm_positions = left_arm_actions.tolist() # + right_arm_actions.tolist()
 
         # Create and send the message with all commands
         message = {
-            "raw_velocity": wheel_commands,
+            #"raw_velocity": wheel_commands,
             "arm_positions": arm_positions,
-            "turn_table": int(turn_table_action.item()),
+            #"turn_table": int(turn_table_action.item()),
         }
 
         self.cmd_socket.send_string(json.dumps(message))
