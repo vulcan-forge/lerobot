@@ -107,7 +107,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         # Decode only the final message
         try:
             observation = json.loads(last_msg)
-            print(f"observation: {observation}")
 
             images_dict = observation.get("images", {})
             new_speed = observation.get("present_speed", {})
@@ -243,7 +242,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         combined_state_tensor = torch.cat((remote_left_arm_state_tensor, remote_right_arm_state_tensor, wheel_state_tensor), dim=0)
 
         obs_dict = {"observation.state": combined_state_tensor}
-        print(f"obs_dict tensor: {obs_dict}")
 
         # Loop over each configured camera
         for cam_name, cam in self.cameras.items():
@@ -252,8 +250,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
                 # Create a black image using the camera's configured width, height, and channels
                 frame = np.zeros((cam.height, cam.width, cam.channels), dtype=np.uint8)
             obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
-
-        print(f"obs_dict images: {obs_dict}")
         return obs_dict
 
     def send_action(self, action: torch.Tensor) -> torch.Tensor:

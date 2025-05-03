@@ -701,12 +701,12 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            # "front_left": OpenCVCameraConfig(
-            #     camera_index="/dev/video1", fps=15, width=640, height=480, rotation=None
-            # ),
-            # "front_right": OpenCVCameraConfig(
-            #     camera_index="/dev/video4", fps=15, width=640, height=480, rotation=None
-            # ),
+            "front_left": OpenCVCameraConfig(
+                camera_index="/dev/video1", fps=15, width=640, height=480, rotation=None
+            ),
+            "front_right": OpenCVCameraConfig(
+                camera_index="/dev/video4", fps=15, width=640, height=480, rotation=None
+            ),
             "wrist_left": OpenCVCameraConfig(
                 camera_index="/dev/video8", fps=15, width=640, height=480, rotation=None
             ),
