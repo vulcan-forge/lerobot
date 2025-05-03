@@ -32,6 +32,17 @@ python lerobot/scripts/control_robot.py \
   --control.resume=true
 ```
 
+```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/sourccey_v1beta_e25_shirt_001 \
+  --policy.type=act \
+  --output_dir=outputs/train/act_sourccey_v1beta_e25_shirt_001 \
+  --job_name=act_sourccey_v1beta_e25_shirt_001 \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=200000
+```
+
 ---
 
 ```bash
