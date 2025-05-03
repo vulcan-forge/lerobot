@@ -102,6 +102,94 @@ class SourcceyV1BetaManipulator(MobileManipulator):
             },
         }
 
+    def on_press(self, key):
+        # Call the parent method first
+        super().on_press(key)
+        # Now handle your extra keys
+        try:
+            if hasattr(key, "char"):
+                # Arm keys (left)
+                if key.char == self.config.teleop_keys["left_arm_forward"]:
+                    self.pressed_keys["left_arm_forward"] = True
+                elif key.char == self.config.teleop_keys["left_arm_backward"]:
+                    self.pressed_keys["left_arm_backward"] = True
+                elif key.char == self.config.teleop_keys["left_arm_left"]:
+                    self.pressed_keys["left_arm_left"] = True
+                elif key.char == self.config.teleop_keys["left_arm_right"]:
+                    self.pressed_keys["left_arm_right"] = True
+                elif key.char == self.config.teleop_keys["left_arm_up"]:
+                    self.pressed_keys["left_arm_up"] = True
+                elif key.char == self.config.teleop_keys["left_arm_down"]:
+                    self.pressed_keys["left_arm_down"] = True
+                elif key.char == self.config.teleop_keys["left_arm_gripper_open"]:
+                    self.pressed_keys["left_arm_gripper_open"] = True
+                elif key.char == self.config.teleop_keys["left_arm_gripper_close"]:
+                    self.pressed_keys["left_arm_gripper_close"] = True
+
+                # Arm keys (right)
+                elif key.char == self.config.teleop_keys["right_arm_forward"]:
+                    self.pressed_keys["right_arm_forward"] = True
+                elif key.char == self.config.teleop_keys["right_arm_backward"]:
+                    self.pressed_keys["right_arm_backward"] = True
+                elif key.char == self.config.teleop_keys["right_arm_left"]:
+                    self.pressed_keys["right_arm_left"] = True
+                elif key.char == self.config.teleop_keys["right_arm_right"]:
+                    self.pressed_keys["right_arm_right"] = True
+                elif key.char == self.config.teleop_keys["right_arm_up"]:
+                    self.pressed_keys["right_arm_up"] = True
+                elif key.char == self.config.teleop_keys["right_arm_down"]:
+                    self.pressed_keys["right_arm_down"] = True
+                elif key.char == self.config.teleop_keys["right_arm_gripper_open"]:
+                    self.pressed_keys["right_arm_gripper_open"] = True
+                elif key.char == self.config.teleop_keys["right_arm_gripper_close"]:
+                    self.pressed_keys["right_arm_gripper_close"] = True
+        except AttributeError:
+            pass
+
+    def on_release(self, key):
+        # Call the parent method first
+        super().on_release(key)
+        # Now handle your extra keys
+        try:
+            if hasattr(key, "char"):
+                # Arm keys (left)
+                if key.char == self.config.teleop_keys["left_arm_forward"]:
+                    self.pressed_keys["left_arm_forward"] = False
+                elif key.char == self.config.teleop_keys["left_arm_backward"]:
+                    self.pressed_keys["left_arm_backward"] = False
+                elif key.char == self.config.teleop_keys["left_arm_left"]:
+                    self.pressed_keys["left_arm_left"] = False
+                elif key.char == self.config.teleop_keys["left_arm_right"]:
+                    self.pressed_keys["left_arm_right"] = False
+                elif key.char == self.config.teleop_keys["left_arm_up"]:
+                    self.pressed_keys["left_arm_up"] = False
+                elif key.char == self.config.teleop_keys["left_arm_down"]:
+                    self.pressed_keys["left_arm_down"] = False
+                elif key.char == self.config.teleop_keys["left_arm_gripper_open"]:
+                    self.pressed_keys["left_arm_gripper_open"] = False
+                elif key.char == self.config.teleop_keys["left_arm_gripper_close"]:
+                    self.pressed_keys["left_arm_gripper_close"] = False
+
+                # Arm keys (right)
+                elif key.char == self.config.teleop_keys["right_arm_forward"]:
+                    self.pressed_keys["right_arm_forward"] = False
+                elif key.char == self.config.teleop_keys["right_arm_backward"]:
+                    self.pressed_keys["right_arm_backward"] = False
+                elif key.char == self.config.teleop_keys["right_arm_left"]:
+                    self.pressed_keys["right_arm_left"] = False
+                elif key.char == self.config.teleop_keys["right_arm_right"]:
+                    self.pressed_keys["right_arm_right"] = False
+                elif key.char == self.config.teleop_keys["right_arm_up"]:
+                    self.pressed_keys["right_arm_up"] = False
+                elif key.char == self.config.teleop_keys["right_arm_down"]:
+                    self.pressed_keys["right_arm_down"] = False
+                elif key.char == self.config.teleop_keys["right_arm_gripper_open"]:
+                    self.pressed_keys["right_arm_gripper_open"] = False
+                elif key.char == self.config.teleop_keys["right_arm_gripper_close"]:
+                    self.pressed_keys["right_arm_gripper_close"] = False
+        except AttributeError:
+            pass
+
     def _get_data(self):
         """
         Polls the video socket for up to 15 ms. If data arrives, decode only
