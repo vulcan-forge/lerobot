@@ -42,6 +42,8 @@ class TeleoperateControlConfig(ControlConfig):
     teleop_time_s: float | None = None
     # Display all cameras on screen
     display_data: bool = False
+    # Control arms with keyboard
+    arm_keyboard_control: bool = False
 
 
 @ControlConfig.register_subclass("record")

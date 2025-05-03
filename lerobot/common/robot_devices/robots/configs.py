@@ -795,6 +795,25 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
             "speed_down": "f",
             # quit teleop
             "quit": "q",
+
+            # Keyboard control
+            "left_arm_forward": "y",
+            "left_arm_backward": "h",
+            "left_arm_left": "g",
+            "left_arm_right": "j",
+            "left_arm_up": "u",
+            "left_arm_down": "t",
+            "left_arm_gripper_open": "n",
+            "left_arm_gripper_close": "b",
+
+            "right_arm_forward": "o",
+            "right_arm_backward": "l",
+            "right_arm_left": "k",
+            "right_arm_right": ";",
+            "right_arm_up": "p",
+            "right_arm_down": "i",
+            "right_arm_gripper_open": ".",
+            "right_arm_gripper_close": ",",
         }
     )
 

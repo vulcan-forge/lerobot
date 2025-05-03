@@ -19,6 +19,15 @@ python lerobot/scripts/control_robot.py \
 ```bash
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
+  --control.type=teleoperate \
+  --control.fps=30 \
+  --control.display_data=true \
+  --control.arm_keyboard_control=true
+```
+
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=sourccey_v1beta \
   --robot.cameras='{}' \
   --control.type=calibrate \
   --control.arms='["left_follower", "right_follower"]'

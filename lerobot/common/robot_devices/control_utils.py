@@ -216,6 +216,7 @@ def control_loop(
     control_time_s=None,
     teleoperate=False,
     display_data=False,
+    arm_keyboard_control: bool = False,
     dataset: LeRobotDataset | None = None,
     events=None,
     policy: PreTrainedPolicy = None,
@@ -254,7 +255,7 @@ def control_loop(
             start_loop_t = time.perf_counter()
 
             if teleoperate:
-                observation, action = robot.teleop_step(record_data=True)
+                observation, action = robot.teleop_step(record_data=True, arm_keyboard_control=arm_keyboard_control)
             else:
                 observation = robot.capture_observation()
 
