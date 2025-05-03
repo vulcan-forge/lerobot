@@ -296,8 +296,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         left_arm_positions = []
         if arm_keyboard_control:
             # Keyboard control for left arm
-            left_arm_positions = self.last_teleop_left_arm_state.clone().tolist()
-            step = 25
+            left_arm_positions = self.last_teleop_left_arm_state.tolist()
+            step = 10
 
             # Map keys to joint indices
             if self.pressed_keys["left_arm_forward"]:
@@ -316,6 +316,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
                 left_arm_positions[5] += step  # gripper open
             if self.pressed_keys["left_arm_gripper_close"]:
                 left_arm_positions[5] -= step  # gripper close
+
+            self.last_teleop_left_arm_state = torch.tensor(left_arm_positions, dtype=torch.float32)
         else:
             left_pos = self.leader_arms["left"].read("Present_Position")
             left_pos_tensor = torch.from_numpy(left_pos).float()
@@ -323,8 +325,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         right_arm_positions = []
         if arm_keyboard_control:
-            right_arm_positions = self.last_teleop_right_arm_state.clone().tolist()
-            step = 25
+            right_arm_positions = self.last_teleop_right_arm_state.tolist()
+            step = 10
 
             # Map keys to joint indices
             if self.pressed_keys["right_arm_forward"]:
@@ -343,6 +345,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
                 right_arm_positions[5] += step
             if self.pressed_keys["right_arm_gripper_close"]:
                 right_arm_positions[5] -= step
+
+            self.last_teleop_right_arm_state = torch.tensor(right_arm_positions, dtype=torch.float32)
         else:
             right_pos = self.leader_arms["right"].read("Present_Position")
             right_pos_tensor = torch.from_numpy(right_pos).float()
