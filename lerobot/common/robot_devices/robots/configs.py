@@ -705,7 +705,7 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
             #     camera_index="/dev/video4", fps=15, width=640, height=480, rotation=None
             # ),
             "front_left": OpenCVCameraConfig(
-                camera_index="/dev/video0", fps=15, width=640, height=480, rotation=None
+                camera_index="/dev/video1", fps=15, width=640, height=480, rotation=None
             ),
             # "wrist_right": OpenCVCameraConfig(
             #     camera_index="/dev/video12", fps=15, width=640, height=480, rotation=None
