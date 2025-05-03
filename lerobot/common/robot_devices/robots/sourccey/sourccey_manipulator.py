@@ -206,13 +206,12 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         left_arm_positions = []
         if arm_keyboard_control:
             # Keyboard control for left arm
-            # We'll use self.last_remote_left_arm_state as the starting point
             left_arm_positions = self.last_remote_left_arm_state.clone().tolist()
-            # Define a step size for each key press
-            step = 0.05  # Adjustable
+            step = 25
+
+            print('self.pressed_keys["right_arm_backward"]', self.pressed_keys["right_arm_backward"])
 
             # Map keys to joint indices
-            # ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
             if self.pressed_keys["left_arm_forward"]:
                 left_arm_positions[1] += step  # shoulder_lift up
             if self.pressed_keys["left_arm_backward"]:
@@ -236,10 +235,12 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         right_arm_positions = []
         if arm_keyboard_control:
-            # Keyboard control for right arm
             right_arm_positions = self.last_remote_right_arm_state.clone().tolist()
-            step = 0.05  # Adjustable
+            step = 25
 
+            print('self.pressed_keys["right_arm_backward"]', self.pressed_keys["right_arm_backward"])
+
+            # Map keys to joint indices
             if self.pressed_keys["right_arm_forward"]:
                 right_arm_positions[1] += step
             if self.pressed_keys["right_arm_backward"]:
