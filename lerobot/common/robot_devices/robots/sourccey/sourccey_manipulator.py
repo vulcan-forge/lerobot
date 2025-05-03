@@ -38,6 +38,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         # Initialize parent class with the config
         super().__init__(config)
         self.speed_index = 2
+        self.last_remote_left_arm_state = torch.zeros(6, dtype=torch.float32)
+        self.last_remote_right_arm_state = torch.zeros(6, dtype=torch.float32)
 
     @property
     def motor_features(self) -> dict:
