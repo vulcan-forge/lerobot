@@ -16,10 +16,7 @@ for i in range(0, 17):
         print(f"  {device} opened but no frame could be read.")
         cap.release()
         continue
-    print(f"  {device} is working! Showing frame for 2 seconds...")
-    cv2.imshow(f"Camera {device}", frame)
-    cv2.waitKey(2000)  # Show for 2 seconds
-    cv2.destroyAllWindows()
+    print(f"  {device} is working! (Frame size: {frame.shape})")
     cap.release()
 
 print("Done testing all cameras.")
