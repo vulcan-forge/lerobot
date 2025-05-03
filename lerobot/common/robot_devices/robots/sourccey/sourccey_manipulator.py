@@ -40,6 +40,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         self.speed_index = 2
         self.last_remote_left_arm_state = torch.zeros(6, dtype=torch.float32)
         self.last_remote_right_arm_state = torch.zeros(6, dtype=torch.float32)
+        self.last_teleop_left_arm_state = torch.zeros(6, dtype=torch.float32)
+        self.last_teleop_right_arm_state = torch.zeros(6, dtype=torch.float32)
 
         # Keyboard state for base teleoperation.
         self.pressed_keys = {
@@ -294,10 +296,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         left_arm_positions = []
         if arm_keyboard_control:
             # Keyboard control for left arm
-            left_arm_positions = self.last_remote_left_arm_state.clone().tolist()
+            left_arm_positions = self.last_teleop_left_arm_state.clone().tolist()
             step = 25
-
-            print('self.pressed_keys["right_arm_backward"]', self.pressed_keys["right_arm_backward"])
 
             # Map keys to joint indices
             if self.pressed_keys["left_arm_forward"]:
@@ -323,10 +323,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         right_arm_positions = []
         if arm_keyboard_control:
-            right_arm_positions = self.last_remote_right_arm_state.clone().tolist()
+            right_arm_positions = self.last_teleop_right_arm_state.clone().tolist()
             step = 25
-
-            print('self.pressed_keys["right_arm_backward"]', self.pressed_keys["right_arm_backward"])
 
             # Map keys to joint indices
             if self.pressed_keys["right_arm_forward"]:
