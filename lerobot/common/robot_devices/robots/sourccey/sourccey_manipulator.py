@@ -78,7 +78,8 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         """
         frames = {}
         present_speed = {}
-        remote_arm_state_tensor = torch.zeros(12, dtype=torch.float32)  # Changed from 6 to 12
+        remote_left_arm_state_tensor = torch.zeros(6, dtype=torch.float32)
+        remote_right_arm_state_tensor = torch.zeros(6, dtype=torch.float32)
 
         # Poll up to 15 ms
         poller = zmq.Poller()
@@ -86,7 +87,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         socks = dict(poller.poll(15))
         if self.video_socket not in socks or socks[self.video_socket] != zmq.POLLIN:
             # No new data arrived → reuse ALL old data
-            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+            return (self.last_frames, self.last_present_speed, self.last_remote_left_arm_state, self.last_remote_right_arm_state)
 
         # Drain all messages, keep only the last
         last_msg = None
@@ -99,15 +100,17 @@ class SourcceyV1BetaManipulator(MobileManipulator):
 
         if not last_msg:
             # No new message → also reuse old
-            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+            return (self.last_frames, self.last_present_speed, self.last_remote_left_arm_state, self.last_remote_right_arm_state)
 
         # Decode only the final message
         try:
             observation = json.loads(last_msg)
+            print(f"observation: {observation}")
 
             images_dict = observation.get("images", {})
             new_speed = observation.get("present_speed", {})
-            new_arm_state = observation.get("follower_arm_state", None)
+            new_left_arm_state = observation.get("left_arm_state", None)
+            new_right_arm_state = observation.get("right_arm_state", None)
 
             # Convert images
             for cam_name, image_b64 in images_dict.items():
@@ -119,23 +122,35 @@ class SourcceyV1BetaManipulator(MobileManipulator):
                         frames[cam_name] = frame_candidate
 
             # If remote_arm_state is None and frames is None there is no message then use the previous message
-            if new_arm_state is not None and frames is not None:
+            if (new_left_arm_state is not None or new_right_arm_state is not None) and frames is not None:
                 self.last_frames = frames
 
-                # Ensure we have 12 values for the arm state
-                if len(new_arm_state) < 12:
-                    # Pad with zeros if we don't have enough values
-                    padded_state = new_arm_state + [0] * (12 - len(new_arm_state))
-                    remote_arm_state_tensor = torch.tensor(padded_state, dtype=torch.float32)
-                else:
-                    remote_arm_state_tensor = torch.tensor(new_arm_state, dtype=torch.float32)
-                self.last_remote_arm_state = remote_arm_state_tensor
+                if (new_left_arm_state is not None):
+                    # Ensure we have 6 values for the arm state
+                    if len(new_left_arm_state) < 6:
+                        # Pad with zeros if we don't have enough values
+                        padded_state = new_left_arm_state + [0] * (6 - len(new_left_arm_state))
+                        remote_left_arm_state_tensor = torch.tensor(padded_state, dtype=torch.float32)
+                    else:
+                        remote_left_arm_state_tensor = torch.tensor(new_left_arm_state, dtype=torch.float32)
+                    self.last_remote_left_arm_state = remote_left_arm_state_tensor
+
+                if (new_right_arm_state is not None):
+                    # Ensure we have 6 values for the arm state
+                    if len(new_right_arm_state) < 6:
+                        # Pad with zeros if we don't have enough values
+                        padded_state = new_right_arm_state + [0] * (6 - len(new_right_arm_state))
+                        remote_right_arm_state_tensor = torch.tensor(padded_state, dtype=torch.float32)
+                    else:
+                        remote_right_arm_state_tensor = torch.tensor(new_right_arm_state, dtype=torch.float32)
+                    self.last_remote_right_arm_state = remote_right_arm_state_tensor
 
                 present_speed = new_speed
                 self.last_present_speed = new_speed
             else:
                 frames = self.last_frames
-                remote_arm_state_tensor = self.last_remote_arm_state
+                remote_left_arm_state_tensor = self.last_remote_left_arm_state
+                remote_right_arm_state_tensor = self.last_remote_right_arm_state
                 present_speed = self.last_present_speed
 
         except Exception as e:
@@ -143,7 +158,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
             # If decode fails, fall back to old data
             return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
 
-        return frames, present_speed, remote_arm_state_tensor
+        return frames, present_speed, remote_left_arm_state_tensor, remote_right_arm_state_tensor
 
     def teleop_step(
         self, record_data: bool = False
@@ -207,6 +222,37 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         action_dict = {"action": action_tensor}
 
         return obs_dict, action_dict
+
+    def capture_observation(self) -> dict:
+        """
+        Capture observations from the remote robot: current follower arm positions,
+        present wheel speeds (converted to body-frame velocities: x, y, theta),
+        and a camera frame.
+        """
+        if not self.is_connected:
+            raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
+
+        frames, present_speed, remote_left_arm_state_tensor, remote_right_arm_state_tensor = self._get_data()
+
+        body_state = self.wheel_raw_to_body(present_speed)
+
+        body_state_mm = (body_state[0] * 1000.0, body_state[1] * 1000.0, body_state[2])  # Convert x,y to mm/s
+        wheel_state_tensor = torch.tensor(body_state_mm, dtype=torch.float32)
+        combined_state_tensor = torch.cat((remote_left_arm_state_tensor, remote_right_arm_state_tensor, wheel_state_tensor), dim=0)
+
+        obs_dict = {"observation.state": combined_state_tensor}
+        print(f"obs_dict tensor: {obs_dict}")
+
+        # Loop over each configured camera
+        for cam_name, cam in self.cameras.items():
+            frame = frames.get(cam_name, None)
+            if frame is None:
+                # Create a black image using the camera's configured width, height, and channels
+                frame = np.zeros((cam.height, cam.width, cam.channels), dtype=np.uint8)
+            obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
+
+        print(f"obs_dict images: {obs_dict}")
+        return obs_dict
 
     def send_action(self, action: torch.Tensor) -> torch.Tensor:
         if not self.is_connected:
