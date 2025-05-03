@@ -189,7 +189,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         self.cmd_socket.send_string(json.dumps(message))
 
         if not record_data:
-            return {}, {}
+            return
 
         obs_dict = self.capture_observation()
 
@@ -364,27 +364,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         x_cmd, y_cmd, theta_rad = velocity_vector
         theta_cmd = theta_rad * (180.0 / np.pi)
         return (x_cmd, y_cmd, theta_cmd)
-
-    def capture_observation(self) -> dict:
-        """
-        Capture observations from the remote robot: current follower arm positions and camera frames.
-        """
-        if not self.is_connected:
-            raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
-
-        frames, present_speed, remote_arm_state_tensor = self._get_data()
-
-        obs_dict = {"observation.state": remote_arm_state_tensor}
-
-        # Loop over each configured camera
-        for cam_name, cam in self.cameras.items():
-            frame = frames.get(cam_name, None)
-            if frame is None:
-                # Create a black image using the camera's configured width, height, and channels
-                frame = np.zeros((cam.height, cam.width, cam.channels), dtype=np.uint8)
-            obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
-
-        return obs_dict
 
 class SourcceyV1Beta:
     def __init__(self, left_motor_bus, right_motor_bus):
