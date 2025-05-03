@@ -271,6 +271,9 @@ def control_loop(
                 frame = {**observation, **action, "task": single_task}
                 dataset.add_frame(frame)
 
+            print(f"action: {action}")
+            print(f"observation: {observation}")
+
             # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
             if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
                 for k, v in action.items():
@@ -278,6 +281,7 @@ def control_loop(
                         rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
 
                 image_keys = [key for key in observation if "image" in key]
+                print(f"image_keys: {image_keys}")
                 for key in image_keys:
                     rr.log(key, rr.Image(observation[key].numpy()), static=True)
 
