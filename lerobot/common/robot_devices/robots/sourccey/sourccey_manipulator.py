@@ -76,7 +76,7 @@ class SourcceyV1BetaManipulator(MobileManipulator):
     @property
     def motor_features(self) -> dict:
         # Define the motor names for each arm
-        arm_motor_names = [
+        follower_arm_names = [
             "shoulder_pan",
             "shoulder_lift",
             "elbow_flex",
@@ -84,11 +84,13 @@ class SourcceyV1BetaManipulator(MobileManipulator):
             "wrist_roll",
             "gripper",
         ]
+        observations = ["x_mm", "y_mm", "theta"]
 
         # Combine all motor names for both arms
         combined_names = (
-            [f"left_{motor}" for motor in arm_motor_names] +  # Left arm motors
-            [f"right_{motor}" for motor in arm_motor_names]  # Right arm motors
+            [f"left_{motor}" for motor in follower_arm_names] +  # Left arm motors
+            [f"right_{motor}" for motor in follower_arm_names] +  # Right arm motors
+            observations
         )
 
         return {

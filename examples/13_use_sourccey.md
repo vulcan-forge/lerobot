@@ -19,6 +19,24 @@ python lerobot/scripts/control_robot.py \
 ```bash
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
+  --control.type=record \
+  --control.fps=30 \
+  --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
+  --control.repo_id=local/sourccey_v1beta_e25_shirt_001 \
+  --control.tags='["tutorial"]' \
+  --control.warmup_time_s=5 \
+  --control.episode_time_s=500 \
+  --control.reset_time_s=30 \
+  --control.num_episodes=1 \
+  --control.push_to_hub=false \
+  --control.resume=true
+```
+
+---
+
+```bash
+python lerobot/scripts/control_robot.py \
+  --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
   --control.fps=30 \
   --control.display_data=true \
