@@ -22,7 +22,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/sourccey_v1beta_e25_shirt_001 \
+  --control.repo_id=local/sourccey_v1beta_e50_shirt_001 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
