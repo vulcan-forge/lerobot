@@ -432,7 +432,6 @@ class SourcceyV1BetaManipulator(MobileManipulator):
         #   - First 6: left arm positions
         #   - Next 6: right arm positions
         #   - Next 3: base commands (x, y, theta)
-        print("action", action)
         if action.numel() < 15:
             padded = torch.zeros(15, dtype=action.dtype)
             padded[:action.numel()] = action
