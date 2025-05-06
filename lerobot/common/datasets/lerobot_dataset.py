@@ -227,6 +227,18 @@ class LeRobotDatasetMetadata:
         """
         return self.task_to_task_index.get(task, None)
 
+    def get_subtask_info_for_frame(self, frame_idx, sub_tasks):
+        """
+        Given a frame index and a list of sub_tasks, return the instruction and sub_task_progress for that frame.
+        If the frame does not belong to any subtask, returns (None, None).
+        """
+        for sub in sub_tasks:
+            if sub["start"] <= frame_idx <= sub["end"]:
+                length = max(1, sub["end"] - sub["start"])
+                progress = (frame_idx - sub["start"]) / length
+                return sub["instruction"], progress
+        return None, None
+
     def add_task(self, task: str):
         """
         Given a task in natural language, add it to the dictionary of tasks.
@@ -270,6 +282,9 @@ class LeRobotDatasetMetadata:
             "episode_index": episode_index,
             "tasks": episode_tasks,
             "length": episode_length,
+            "sub_tasks": [
+                # {"start": 0, "end": 74, "instruction": "walk to the fridge"},
+            ],
         }
         self.episodes[episode_index] = episode_dict
         write_episode(episode_dict, self.root)
@@ -349,6 +364,22 @@ class LeRobotDatasetMetadata:
         write_json(obj.info, obj.root / INFO_PATH)
         obj.revision = None
         return obj
+
+    def edit_subtasks(self, episode_index: int, new_subtasks: list[dict]):
+        """
+        Edit the sub_tasks for a given episode.
+        Args:
+            episode_index (int): The index of the episode to edit.
+            new_subtasks (list[dict]): The new list of subtask dicts to set.
+        """
+        if episode_index not in self.episodes:
+            raise ValueError(f"Episode {episode_index} does not exist.")
+
+        # Update in-memory
+        self.episodes[episode_index]["sub_tasks"] = new_subtasks
+
+        # Save to disk
+        write_episode(self.episodes[episode_index], self.root)
 
 
 class LeRobotDataset(torch.utils.data.Dataset):
@@ -747,6 +778,12 @@ class LeRobotDataset(torch.utils.data.Dataset):
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
+
+        # Add subtask info
+        frame_idx = item["frame_index"].item()
+        instruction, sub_task_progress = self.meta.get_subtask_info_for_frame(frame_idx, item.get("sub_tasks", []))
+        item["instruction"] = instruction
+        item["sub_task_progress"] = sub_task_progress
 
         return item
 
