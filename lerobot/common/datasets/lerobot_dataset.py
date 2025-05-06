@@ -229,15 +229,29 @@ class LeRobotDatasetMetadata:
 
     def get_subtask_info_for_frame(self, frame_idx, sub_tasks):
         """
-        Given a frame index and a list of sub_tasks, return the instruction and sub_task_progress for that frame.
-        If the frame does not belong to any subtask, returns (None, None).
+        Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
         """
         for sub in sub_tasks:
             if sub["start"] <= frame_idx <= sub["end"]:
                 length = max(1, sub["end"] - sub["start"])
                 progress = (frame_idx - sub["start"]) / length
-                return sub["instruction"], progress
-        return None, None
+                return {
+                    "subtask_instruction": sub["instruction"],
+                    "subtask_progress": progress,
+                    "subtask_status": sub.get("status", None),
+                    "subtask_performance_score": sub.get("performance_score", None),
+                    "subtask_error_type": sub.get("error_type", None),
+                    "subtask_error_message": sub.get("error_message", None),
+                }
+        # If no subtask found for this frame
+        return {
+            "subtask_instruction": None,
+            "subtask_progress": None,
+            "subtask_status": None,
+            "subtask_performance_score": None,
+            "subtask_error_type": None,
+            "subtask_error_message": None,
+        }
 
     def add_task(self, task: str):
         """
@@ -282,9 +296,19 @@ class LeRobotDatasetMetadata:
             "episode_index": episode_index,
             "tasks": episode_tasks,
             "length": episode_length,
+            "performance_score": 1.0,
             "sub_tasks": [
-                # {"start": 0, "end": 74, "instruction": "walk to the fridge"},
+                # {
+                #     "start": 0,
+                #     "end": 74,
+                #     "instruction": "walk to the fridge",
+                #     "status": "success",         # "success", "error", "incomplete", etc.
+                #     "performance_score": 1.0,        # 0.0 (fail) to 1.0 (perfect), can be fractional
+                #     "error_type": None,          # e.g., "collision", "timeout", or None if no error
+                #     "error_message": None        # Optional: human-readable description, or None
+                # }
             ],
+
         }
         self.episodes[episode_index] = episode_dict
         write_episode(episode_dict, self.root)
@@ -775,15 +799,18 @@ class LeRobotDataset(torch.utils.data.Dataset):
             for cam in image_keys:
                 item[cam] = self.image_transforms(item[cam])
 
+        # Add episode performance score
+        episode_performance_score = self.meta.episodes[ep_idx].get("performance_score", 1.0)
+        item["episode_performance_score"] = episode_performance_score
+
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
 
         # Add subtask info
         frame_idx = item["frame_index"].item()
-        instruction, sub_task_progress = self.meta.get_subtask_info_for_frame(frame_idx, item.get("sub_tasks", []))
-        item["instruction"] = instruction
-        item["sub_task_progress"] = sub_task_progress
+        subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, item.get("sub_tasks", []))
+        item.update(subtask_info)
 
         return item
 
