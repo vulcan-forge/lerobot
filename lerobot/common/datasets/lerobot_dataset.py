@@ -238,19 +238,11 @@ class LeRobotDatasetMetadata:
                 return {
                     "subtask_instruction": sub["instruction"],
                     "subtask_progress": progress,
-                    "subtask_status": sub.get("status", None),
-                    "subtask_performance_score": sub.get("performance_score", None),
-                    "subtask_error_type": sub.get("error_type", None),
-                    "subtask_error_message": sub.get("error_message", None),
                 }
         # If no subtask found for this frame
         return {
             "subtask_instruction": None,
             "subtask_progress": None,
-            "subtask_status": None,
-            "subtask_performance_score": None,
-            "subtask_error_type": None,
-            "subtask_error_message": None,
         }
 
     def add_task(self, task: str):
@@ -798,10 +790,6 @@ class LeRobotDataset(torch.utils.data.Dataset):
             image_keys = self.meta.camera_keys
             for cam in image_keys:
                 item[cam] = self.image_transforms(item[cam])
-
-        # Add episode performance score
-        episode_performance_score = self.meta.episodes[ep_idx].get("performance_score", 1.0)
-        item["episode_performance_score"] = episode_performance_score
 
         # Add task as a string
         task_idx = item["task_index"].item()
