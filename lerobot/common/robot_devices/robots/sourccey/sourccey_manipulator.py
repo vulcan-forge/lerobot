@@ -428,36 +428,36 @@ class SourcceyV1BetaManipulator(MobileManipulator):
             raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
 
         # For all other control types, handle all motors
-        # Ensure the action tensor has at least 17 elements:
+        # Ensure the action tensor has at least 15 elements:
         #   - First 6: left arm positions
         #   - Next 6: right arm positions
-        #   - Next 4: wheel commands
-        #   - Last 1: turn table command
-        if action.numel() < 17:
-            padded = torch.zeros(17, dtype=action.dtype)
+        #   - Next 3: base commands (x, y, theta)
+        if action.numel() < 15:
+            padded = torch.zeros(15, dtype=action.dtype)
             padded[:action.numel()] = action
             action = padded
 
         # Extract arm and base actions
         left_arm_actions = action[:6].flatten()
         right_arm_actions = action[6:12].flatten()
-        wheel_actions = action[12:16].flatten()
-        turn_table_action = action[16].flatten()
+        base_actions = action[12:15].flatten()
+        x_cmd_mm = base_actions[0].item()  # mm/s
+        y_cmd_mm = base_actions[1].item()  # mm/s
+        theta_cmd = base_actions[2].item()  # deg/s
 
-        # Convert wheel actions to wheel commands
-        wheel_commands = {
-            "back_left_wheel": int(wheel_actions[0].item()),
-            "back_right_wheel": int(wheel_actions[1].item()),
-            "front_left_wheel": int(wheel_actions[2].item()),
-            "front_right_wheel": int(wheel_actions[3].item()),
-        }
+        # Convert mm/s to m/s for the kinematics calculations.
+        x_cmd = x_cmd_mm / 1000.0  # m/s
+        y_cmd = y_cmd_mm / 1000.0  # m/s
+
+        # Compute wheel commands from body commands.
+        wheel_commands = self.body_to_wheel_raw(x_cmd, y_cmd, theta_cmd)
 
         # Create and send the message with all commands
         message = {
             "raw_velocity": wheel_commands,
             "left_arm_positions": left_arm_actions.tolist(),
             "right_arm_positions": right_arm_actions.tolist(),
-            "turn_table_positions": turn_table_action.tolist(),
+            "turn_table_positions": [],
         }
 
         self.cmd_socket.send_string(json.dumps(message))
