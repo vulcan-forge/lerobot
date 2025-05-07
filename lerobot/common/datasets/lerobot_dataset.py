@@ -227,6 +227,24 @@ class LeRobotDatasetMetadata:
         """
         return self.task_to_task_index.get(task, None)
 
+    def get_subtask_info_for_frame(self, frame_idx, sub_tasks):
+        """
+        Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
+        """
+        for sub in sub_tasks:
+            if sub["start"] <= frame_idx <= sub["end"]:
+                length = max(1, sub["end"] - sub["start"])
+                progress = (frame_idx - sub["start"]) / length
+                return {
+                    "subtask_instruction": sub["instruction"],
+                    "subtask_progress": progress,
+                }
+        # If no subtask found for this frame
+        return {
+            "subtask_instruction": None,
+            "subtask_progress": None,
+        }
+
     def add_task(self, task: str):
         """
         Given a task in natural language, add it to the dictionary of tasks.
@@ -270,6 +288,19 @@ class LeRobotDatasetMetadata:
             "episode_index": episode_index,
             "tasks": episode_tasks,
             "length": episode_length,
+            "performance_score": 1.0,
+            "sub_tasks": [
+                # {
+                #     "start": 0,
+                #     "end": 74,
+                #     "instruction": "walk to the fridge",
+                #     "status": "success",         # "success", "error", "incomplete", etc.
+                #     "performance_score": 1.0,        # 0.0 (fail) to 1.0 (perfect), can be fractional
+                #     "error_type": None,          # e.g., "collision", "timeout", or None if no error
+                #     "error_message": None        # Optional: human-readable description, or None
+                # }
+            ],
+
         }
         self.episodes[episode_index] = episode_dict
         write_episode(episode_dict, self.root)
@@ -349,6 +380,22 @@ class LeRobotDatasetMetadata:
         write_json(obj.info, obj.root / INFO_PATH)
         obj.revision = None
         return obj
+
+    def edit_subtasks(self, episode_index: int, new_subtasks: list[dict]):
+        """
+        Edit the sub_tasks for a given episode.
+        Args:
+            episode_index (int): The index of the episode to edit.
+            new_subtasks (list[dict]): The new list of subtask dicts to set.
+        """
+        if episode_index not in self.episodes:
+            raise ValueError(f"Episode {episode_index} does not exist.")
+
+        # Update in-memory
+        self.episodes[episode_index]["sub_tasks"] = new_subtasks
+
+        # Save to disk
+        write_episode(self.episodes[episode_index], self.root)
 
 
 class LeRobotDataset(torch.utils.data.Dataset):
@@ -747,6 +794,11 @@ class LeRobotDataset(torch.utils.data.Dataset):
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
+
+        # Add subtask info
+        frame_idx = item["frame_index"].item()
+        subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, item.get("sub_tasks", []))
+        item.update(subtask_info)
 
         return item
 
