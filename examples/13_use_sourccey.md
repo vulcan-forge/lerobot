@@ -26,7 +26,7 @@ python lerobot/scripts/control_robot.py \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
-  --control.reset_time_s=30 \
+  --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
   --control.resume=true
