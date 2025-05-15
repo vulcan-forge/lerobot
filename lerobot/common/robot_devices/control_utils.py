@@ -258,6 +258,7 @@ def control_loop(
                 observation, action = robot.teleop_step(record_data=True, arm_keyboard_control=arm_keyboard_control)
             else:
                 observation = robot.capture_observation()
+                action = None
 
                 if policy is not None:
                     pred_action = predict_action(
@@ -293,6 +294,7 @@ def control_loop(
             if events["exit_early"]:
                 events["exit_early"] = False
                 break
+
     except Exception as e:
         print(f"Error in control_loop: {e}")
         traceback.print_exc()
