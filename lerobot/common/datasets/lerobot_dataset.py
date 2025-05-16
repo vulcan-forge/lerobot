@@ -227,30 +227,30 @@ class LeRobotDatasetMetadata:
         """
         return self.task_to_task_index.get(task, None)
 
-    def get_subtask_info_for_frame(self, frame_idx, task_idx, sub_tasks):
-        """
-        Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
-        """
+    # def get_subtask_info_for_frame(self, frame_idx, task_idx, sub_tasks):
+    #     """
+    #     Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
+    #     """
 
-        empty_subtask = {
-            "subtask_instruction": None,
-            "subtask_progress": None,
-        }
+    #     empty_subtask = {
+    #         "subtask_instruction": None,
+    #         "subtask_progress": None,
+    #     }
 
-        if sub_tasks is None or len(sub_tasks) <= task_idx:
-            return empty_subtask
+    #     if sub_tasks is None or len(sub_tasks) <= task_idx:
+    #         return empty_subtask
 
-        subtask = sub_tasks[task_idx]
-        for sub in subtask:
-            if sub["start"] <= frame_idx <= sub["end"]:
-                length = max(1, sub["end"] - sub["start"])
-                progress = (frame_idx - sub["start"]) / length
-                return {
-                    "subtask_instruction": sub["instruction"],
-                    "subtask_progress": progress,
-                }
-        # If no subtask found for this frame
-        return empty_subtask
+    #     subtask = sub_tasks[task_idx]
+    #     for sub in subtask:
+    #         if sub["start"] <= frame_idx <= sub["end"]:
+    #             length = max(1, sub["end"] - sub["start"])
+    #             progress = (frame_idx - sub["start"]) / length
+    #             return {
+    #                 "subtask_instruction": sub["instruction"],
+    #                 "subtask_progress": progress,
+    #             }
+    #     # If no subtask found for this frame
+    #     return empty_subtask
 
     def add_task(self, task: str):
         """
@@ -804,8 +804,8 @@ class LeRobotDataset(torch.utils.data.Dataset):
 
         # Add subtask info
         frame_idx = item["frame_index"].item()
-        subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, task_idx, item.get("sub_tasks", []))
-        item.update(subtask_info)
+        # subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, task_idx, item.get("sub_tasks", []))
+        # item.update(subtask_info)
 
         return item
 
