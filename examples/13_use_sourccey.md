@@ -40,7 +40,18 @@ python lerobot/scripts/train.py \
   --job_name=act_sourccey_v1beta_e50_shirt_001 \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=200000
+  --steps=100000
+```
+
+```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/so100_grab_and_fold_towel \
+  --policy.type=act \
+  --output_dir=outputs/train/act_so100_grab_and_fold_towel \
+  --job_name=act_so100_grab_and_fold_towel \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=100000
 ```
 
 ```
