@@ -34,10 +34,10 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_e50_shirt_001 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_subtask_002 \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_e50_shirt_001 \
-  --job_name=act_sourccey_v1beta_e50_shirt_001 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_subtask_002 \
+  --job_name=act_sourccey_v1beta_towel_subtask_002 \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000
