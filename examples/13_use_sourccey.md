@@ -34,13 +34,24 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_e50_shirt_001 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_subtask_002 \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_e50_shirt_001 \
-  --job_name=act_sourccey_v1beta_e50_shirt_001 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_subtask_002 \
+  --job_name=act_sourccey_v1beta_towel_subtask_002 \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=200000
+  --steps=100000
+```
+
+```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/so100_grab_and_fold_towel \
+  --policy.type=act \
+  --output_dir=outputs/train/act_so100_grab_and_fold_towel \
+  --job_name=act_so100_grab_and_fold_towel \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=100000
 ```
 
 ```
