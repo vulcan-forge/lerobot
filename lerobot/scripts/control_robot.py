@@ -247,8 +247,7 @@ def teleoperate(robot: Robot, cfg: TeleoperateControlConfig):
         control_time_s=cfg.teleop_time_s,
         fps=cfg.fps,
         teleoperate=True,
-        display_data=cfg.display_data,
-        arm_keyboard_control=cfg.arm_keyboard_control,
+        display_data=cfg.display_data
     )
 
 

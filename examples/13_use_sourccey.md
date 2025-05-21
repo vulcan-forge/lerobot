@@ -22,7 +22,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_subtask_002 \
+  --control.repo_id=local/sourccey_v1beta_towel_subtask_004 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
@@ -31,6 +31,13 @@ python lerobot/scripts/control_robot.py \
   --control.push_to_hub=false \
   --control.resume=true
 ```
+
+Interesting Parameters
+/_
+--policy.dim_model=64 \
+--policy.n_action_steps=20 \
+--policy.chunk_size=20 \
+_/
 
 ```bash
 python lerobot/scripts/train.py \
@@ -60,14 +67,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_subtask_002 \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_subtask_004 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=30 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_subtask_002/checkpoints/100000/pretrained_model
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_subtask_004/checkpoints/010000/pretrained_model
 ```
 
 ---
@@ -77,8 +84,7 @@ python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
   --control.fps=30 \
-  --control.display_data=true \
-  --control.arm_keyboard_control=true
+  --control.display_data=true
 ```
 
 ```bash
@@ -125,4 +131,18 @@ python lerobot/scripts/control_robot.py \
 ```
 sudo iptables -I DOCKER-USER -p tcp --dport 5555 -j ACCEPT
 sudo iptables -I DOCKER-USER -p tcp --dport 5556 -j ACCEPT
+```
+
+---
+
+SO100
+
+---
+
+```
+python lerobot/scripts/control_robot.py \
+  --robot.type=so100 \
+  --control.type=teleoperate \
+  --control.fps=30 \
+  --control.display_data=true
 ```

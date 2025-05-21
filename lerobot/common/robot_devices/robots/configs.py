@@ -505,7 +505,19 @@ class So100RobotConfig(ManipulatorRobotConfig):
 
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
-            "main": FeetechMotorsBusConfig(
+            "right": FeetechMotorsBusConfig(
+                port="COM18",
+                motors={
+                    # name: (index, model)
+                    "shoulder_pan": [1, "sts3215"],
+                    "shoulder_lift": [2, "sts3215"],
+                    "elbow_flex": [3, "sts3215"],
+                    "wrist_flex": [4, "sts3215"],
+                    "wrist_roll": [5, "sts3215"],
+                    "gripper": [6, "sts3215"],
+                },
+            ),
+            "left": FeetechMotorsBusConfig(
                 port="COM17",
                 motors={
                     # name: (index, model)
@@ -522,8 +534,20 @@ class So100RobotConfig(ManipulatorRobotConfig):
 
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
-            "main": FeetechMotorsBusConfig(
-                port="COM19",
+            "right": FeetechMotorsBusConfig(
+                port="COM21",
+                motors={
+                    # name: (index, model)
+                    "shoulder_pan": [1, "sts3215"],
+                    "shoulder_lift": [2, "sts3215"],
+                    "elbow_flex": [3, "sts3215"],
+                    "wrist_flex": [4, "sts3215"],
+                    "wrist_roll": [5, "sts3215"],
+                    "gripper": [6, "sts3215"],
+                },
+            ),
+            "left": FeetechMotorsBusConfig(
+                port="COM20",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -539,12 +563,27 @@ class So100RobotConfig(ManipulatorRobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "default": OpenCVCameraConfig(
+            "left_view": OpenCVCameraConfig(
                 camera_index=0,
-                fps=30,
+                fps=10,
                 width=640,
                 height=480,
+                color_mode="rgb"
             ),
+            "right_view": OpenCVCameraConfig(
+                camera_index=3,
+                fps=10,
+                width=640,
+                height=480,
+                color_mode="rgb"
+            ),
+            "center_view": OpenCVCameraConfig(
+                camera_index=2,
+                fps=10,
+                width=640,
+                height=480,
+                color_mode="rgb"
+            )
         }
     )
 
