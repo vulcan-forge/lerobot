@@ -15,6 +15,8 @@
 import abc
 from dataclasses import dataclass, field
 from typing import Sequence
+from pathlib import Path
+import json
 
 import draccus
 
@@ -43,21 +45,40 @@ class ManipulatorRobotConfig(RobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(default_factory=lambda: {})
     follower_arms: dict[str, MotorsBusConfig] = field(default_factory=lambda: {})
     cameras: dict[str, CameraConfig] = field(default_factory=lambda: {})
-
-    # Optionally limit the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length
-    # as the number of motors in your follower arms (assumes all follower arms have the same number of
-    # motors).
     max_relative_target: list[float] | float | None = None
-
-    # Optionally set the leader arm in torque mode with the gripper motor set to this angle. This makes it
-    # possible to squeeze the gripper and have it spring back to an open position on its own. If None, the
-    # gripper is not put in torque mode.
     gripper_open_degree: float | None = None
-
     mock: bool = False
+    config_dir: str = ".cache/config"  # Add default config directory
 
     def __post_init__(self):
+        # First try to load config from JSON if it exists
+        config_path = Path(self.config_dir) / "config.json"
+        if config_path.exists():
+            with open(config_path) as f:
+                json_config = json.load(f)
+
+            # Update leader_arms if present in JSON
+            if "leader_arms" in json_config:
+                self.leader_arms = {
+                    arm_name: self._create_motors_bus_config(arm_config)
+                    for arm_name, arm_config in json_config["leader_arms"].items()
+                }
+
+            # Update follower_arms if present in JSON
+            if "follower_arms" in json_config:
+                self.follower_arms = {
+                    arm_name: self._create_motors_bus_config(arm_config)
+                    for arm_name, arm_config in json_config["follower_arms"].items()
+                }
+
+            # Update cameras if present in JSON
+            if "cameras" in json_config:
+                self.cameras = {
+                    cam_name: self._create_camera_config(cam_config)
+                    for cam_name, cam_config in json_config["cameras"].items()
+                }
+
+        # Then run the existing validation logic
         if self.mock:
             for arm in self.leader_arms.values():
                 if not arm.mock:
@@ -79,6 +100,39 @@ class ManipulatorRobotConfig(RobotConfig):
                         "Note: This feature does not yet work with robots where different follower arms have "
                         "different numbers of motors."
                     )
+
+    def _create_motors_bus_config(self, arm_config: dict) -> MotorsBusConfig:
+        """Create the appropriate MotorsBusConfig based on robot type"""
+        if self.type in ["aloha", "koch", "koch_bimanual"]:
+            return DynamixelMotorsBusConfig(
+                port=arm_config["port"],
+                motors=arm_config["motors"]
+            )
+        else:  # so100, so101, moss, lekiwi, etc.
+            return FeetechMotorsBusConfig(
+                port=arm_config["port"],
+                motors=arm_config["motors"]
+            )
+
+    def _create_camera_config(self, cam_config: dict) -> CameraConfig:
+        """Create the appropriate CameraConfig based on type"""
+        if cam_config["type"] == "OpenCV":
+            return OpenCVCameraConfig(
+                camera_index=cam_config["camera_index"],
+                fps=cam_config["fps"],
+                width=cam_config["width"],
+                height=cam_config["height"],
+                color_mode=cam_config.get("color_mode", "rgb")
+            )
+        elif cam_config["type"] == "IntelRealSense":
+            return IntelRealSenseCameraConfig(
+                serial_number=cam_config["serial_number"],
+                fps=cam_config["fps"],
+                width=cam_config["width"],
+                height=cam_config["height"]
+            )
+        else:
+            raise ValueError(f"Unknown camera type: {cam_config['type']}")
 
 
 @RobotConfig.register_subclass("aloha")
@@ -498,6 +552,7 @@ class So101RobotConfig(ManipulatorRobotConfig):
 @dataclass
 class So100RobotConfig(ManipulatorRobotConfig):
     calibration_dir: str = ".cache/calibration/so100"
+    config_dir: str = ".cache/config/so100"
     # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
     # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
     # the number of motors in your follower arms.
@@ -506,7 +561,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "right": FeetechMotorsBusConfig(
-                port="COM18",
+                port="COM30",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -518,7 +573,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 },
             ),
             "left": FeetechMotorsBusConfig(
-                port="COM17",
+                port="COM31",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -535,7 +590,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "right": FeetechMotorsBusConfig(
-                port="COM21",
+                port="COM32",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -547,7 +602,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 },
             ),
             "left": FeetechMotorsBusConfig(
-                port="COM20",
+                port="COM33",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
