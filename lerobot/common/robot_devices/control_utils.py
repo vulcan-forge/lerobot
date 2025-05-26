@@ -247,7 +247,10 @@ def control_loop(
 
     timestamp = 0
     start_episode_t = time.perf_counter()
-    print(f"start loop")
+
+    # Controls starts, if policy is given it needs cleaning up
+    if policy is not None:
+        policy.reset()
 
     try:
         while timestamp < control_time_s:
