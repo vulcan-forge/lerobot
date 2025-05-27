@@ -802,10 +802,10 @@ class SourcceyV1BetaRobotConfig(MobileManipulatorRobotConfig):
                 camera_index="/dev/video4", fps=10, width=640, height=480, rotation=None
             ),
             "wrist_left": OpenCVCameraConfig(
-                camera_index="/dev/video8", fps=10, width=480, height=640, rotation=-90
+                camera_index="/dev/video8", fps=10, width=640, height=640, rotation=-90
             ),
             "wrist_right": OpenCVCameraConfig(
-                camera_index="/dev/video10", fps=10, width=480, height=640, rotation=-90
+                camera_index="/dev/video10", fps=10, width=640, height=640, rotation=-90
             ),
         }
     )
