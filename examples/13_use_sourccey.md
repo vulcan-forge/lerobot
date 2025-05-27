@@ -22,7 +22,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_005 \
+  --control.repo_id=local/sourccey_v1beta_towel_006 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
@@ -31,13 +31,6 @@ python lerobot/scripts/control_robot.py \
   --control.push_to_hub=false \
   --control.resume=true
 ```
-
-Interesting Parameters
-/_
---policy.dim_model=64 \
---policy.n_action_steps=20 \
---policy.chunk_size=20 \
-_/
 
 ```bash
 python lerobot/scripts/train.py \
@@ -52,10 +45,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/so100_grab_and_fold_towel \
-  --policy.type=act \
-  --output_dir=outputs/train/act_so100_grab_and_fold_towel \
-  --job_name=act_so100_grab_and_fold_towel \
+  --dataset.repo_id=local/sourccey_v1beta_towel_005 \
+  --policy.type=pi0 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_005 \
+  --job_name=pi0_sourccey_v1beta_towel_005 \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000
@@ -67,14 +60,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_subtask_gpu_004 \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_005 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=30 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_subtask_gpu_004/checkpoints/040000/pretrained_model
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_005/checkpoints/100000/pretrained_model
 ```
 
 ---
