@@ -47,7 +47,7 @@ python lerobot/scripts/train.py \
 python lerobot/scripts/train.py \
   --dataset.repo_id=local/sourccey_v1beta_towel_005 \
   --policy.type=pi0 \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_005 \
+  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_005 \
   --job_name=pi0_sourccey_v1beta_towel_005 \
   --policy.device=cuda \
   --wandb.enable=false \
