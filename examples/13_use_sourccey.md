@@ -51,7 +51,8 @@ python lerobot/scripts/train.py \
   --job_name=pi0_sourccey_v1beta_towel_005 \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=100000
+  --steps=100000 \
+  --batch_size=2
 ```
 
 ```
