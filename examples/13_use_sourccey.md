@@ -71,6 +71,11 @@ python lerobot/scripts/control_robot.py \
   --control.policy.path=outputs/train/act_sourccey_v1beta_towel_005/checkpoints/100000/pretrained_model
 ```
 
+python lerobot/scripts/remove_episodes.py \
+ --repo-id=local/sourccey_v1beta_towel_006 \
+ --episodes='12-16' \
+ --push-to-hub=0
+
 ---
 
 ```bash
