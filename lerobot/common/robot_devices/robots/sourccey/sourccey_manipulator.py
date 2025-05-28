@@ -573,4 +573,3 @@ class SourcceyV1Beta:
         """Stops the robot by setting all motor speeds to zero."""
         self.left_motor_bus.write("Goal_Speed", [0, 0, 0, 0], self.wheel_motor_ids)
         self.right_motor_bus.write("Goal_Speed", [0], self.turn_table_motor_ids)
-        print("Motors stopped.")

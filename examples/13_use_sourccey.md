@@ -22,7 +22,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_012 \
+  --control.repo_id=local/sourccey_v1beta_towel_013 \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
@@ -68,7 +68,8 @@ python lerobot/scripts/control_robot.py \
   --control.reset_time_s=30 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
+  --control.resume=true
 ```
 
 ```
@@ -84,7 +85,8 @@ python lerobot/scripts/control_robot.py \
   --control.reset_time_s=30 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/pi0_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model
+  --control.policy.path=outputs/train/pi0_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
+  --control.resume=true
 ```
 
 python lerobot/scripts/remove_episodes.py \

@@ -274,6 +274,7 @@ def run_sourccey_v1beta(robot_config):
         stop_event.set()
         cam_thread.join()
         robot.stop()
+        print("Motors stopped.")
         left_motors_bus.disconnect()
         right_motors_bus.disconnect()
         cmd_socket.close()
