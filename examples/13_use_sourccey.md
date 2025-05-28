@@ -37,7 +37,7 @@ python lerobot/scripts/train.py \
   --dataset.repo_id=local/sourccey_v1beta_towel_010 \
   --policy.type=act \
   --output_dir=outputs/train/act_sourccey_v1beta_towel_010 \
-  --job_name=act_sourccey_v1beta_towel_005 \
+  --job_name=act_sourccey_v1beta_towel_010 \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000
