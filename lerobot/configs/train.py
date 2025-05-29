@@ -60,6 +60,7 @@ class TrainPipelineConfig(HubMixin):
     # Distributed training settings
     distributed_training: bool = False
     num_gpus: int = 1
+    ddp_find_unused_parameters: bool = False
 
     # Checkpoint is saved every `save_freq` training iterations and after the last training step.
     save_freq: int = 20_000

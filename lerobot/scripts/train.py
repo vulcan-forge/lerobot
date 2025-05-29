@@ -174,7 +174,7 @@ def train(cfg: TrainPipelineConfig):
             policy,
             device_ids=[local_rank],
             output_device=local_rank,
-            find_unused_parameters=True  # This might be needed depending on your model architecture
+            find_unused_parameters=cfg.ddp_find_unused_parameters
         )
 
     step = 0  # number of policy updates (forward + backward + optim)
