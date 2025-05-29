@@ -34,6 +34,19 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
+  --dataset.repo_id=local/sourccey_v1beta_towel_014 \
+  --policy.type=act \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
+  --job_name=act_sourccey_v1beta_towel_014 \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=100000 \
+  --distributed_training=True \
+  --num_gpus=2
+```
+
+```
+torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --dataset.repo_id=local/sourccey_v1beta_towel_010 \
   --policy.type=act \
   --output_dir=outputs/train/act_sourccey_v1beta_towel_010 \
@@ -54,7 +67,19 @@ python lerobot/scripts/train.py \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
-  --batch_size=2 \
+  --batch_size=2
+```
+
+```bash
+torchrun --nproc_per_node=2 lerobot/scripts/train.py \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010 \
+  --policy.type=pi0 \
+  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010 \
+  --job_name=pi0_sourccey_v1beta_towel_010 \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=100000 \
+  --batch_size=4 \
   --distributed_training=True \
   --num_gpus=2
 ```
