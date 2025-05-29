@@ -39,6 +39,7 @@ python lerobot/scripts/train.py \
   --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
   --job_name=act_sourccey_v1beta_towel_014 \
   --policy.device=cuda \
+  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=100000
 ```
@@ -50,6 +51,7 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
   --job_name=act_sourccey_v1beta_towel_014 \
   --policy.device=cuda \
+  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=100000 \
   --distributed_training=true \
@@ -63,6 +65,7 @@ python lerobot/scripts/train.py \
   --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010 \
   --job_name=pi0_sourccey_v1beta_towel_010 \
   --policy.device=cuda \
+  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=100000 \
   --batch_size=2
@@ -75,6 +78,7 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010 \
   --job_name=pi0_sourccey_v1beta_towel_010 \
   --policy.device=cuda \
+  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=100000 \
   --batch_size=4 \
