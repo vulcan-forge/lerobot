@@ -110,6 +110,7 @@ def train(cfg: TrainPipelineConfig):
     cfg.validate()
     logging.info(pformat(cfg.to_dict()))
 
+    # Set up logging first
     if cfg.wandb.enable and cfg.wandb.project:
         wandb_logger = WandBLogger(cfg)
     else:
@@ -119,8 +120,29 @@ def train(cfg: TrainPipelineConfig):
     if cfg.seed is not None:
         set_seed(cfg.seed)
 
-    # Check device is available
-    device = get_safe_torch_device(cfg.policy.device, log=True)
+    # Set up distributed training if enabled
+    if cfg.distributed_training:
+        if not torch.cuda.is_available():
+            raise RuntimeError("Distributed training requires CUDA")
+
+        # Initialize the process group
+        torch.distributed.init_process_group(backend='nccl')
+        local_rank = torch.distributed.get_rank()
+        world_size = torch.distributed.get_world_size()
+
+        # Set device for this process
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f'cuda:{local_rank}')
+
+        # Only log on main process
+        if local_rank == 0:
+            logging.info(f"Initialized distributed training with {world_size} GPUs")
+    else:
+        device = get_safe_torch_device(cfg.policy.device, log=True)
+        local_rank = 0
+        world_size = 1
+
+    # Set CUDA configurations
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -141,6 +163,15 @@ def train(cfg: TrainPipelineConfig):
         ds_meta=dataset.meta,
     )
 
+    # Wrap model with DDP if using distributed training
+    if cfg.distributed_training:
+        policy = torch.nn.parallel.DistributedDataParallel(
+            policy,
+            device_ids=[local_rank],
+            output_device=local_rank,
+            find_unused_parameters=True  # This might be needed depending on your model architecture
+        )
+
     logging.info("Creating optimizer and scheduler")
     optimizer, lr_scheduler = make_optimizer_and_scheduler(cfg, policy)
     grad_scaler = GradScaler(device.type, enabled=cfg.policy.use_amp)
@@ -149,18 +180,6 @@ def train(cfg: TrainPipelineConfig):
 
     if cfg.resume:
         step, optimizer, lr_scheduler = load_training_state(cfg.checkpoint_path, optimizer, lr_scheduler)
-
-    num_learnable_params = sum(p.numel() for p in policy.parameters() if p.requires_grad)
-    num_total_params = sum(p.numel() for p in policy.parameters())
-
-    logging.info(colored("Output dir:", "yellow", attrs=["bold"]) + f" {cfg.output_dir}")
-    if cfg.env is not None:
-        logging.info(f"{cfg.env.task=}")
-    logging.info(f"{cfg.steps=} ({format_big_number(cfg.steps)})")
-    logging.info(f"{dataset.num_frames=} ({format_big_number(dataset.num_frames)})")
-    logging.info(f"{dataset.num_episodes=}")
-    logging.info(f"{num_learnable_params=} ({format_big_number(num_learnable_params)})")
-    logging.info(f"{num_total_params=} ({format_big_number(num_total_params)})")
 
     # create dataloader for offline training
     if hasattr(cfg.policy, "drop_n_last_frames"):
@@ -174,10 +193,34 @@ def train(cfg: TrainPipelineConfig):
         shuffle = True
         sampler = None
 
+    # Create distributed sampler if using distributed training
+    if cfg.distributed_training:
+        # Ensure batch size is divisible by number of GPUs
+        if cfg.batch_size % world_size != 0:
+            raise ValueError(f"Batch size ({cfg.batch_size}) must be divisible by number of GPUs ({world_size})")
+        per_gpu_batch_size = cfg.batch_size // world_size
+
+        if sampler is not None:
+            # If we have a custom sampler, we need to wrap it
+            sampler = torch.utils.data.distributed.DistributedSampler(
+                sampler,
+                num_replicas=world_size,
+                rank=local_rank
+            )
+        else:
+            sampler = torch.utils.data.distributed.DistributedSampler(
+                dataset,
+                num_replicas=world_size,
+                rank=local_rank
+            )
+        shuffle = False  # DistributedSampler handles shuffling
+    else:
+        per_gpu_batch_size = cfg.batch_size
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
         num_workers=cfg.num_workers,
-        batch_size=cfg.batch_size,
+        batch_size=per_gpu_batch_size,  # Use per-GPU batch size
         shuffle=shuffle,
         sampler=sampler,
         pin_memory=device.type != "cpu",
