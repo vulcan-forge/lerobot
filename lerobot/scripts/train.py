@@ -221,11 +221,13 @@ def train(cfg: TrainPipelineConfig):
     dataloader = torch.utils.data.DataLoader(
         dataset,
         num_workers=cfg.num_workers,
-        batch_size=per_gpu_batch_size,  # Use per-GPU batch size
+        batch_size=per_gpu_batch_size,
         shuffle=shuffle,
         sampler=sampler,
-        pin_memory=device.type != "cpu",
+        pin_memory=(device.type != "cpu"),
         drop_last=False,
+        persistent_workers=(cfg.num_workers > 0 and cfg.dataloader_persistent_workers),
+        prefetch_factor=cfg.dataloader_prefetch_factor,
     )
     dl_iter = cycle(dataloader)
 
