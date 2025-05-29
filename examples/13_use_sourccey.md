@@ -40,7 +40,9 @@ python lerobot/scripts/train.py \
   --job_name=act_sourccey_v1beta_towel_010 \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=100000
+  --steps=100000 \
+  --distributed_training=True \
+  --num_gpus=2
 ```
 
 ```bash
@@ -52,7 +54,9 @@ python lerobot/scripts/train.py \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
-  --batch_size=2
+  --batch_size=2 \
+  --distributed_training=True \
+  --num_gpus=2
 ```
 
 ```
@@ -61,14 +65,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_011 \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_full \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_011/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
