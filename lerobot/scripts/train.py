@@ -163,6 +163,11 @@ def train(cfg: TrainPipelineConfig):
         ds_meta=dataset.meta,
     )
 
+    # ✅ Create optimizer, scheduler, and grad scaler BEFORE DDP wrapping
+    logging.info("Creating optimizer and scheduler")
+    optimizer, lr_scheduler = make_optimizer_and_scheduler(cfg, policy)
+    grad_scaler = GradScaler(device.type, enabled=cfg.policy.use_amp)
+
     # Wrap model with DDP if using distributed training
     if cfg.distributed_training:
         policy = torch.nn.parallel.DistributedDataParallel(
@@ -171,10 +176,6 @@ def train(cfg: TrainPipelineConfig):
             output_device=local_rank,
             find_unused_parameters=True  # This might be needed depending on your model architecture
         )
-
-    logging.info("Creating optimizer and scheduler")
-    optimizer, lr_scheduler = make_optimizer_and_scheduler(cfg, policy)
-    grad_scaler = GradScaler(device.type, enabled=cfg.policy.use_amp)
 
     step = 0  # number of policy updates (forward + backward + optim)
 

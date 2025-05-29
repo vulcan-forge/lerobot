@@ -40,21 +40,19 @@ python lerobot/scripts/train.py \
   --job_name=act_sourccey_v1beta_towel_014 \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=100000 \
-  --distributed_training=True \
-  --num_gpus=2
+  --steps=100000
 ```
 
-```
+```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_014 \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_010 \
-  --job_name=act_sourccey_v1beta_towel_010 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
+  --job_name=act_sourccey_v1beta_towel_014 \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
-  --distributed_training=True \
+  --distributed_training=true \
   --num_gpus=2
 ```
 
@@ -80,7 +78,7 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --wandb.enable=false \
   --steps=100000 \
   --batch_size=4 \
-  --distributed_training=True \
+  --distributed_training=true \
   --num_gpus=2
 ```
 
