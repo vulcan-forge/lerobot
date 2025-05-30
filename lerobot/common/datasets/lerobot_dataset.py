@@ -722,18 +722,10 @@ class LeRobotDataset(torch.utils.data.Dataset):
         ep_start = self.episode_data_index["from"][index_position]
         ep_end = self.episode_data_index["to"][index_position]
 
-        # Add debug logging
-        logging.info(f"Query indices for idx={idx}, ep_idx={ep_idx}:")
-        logging.info(f"ep_start={ep_start}, ep_end={ep_end}")
-        # logging.info(f"delta_indices={self.delta_indices}")
-
         query_indices = {
             key: [max(ep_start.item(), min(ep_end.item() - 1, idx + delta)) for delta in delta_idx]
             for key, delta_idx in self.delta_indices.items()
         }
-
-        # Log the calculated indices
-        # logging.info(f"Calculated query_indices: {query_indices}")
 
         padding = {
             f"{key}_is_pad": torch.BoolTensor(
@@ -753,11 +745,8 @@ class LeRobotDataset(torch.utils.data.Dataset):
             if query_indices is not None and key in query_indices:
                 timestamps = self.hf_dataset.select(query_indices[key])["timestamp"]
                 query_timestamps[key] = torch.stack(timestamps).tolist()
-                # Add logging
-                logging.info(f"Query timestamps for {key}: {query_timestamps[key]}")
             else:
                 query_timestamps[key] = [current_ts]
-                logging.info(f"Using current timestamp for {key}: {current_ts}")
 
         return query_timestamps
 
@@ -772,21 +761,6 @@ class LeRobotDataset(torch.utils.data.Dataset):
         item = {}
         for vid_key, query_ts in query_timestamps.items():
             video_path = self.root / self.meta.get_video_file_path(ep_idx, vid_key)
-
-            # Get video info to validate frame indices
-            video_info = get_video_info(video_path)
-            max_frames = video_info.get('num_frames', 0)
-
-            # Convert timestamps to frame indices
-            frame_indices = [int(ts * self.fps) for ts in query_ts]
-
-            # Only log if any index is between 500 and 633
-            if any(500 <= idx <= 633 for idx in frame_indices):
-                logging.info(
-                    f"Frame index in problematic range for video {video_path}: "
-                    f"indices {frame_indices} (max frames: {max_frames})"
-                )
-
             frames = decode_video_frames(video_path, query_ts, self.tolerance_s, self.video_backend)
             item[vid_key] = frames.squeeze(0)
 
