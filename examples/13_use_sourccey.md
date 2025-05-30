@@ -22,12 +22,12 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_014 \
+  --control.repo_id=local/sourccey_v1beta_towel_010_a \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
-  --control.num_episodes=1 \
+  --control.num_episodes=3 \
   --control.push_to_hub=false \
   --control.resume=true
 ```
@@ -92,14 +92,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_012 \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_full \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_012/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
