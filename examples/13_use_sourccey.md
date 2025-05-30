@@ -34,10 +34,10 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_014 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_b \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
-  --job_name=act_sourccey_v1beta_towel_014 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_b \
+  --job_name=act_sourccey_v1beta_towel_010_b \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -46,10 +46,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_014 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_b  \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_014 \
-  --job_name=act_sourccey_v1beta_towel_014 \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_b \
+  --job_name=act_sourccey_v1beta_towel_010_b  \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -92,14 +92,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_full \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_b \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_b/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
@@ -109,14 +109,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_pi0_sourccey_v1beta_towel_005 \
+  --control.repo_id=local/eval_pi0_sourccey_v1beta_towel_010_b \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/pi0_sourccey_v1beta_towel_010/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/pi0_sourccey_v1beta_towel_010_b/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
