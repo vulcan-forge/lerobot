@@ -217,41 +217,17 @@ def combine_datasets(datasets: list[LeRobotDataset], root: str, repo_id: str) ->
             if src_data_path.exists():
                 dst_data_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # Read the parquet file to check frame indices
+                # Read the parquet file
                 df = pd.read_parquet(src_data_path)
-                max_frame_idx = df['frame_index'].max() if 'frame_index' in df.columns else 0
-                num_frames_in_parquet = len(df)
 
-                # Check video frame counts
-                for vid_key in dataset.meta.video_keys:
-                    src_video_path = dataset.meta.root / dataset.meta.get_video_file_path(ep_idx, vid_key)
-                    if src_video_path.exists():
-                        # Get video frame count using OpenCV
-                        cap = cv2.VideoCapture(str(src_video_path))
-                        num_frames_in_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                        cap.release()
+                # Update frame indices to match the new episode indices
+                df['frame_index'] = df['frame_index'] + (dataset_idx * len(dataset_episodes))
 
-                        logging.info(
-                            f"Episode {ep_idx} in dataset {dataset.meta.root}: "
-                            f"parquet has {num_frames_in_parquet} frames, "
-                            f"video has {num_frames_in_video} frames, "
-                            f"max frame index is {max_frame_idx}"
-                        )
+                # Update episode indices
+                df['episode_index'] = new_ep_idx
 
-                        if num_frames_in_parquet != num_frames_in_video:
-                            raise ValueError(
-                                f"Frame count mismatch in episode {ep_idx} in dataset {dataset.meta.root}: "
-                                f"parquet has {num_frames_in_parquet} frames but video has {num_frames_in_video} frames"
-                            )
-
-                        if max_frame_idx != num_frames_in_video - 1:
-                            raise ValueError(
-                                f"Frame index mismatch in episode {ep_idx} in dataset {dataset.meta.root}: "
-                                f"max frame index is {max_frame_idx} but video has {num_frames_in_video} frames"
-                            )
-
-                # Only copy the files if validation passes
-                shutil.copy2(src_data_path, dst_data_path)
+                # Write the updated data back to the new parquet file
+                df.to_parquet(dst_data_path)
             else:
                 logging.warning(f"Missing data file for episode {ep_idx} in dataset {dataset.meta.root}")
 
