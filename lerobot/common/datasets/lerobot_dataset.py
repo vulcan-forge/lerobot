@@ -769,16 +769,24 @@ class LeRobotDataset(torch.utils.data.Dataset):
         }
 
     def _query_videos(self, query_timestamps: dict[str, list[float]], ep_idx: int) -> dict[str, torch.Tensor]:
-        """Note: When using data workers (e.g. DataLoader with num_workers>0), do not call this function
-        in the main process (e.g. by using a second Dataloader with num_workers=0). It will result in a
-        Segmentation Fault. This probably happens because a memory reference to the video loader is created in
-        the main process and a subprocess fails to access it.
-        """
         item = {}
         for vid_key, query_ts in query_timestamps.items():
             video_path = self.root / self.meta.get_video_file_path(ep_idx, vid_key)
-            # Add logging
-            logging.info(f"Querying video {video_path} for timestamps {query_ts}")
+
+            # Get video info to validate frame indices
+            video_info = get_video_info(video_path)
+            max_frames = video_info.get('num_frames', 0)
+
+            # Convert timestamps to frame indices
+            frame_indices = [int(ts * self.fps) for ts in query_ts]
+
+            # Only log if any index is between 500 and 633
+            if any(500 <= idx <= 633 for idx in frame_indices):
+                logging.info(
+                    f"Frame index in problematic range for video {video_path}: "
+                    f"indices {frame_indices} (max frames: {max_frames})"
+                )
+
             frames = decode_video_frames(video_path, query_ts, self.tolerance_s, self.video_backend)
             item[vid_key] = frames.squeeze(0)
 
