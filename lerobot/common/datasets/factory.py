@@ -19,6 +19,8 @@ from pprint import pformat
 import shutil
 
 import torch
+import pandas as pd
+import cv2  # Add this import at the top
 
 from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import (
@@ -138,15 +140,10 @@ def combine_datasets(datasets: list[LeRobotDataset], root: str, repo_id: str) ->
     # Validate that all datasets have compatible configurations
     first_dataset = datasets[0]
     for dataset in datasets[1:]:
-        # Check FPS compatibility
         if dataset.fps != first_dataset.fps:
             raise ValueError(f"Incompatible FPS: {dataset.fps} vs {first_dataset.fps}")
-
-        # Check feature compatibility
         if dataset.features != first_dataset.features:
             raise ValueError("Datasets have incompatible features")
-
-        # Check video backend compatibility
         if dataset.video_backend != first_dataset.video_backend:
             raise ValueError("Datasets have incompatible video backends")
 
@@ -172,69 +169,145 @@ def combine_datasets(datasets: list[LeRobotDataset], root: str, repo_id: str) ->
     total_episodes = sum(dataset.meta.total_episodes for dataset in datasets)
     total_chunks = (total_episodes + chunk_size - 1) // chunk_size
 
-    # Update metadata with correct total episodes and chunks
-    combined_dataset.meta.info["total_episodes"] = total_episodes
-    combined_dataset.meta.info["total_chunks"] = total_chunks
-    combined_dataset.meta.info["chunks_size"] = chunk_size
-
-    # Create meta directory
-    meta_dir = combined_dataset.meta.root / "meta"
-    meta_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create data directory
-    data_dir = combined_dataset.meta.root / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-
-    # Combine episodes and stats
+    # Initialize offsets
     episode_offset = 0
+    task_content_to_index = {}  # Map task content to its index
+
+    # First, combine all tasks from all datasets, deduplicating by task content
     for dataset in datasets:
-        logging.info(f"Processing dataset with root: {dataset.meta.root}")
-        # Update episode indices
-        for ep_idx in dataset.meta.episodes:
-            new_ep_idx = ep_idx + episode_offset
-            combined_dataset.meta.episodes[new_ep_idx] = dataset.meta.episodes[ep_idx]
-            combined_dataset.meta.episodes_stats[new_ep_idx] = dataset.meta.episodes_stats[ep_idx]
+        for task_idx, task in dataset.meta.tasks.items():
+            if task not in task_content_to_index:
+                # If this is a new task, add it with the next available index
+                task_content_to_index[task] = len(task_content_to_index)
+            # Update the task index in the dataset's episodes
+            for ep_idx in dataset.meta.episodes:
+                if dataset.meta.episodes[ep_idx].get("task_index") == task_idx:
+                    dataset.meta.episodes[ep_idx]["task_index"] = task_content_to_index[task]
+
+    # Add all unique tasks to the combined dataset
+    combined_dataset.meta.tasks = {idx: task for task, idx in task_content_to_index.items()}
+
+    # Then combine episodes and stats
+    for dataset_idx, dataset in enumerate(datasets):
+        logging.info(f"Processing dataset {dataset_idx + 1} with root: {dataset.meta.root}")
+
+        # Get the episode indices for this dataset
+        dataset_episodes = sorted(dataset.meta.episodes.keys())
+
+        for ep_idx in dataset_episodes:
+            # Calculate the new episode index based on which dataset we're processing
+            new_ep_idx = ep_idx + (dataset_idx * len(dataset_episodes))
+
+            # Get the original episode data
+            episode = dataset.meta.episodes[ep_idx].copy()
+            episode_stats = dataset.meta.episodes_stats[ep_idx].copy()
+
+            # Update episode with new task indices and episode index
+            if "task_index" in episode:
+                episode["task_index"] = task_content_to_index[dataset.meta.tasks[episode["task_index"]]]
+            episode["episode_index"] = new_ep_idx
 
             # Calculate new chunk and episode numbers
             new_chunk = new_ep_idx // chunk_size
-            new_ep_in_chunk = new_ep_idx % chunk_size
 
             # Copy data files with new sequential naming
             src_data_path = dataset.meta.root / dataset.meta.get_data_file_path(ep_idx)
+            dst_data_path = combined_dataset.meta.root / f"data/chunk-{new_chunk:03d}/episode_{new_ep_idx:06d}.parquet"
+
             if src_data_path.exists():
-                dst_data_path = combined_dataset.meta.root / f"data/chunk-{new_chunk:03d}/episode_{new_ep_idx:06d}.parquet"
                 dst_data_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Read the parquet file to check frame indices
+                df = pd.read_parquet(src_data_path)
+                max_frame_idx = df['frame_index'].max() if 'frame_index' in df.columns else 0
+                num_frames_in_parquet = len(df)
+
+                # Check video frame counts
+                for vid_key in dataset.meta.video_keys:
+                    src_video_path = dataset.meta.root / dataset.meta.get_video_file_path(ep_idx, vid_key)
+                    if src_video_path.exists():
+                        # Get video frame count using OpenCV
+                        cap = cv2.VideoCapture(str(src_video_path))
+                        num_frames_in_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                        cap.release()
+
+                        logging.info(
+                            f"Episode {ep_idx} in dataset {dataset.meta.root}: "
+                            f"parquet has {num_frames_in_parquet} frames, "
+                            f"video has {num_frames_in_video} frames, "
+                            f"max frame index is {max_frame_idx}"
+                        )
+
+                        if num_frames_in_parquet != num_frames_in_video:
+                            raise ValueError(
+                                f"Frame count mismatch in episode {ep_idx} in dataset {dataset.meta.root}: "
+                                f"parquet has {num_frames_in_parquet} frames but video has {num_frames_in_video} frames"
+                            )
+
+                        if max_frame_idx != num_frames_in_video - 1:
+                            raise ValueError(
+                                f"Frame index mismatch in episode {ep_idx} in dataset {dataset.meta.root}: "
+                                f"max frame index is {max_frame_idx} but video has {num_frames_in_video} frames"
+                            )
+
+                # Only copy the files if validation passes
                 shutil.copy2(src_data_path, dst_data_path)
+            else:
+                logging.warning(f"Missing data file for episode {ep_idx} in dataset {dataset.meta.root}")
 
             # Copy video files if they exist
             for vid_key in dataset.meta.video_keys:
                 src_video_path = dataset.meta.root / dataset.meta.get_video_file_path(ep_idx, vid_key)
+                dst_video_path = combined_dataset.meta.root / f"videos/chunk-{new_chunk:03d}/{vid_key}/episode_{new_ep_idx:06d}.mp4"
+
                 if src_video_path.exists():
-                    dst_video_path = combined_dataset.meta.root / f"videos/chunk-{new_chunk:03d}/{vid_key}/episode_{new_ep_idx:06d}.mp4"
                     dst_video_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(src_video_path, dst_video_path)
+                else:
+                    logging.warning(f"Missing video file for episode {ep_idx}, camera {vid_key} in dataset {dataset.meta.root}")
 
-        episode_offset += dataset.meta.total_episodes
+            # Add episode and stats to combined dataset
+            combined_dataset.meta.episodes[new_ep_idx] = episode
+            combined_dataset.meta.episodes_stats[new_ep_idx] = episode_stats
+
+    # Calculate combined statistics
+    total_frames = sum(dataset.meta.info["total_frames"] for dataset in datasets)
+    total_tasks = len(task_content_to_index)  # This is the number of unique tasks
+    total_videos = sum(dataset.meta.info["total_videos"] for dataset in datasets)
+
+    # Update metadata with correct statistics
+    combined_dataset.meta.info.update({
+        "total_episodes": total_episodes,
+        "total_frames": total_frames,
+        "total_tasks": total_tasks,
+        "total_videos": total_videos,
+        "total_chunks": total_chunks,
+        "chunks_size": chunk_size,
+        "splits": {
+            "train": f"0:{total_episodes}"  # Update splits to cover all episodes
+        }
+    })
 
     # Save all metadata files
     write_info(combined_dataset.meta.info, combined_dataset.meta.root)
 
     # Save tasks.jsonl
     tasks_data = [{"task_index": idx, "task": task} for idx, task in combined_dataset.meta.tasks.items()]
-    write_jsonlines(tasks_data, meta_dir / "tasks.jsonl")
+    write_jsonlines(tasks_data, combined_dataset.meta.root / "meta" / "tasks.jsonl")
 
     # Save episodes.jsonl
     episodes_data = list(combined_dataset.meta.episodes.values())
-    write_jsonlines(episodes_data, meta_dir / "episodes.jsonl")
+    write_jsonlines(episodes_data, combined_dataset.meta.root / "meta" / "episodes.jsonl")
 
     # Save episodes_stats.jsonl
     episodes_stats_data = [
         {"episode_index": idx, "stats": serialize_dict(stats)}
         for idx, stats in combined_dataset.meta.episodes_stats.items()
     ]
-    write_jsonlines(episodes_stats_data, meta_dir / "episodes_stats.jsonl")
+    write_jsonlines(episodes_stats_data, combined_dataset.meta.root / "meta" / "episodes_stats.jsonl")
 
     # Verify that data files exist before loading
+    data_dir = combined_dataset.meta.root / "data"
     if not data_dir.exists():
         raise ValueError(f"Data directory {data_dir} does not exist")
 

@@ -721,11 +721,21 @@ class LeRobotDataset(torch.utils.data.Dataset):
         index_position = translate_episode_index_to_position(self.meta.episodes, ep_idx)
         ep_start = self.episode_data_index["from"][index_position]
         ep_end = self.episode_data_index["to"][index_position]
+
+        # Add debug logging
+        logging.info(f"Query indices for idx={idx}, ep_idx={ep_idx}:")
+        logging.info(f"ep_start={ep_start}, ep_end={ep_end}")
+        logging.info(f"delta_indices={self.delta_indices}")
+
         query_indices = {
             key: [max(ep_start.item(), min(ep_end.item() - 1, idx + delta)) for delta in delta_idx]
             for key, delta_idx in self.delta_indices.items()
         }
-        padding = {  # Pad values outside of current episode range
+
+        # Log the calculated indices
+        logging.info(f"Calculated query_indices: {query_indices}")
+
+        padding = {
             f"{key}_is_pad": torch.BoolTensor(
                 [(idx + delta < ep_start.item()) | (idx + delta >= ep_end.item()) for delta in delta_idx]
             )

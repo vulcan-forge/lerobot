@@ -127,6 +127,13 @@ python lerobot/scripts/control_robot.py \
   --control.resume=true
 ```
 
+```
+python lerobot/scripts/combine_dataset.py \
+    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_a \
+    --output_repo_id local/sourccey_v1beta_towel_010_a_a_combined \
+    --push_to_hub 0
+```
+
 python lerobot/scripts/remove_episodes.py \
  --repo-id=local/sourccey_v1beta_towel_006 \
  --episodes='12-16' \
