@@ -725,7 +725,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         # Add debug logging
         logging.info(f"Query indices for idx={idx}, ep_idx={ep_idx}:")
         logging.info(f"ep_start={ep_start}, ep_end={ep_end}")
-        logging.info(f"delta_indices={self.delta_indices}")
+        # logging.info(f"delta_indices={self.delta_indices}")
 
         query_indices = {
             key: [max(ep_start.item(), min(ep_end.item() - 1, idx + delta)) for delta in delta_idx]
@@ -733,7 +733,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         }
 
         # Log the calculated indices
-        logging.info(f"Calculated query_indices: {query_indices}")
+        # logging.info(f"Calculated query_indices: {query_indices}")
 
         padding = {
             f"{key}_is_pad": torch.BoolTensor(
@@ -753,8 +753,11 @@ class LeRobotDataset(torch.utils.data.Dataset):
             if query_indices is not None and key in query_indices:
                 timestamps = self.hf_dataset.select(query_indices[key])["timestamp"]
                 query_timestamps[key] = torch.stack(timestamps).tolist()
+                # Add logging
+                logging.info(f"Query timestamps for {key}: {query_timestamps[key]}")
             else:
                 query_timestamps[key] = [current_ts]
+                logging.info(f"Using current timestamp for {key}: {current_ts}")
 
         return query_timestamps
 
@@ -774,6 +777,8 @@ class LeRobotDataset(torch.utils.data.Dataset):
         item = {}
         for vid_key, query_ts in query_timestamps.items():
             video_path = self.root / self.meta.get_video_file_path(ep_idx, vid_key)
+            # Add logging
+            logging.info(f"Querying video {video_path} for timestamps {query_ts}")
             frames = decode_video_frames(video_path, query_ts, self.tolerance_s, self.video_backend)
             item[vid_key] = frames.squeeze(0)
 
