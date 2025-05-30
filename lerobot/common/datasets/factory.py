@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+from pathlib import Path
 from pprint import pformat
 import shutil
 
 import torch
 
+from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import (
     LeRobotDataset,
     LeRobotDatasetMetadata,
@@ -147,6 +149,12 @@ def combine_datasets(datasets: list[LeRobotDataset], root: str, repo_id: str) ->
         # Check video backend compatibility
         if dataset.video_backend != first_dataset.video_backend:
             raise ValueError("Datasets have incompatible video backends")
+
+    # Delete existing dataset directory if it exists
+    output_root = Path(root) if root else HF_LEROBOT_HOME / repo_id
+    if output_root.exists():
+        logging.info(f"Removing existing dataset directory: {output_root}")
+        shutil.rmtree(output_root)
 
     # Create the combined dataset using create()
     combined_dataset = LeRobotDataset.create(
