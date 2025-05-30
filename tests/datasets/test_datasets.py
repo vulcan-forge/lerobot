@@ -30,7 +30,7 @@ from safetensors.torch import load_file
 
 import lerobot
 from lerobot.scripts import remove_episodes
-from lerobot.common.datasets.factory import make_dataset
+from lerobot.common.datasets.factory import make_dataset, combine_datasets
 from lerobot.common.datasets.image_writer import image_array_to_pil_image
 from lerobot.common.datasets.lerobot_dataset import (
     LeRobotDataset,

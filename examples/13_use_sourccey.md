@@ -86,6 +86,13 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --num_gpus=2
 ```
 
+```bash
+python lerobot/scripts/combine_dataset.py \
+    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_b \
+    --output_repo_id=local/sourccey_v1beta_towel_010_a_b_combined \
+    --push_to_hub=0
+```
+
 ```
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
