@@ -81,7 +81,10 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --steps=100000 \
   --batch_size=2 \
   --distributed_training=true \
-  --num_gpus=2
+  --num_gpus=2 \
+  --policy.freeze_vision_encoder=true \
+  --policy.train_expert_only=true \
+  --ddp_find_unused_parameters=true
 ```
 
 ```bash
