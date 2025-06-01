@@ -22,7 +22,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_010_b \
+  --control.repo_id=local/sourccey_v1beta_towel_010_e \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
@@ -34,10 +34,10 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_b \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_b_3c_combined \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_b \
-  --job_name=act_sourccey_v1beta_towel_010_b \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_a_b_3c_combined \
+  --job_name=act_sourccey_v1beta_towel_010_a_b_3c_combined \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -88,8 +88,15 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 
 ```bash
 python lerobot/scripts/combine_dataset.py \
-    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_b \
-    --output_repo_id=local/sourccey_v1beta_towel_010_a_b_combined \
+    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_b local/sourccey_v1beta_towel_010_2b local/sourccey_v1beta_towel_010_c local/sourccey_v1beta_towel_010_2c local/sourccey_v1beta_towel_010_3c \
+    --output_repo_id=local/sourccey_v1beta_towel_010_a_2b_3c_combined \
+    --push_to_hub=0
+```
+
+```bash
+python lerobot/scripts/combine_dataset.py \
+    --repo_ids local/sourccey_v1beta_towel_010_d local/sourccey_v1beta_towel_010_e \
+    --output_repo_id=local/sourccey_v1beta_towel_010_d_e_combined \
     --push_to_hub=0
 ```
 
@@ -99,14 +106,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_b \
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_d_e_combined \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_b/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_d_e_combined/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
@@ -129,14 +136,21 @@ python lerobot/scripts/control_robot.py \
 
 ```
 python lerobot/scripts/combine_dataset.py \
-    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_a \
-    --output_repo_id local/sourccey_v1beta_towel_010_a_a_combined \
+    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_b local/sourccey_v1beta_towel_010_c local/sourccey_v1beta_towel_010_2c local/sourccey_v1beta_towel_010_3c local/sourccey_v1beta_towel_010_d local/sourccey_v1beta_towel_010_e  \
+    --output_repo_id local/sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+    --push_to_hub 0
+```
+
+```
+python lerobot/scripts/combine_dataset.py \
+    --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_d  \
+    --output_repo_id local/sourccey_v1beta_towel_010_a_d_combined \
     --push_to_hub 0
 ```
 
 python lerobot/scripts/remove_episodes.py \
- --repo-id=local/sourccey_v1beta_towel_006 \
- --episodes='12-16' \
+ --repo-id=local/sourccey_v1beta_towel_010_c \
+ --episodes='5' \
  --push-to-hub=0
 
 ---
