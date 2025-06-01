@@ -73,10 +73,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010 \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
   --policy.type=pi0 \
-  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010 \
-  --job_name=pi0_sourccey_v1beta_towel_010 \
+  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+  --job_name=pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
