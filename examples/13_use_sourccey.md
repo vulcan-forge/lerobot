@@ -12,7 +12,7 @@ Then on your laptop, also run `conda activate lerobot` and this script:
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
-  --control.fps=30 \
+  --control.fps=20 \
   --control.display_data=true
 ```
 
@@ -112,8 +112,8 @@ python lerobot/scripts/control_robot.py \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
-  --control.num_episodes=1 \
-  --control.push_to_hub=false \
+  --control.num_episodesfalse=1 \
+  --control.push_to_hub= \
   --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
