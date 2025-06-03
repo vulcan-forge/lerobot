@@ -73,7 +73,7 @@ class MobileManipulator:
         self.teleop_keys = self.config.teleop_keys
 
         # For teleoperation, the leader arm (local) is used to record the desired arm pose.
-        self.leader_arms = make_motors_buses_from_configs(self.config.leader_arms)
+        self.leader_arms = {} # make_motors_buses_from_configs(self.config.leader_arms)
 
         self.follower_arms = make_motors_buses_from_configs(self.config.follower_arms)
 
@@ -236,10 +236,10 @@ class MobileManipulator:
             pass
 
     def connect(self):
-        if not self.leader_arms:
-            raise ValueError("MobileManipulator has no leader arm to connect.")
+        # if not self.leader_arms:
+        #     raise ValueError("MobileManipulator has no leader arm to connect.")
 
-        self.calibrate_leader()
+        # self.calibrate_leader()
 
         print("Leader arms connected")
 
