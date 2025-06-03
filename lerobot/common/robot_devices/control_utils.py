@@ -226,13 +226,9 @@ def control_loop(
     fps: int | None = None,
     single_task: str | None = None,
 ):
-    print(f"control_loop: {robot.robot_type}")
-
     # TODO(rcadene): Add option to record logs
     if not robot.is_connected:
         robot.connect()
-
-    print(f"control_loop: {robot.robot_type}")
 
     if events is None:
         events = {"exit_early": False}
@@ -255,58 +251,53 @@ def control_loop(
     # Controls starts, if policy is given it needs cleaning up
     if policy is not None:
         policy.reset()
-        policy.single_task = single_task
 
-    try:
-        while timestamp < control_time_s:
-            start_loop_t = time.perf_counter()
+    while timestamp < control_time_s:
+        start_loop_t = time.perf_counter()
 
-            if teleoperate:
-                observation, action = robot.teleop_step(record_data=True)
-            else:
-                observation = robot.capture_observation()
-                action = None
-                observation["task"] = [single_task]
-                observation["robot_type"] = [policy.robot_type] if hasattr(policy, "robot_type") else [""]
-                if policy is not None:
-                    pred_action = predict_action(
-                        observation, policy, get_safe_torch_device(policy.config.device), policy.config.use_amp
-                    )
-                    # Action can eventually be clipped using `max_relative_target`,
-                    # so action actually sent is saved in the dataset.
-                    action = robot.send_action(pred_action)
-                    action = {"action": action}
+        if teleoperate:
+            observation, action = robot.teleop_step(record_data=True)
+        else:
+            observation = robot.capture_observation()
+            action = None
+            observation["task"] = [single_task]
+            observation["robot_type"] = [policy.robot_type] if hasattr(policy, "robot_type") else [""]
+            if policy is not None:
+                pred_action = predict_action(
+                    observation, policy, get_safe_torch_device(policy.config.device), policy.config.use_amp
+                )
+                # Action can eventually be clipped using `max_relative_target`,
+                # so action actually sent is saved in the dataset.
+                action = robot.send_action(pred_action)
+                action = {"action": action}
 
-            if dataset is not None:
-                observation = {k: v for k, v in observation.items() if k not in ["task", "robot_type"]}
-                frame = {**observation, **action, "task": single_task}
-                dataset.add_frame(frame)
+        if dataset is not None:
+            observation = {k: v for k, v in observation.items() if k not in ["task", "robot_type"]}
+            frame = {**observation, **action, "task": single_task}
+            dataset.add_frame(frame)
 
-                # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
-                if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
-                    for k, v in action.items():
-                        for i, vv in enumerate(v):
-                            rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
+        # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
+        if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
+            if action is not None:
+                for k, v in action.items():
+                    for i, vv in enumerate(v):
+                        rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
 
-                    image_keys = [key for key in observation if "image" in key]
-                    for key in image_keys:
-                        rr.log(key, rr.Image(observation[key].numpy()), static=True)
+            image_keys = [key for key in observation if "image" in key]
+            for key in image_keys:
+                rr.log(key, rr.Image(observation[key].numpy()), static=True)
 
-                if fps is not None:
-                    dt_s = time.perf_counter() - start_loop_t
-                    busy_wait(1 / fps - dt_s)
+        if fps is not None:
+            dt_s = time.perf_counter() - start_loop_t
+            busy_wait(1 / fps - dt_s)
 
-                dt_s = time.perf_counter() - start_loop_t
-                log_control_info(robot, dt_s, fps=fps)
+        dt_s = time.perf_counter() - start_loop_t
+        log_control_info(robot, dt_s, fps=fps)
 
-                timestamp = time.perf_counter() - start_episode_t
-                if events["exit_early"]:
-                    events["exit_early"] = False
-                    break
-
-    except Exception as e:
-        print(f"Error in control_loop: {e}")
-        traceback.print_exc()
+        timestamp = time.perf_counter() - start_episode_t
+        if events["exit_early"]:
+            events["exit_early"] = False
+            break
 
 
 def reset_environment(robot, events, reset_time_s, fps):
