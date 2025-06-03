@@ -72,10 +72,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
   --policy.type=pi0 \
-  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-  --job_name=pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010_a \
+  --job_name=pi0_sourccey_v1beta_towel_010_a \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
@@ -107,11 +107,7 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=20 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-<<<<<<< HEAD
-  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-=======
   --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_a \
->>>>>>> main
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
