@@ -107,13 +107,17 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=20 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
+<<<<<<< HEAD
   --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+=======
+  --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_a \
+>>>>>>> main
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
-  --control.num_episodesfalse=1 \
-  --control.push_to_hub= \
+  --control.num_episodes=1 \
+  --control.push_to_hub=false \
   --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
@@ -122,7 +126,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=record \
-  --control.fps=30 \
+  --control.fps=20 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
   --control.repo_id=local/eval_pi0_sourccey_v1beta_towel_010_a \
   --control.tags='["tutorial"]' \
@@ -160,7 +164,7 @@ python lerobot/scripts/remove_episodes.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
-  --control.fps=30 \
+  --control.fps=20 \
   --control.display_data=true
 ```
 
@@ -200,7 +204,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=so100 \
   --control.type=teleoperate \
-  --control.fps=30
+  --control.fps=20
 ```
 
 --/dev/ttyGS0
@@ -220,6 +224,6 @@ SO100
 python lerobot/scripts/control_robot.py \
   --robot.type=so100 \
   --control.type=teleoperate \
-  --control.fps=30 \
+  --control.fps=20 \
   --control.display_data=true
 ```
