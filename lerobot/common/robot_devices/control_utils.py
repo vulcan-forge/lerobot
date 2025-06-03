@@ -119,10 +119,6 @@ def predict_action(observation, policy, device, use_amp):
             observation[name] = observation[name].unsqueeze(0)
             observation[name] = observation[name].to(device)
 
-        # Add task to observation if it's not already there
-        if "task" not in observation and hasattr(policy, "single_task"):
-            observation["task"] = [policy.single_task]  # PI0 expects a list of tasks
-
         # Compute the next action with the policy
         # based on the current observation
         action = policy.select_action(observation)
