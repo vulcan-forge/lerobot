@@ -619,14 +619,14 @@ class So100RobotConfig(ManipulatorRobotConfig):
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
             "left_view": OpenCVCameraConfig(
-                camera_index=0,
+                camera_index=2,
                 fps=10,
                 width=640,
                 height=480,
                 color_mode="rgb"
             ),
             "right_view": OpenCVCameraConfig(
-                camera_index=3,
+                camera_index=0,
                 fps=10,
                 width=640,
                 height=480,
