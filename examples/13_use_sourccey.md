@@ -86,7 +86,8 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 
 ---- Train on Pretrained SmolVLA model
 
-python lerobot/scripts/train.py \
+```bash
+CUDA_VISIBLE_DEVICES=0 python lerobot/scripts/train.py \
  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
  --policy.path=lerobot/smolvla_base \
  --policy.device=cuda \
@@ -95,6 +96,7 @@ python lerobot/scripts/train.py \
  --wandb.enable=false \
  --steps=200000 \
  --batch_size=64
+```
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
@@ -110,8 +112,9 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
  --num_gpus=2
 ```
 
------
- --steps=200000 \
+---
+
+--steps=200000 \
  --batch_size=64 \
 
 ----- Combine Dataset functions
