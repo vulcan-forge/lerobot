@@ -94,17 +94,17 @@ CUDA_VISIBLE_DEVICES=0 python lerobot/scripts/train.py \
  --output_dir=outputs/train/smolvla_base_sourccey_v1beta_towel_010_a \
  --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
  --wandb.enable=false \
- --steps=200000 \
- --batch_size=64
+ --steps=100000 \
+ --batch_size=4
 ```
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
  --policy.path=lerobot/smolvla_base \
+ --policy.device=cuda \
  --output_dir=outputs/train/smolvla_base_sourccey_v1beta_towel_010_a \
  --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
- --policy.device=cuda \
  --wandb.enable=false \
  --steps=100000 \
  --batch_size=4
