@@ -84,6 +84,36 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --batch_size=4
 ```
 
+---- Train on Pretrained SmolVLA model
+
+python lerobot/scripts/train.py \
+ --dataset.repo_id=lerobot/svla_so100_stacking \
+ --policy.path=lerobot/smolvla_base \
+ --policy.device=cuda \
+ --output_dir=outputs/train/smolvla_base_sourccey_v1beta_towel_010_a \
+ --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
+ --wandb.enable=false \
+ --steps=200000 \
+ --batch_size=64 \
+ --distributed_training=true \
+ --num_gpus=2 \
+
+```bash
+torchrun --nproc_per_node=2 lerobot/scripts/train.py \
+ --dataset.repo_id=local/sourccey_v1beta_towel_010_a\
+ --policy.path=lerobot/smolvla_base \
+ --output_dir=outputs/train/smolvla_base_sourccey_v1beta_towel_010_a \
+ --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
+ --policy.device=cuda \
+ --wandb.enable=false \
+ --steps=200000 \
+ --batch_size=64
+ --distributed_training=true \
+ --num_gpus=2 \
+```
+
+----- Combine Dataset functions
+
 ```bash
 python lerobot/scripts/combine_dataset.py \
     --repo_ids local/sourccey_v1beta_towel_010_a local/sourccey_v1beta_towel_010_b local/sourccey_v1beta_towel_010_2b local/sourccey_v1beta_towel_010_c local/sourccey_v1beta_towel_010_2c local/sourccey_v1beta_towel_010_3c \
