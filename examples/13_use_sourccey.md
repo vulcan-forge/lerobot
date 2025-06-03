@@ -34,10 +34,10 @@ python lerobot/scripts/control_robot.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_b_3c_combined \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_a_b_3c_combined \
-  --job_name=act_sourccey_v1beta_towel_010_a_b_3c_combined \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_a \
+  --job_name=act_sourccey_v1beta_towel_010_a \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -46,10 +46,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_b  \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a  \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_b \
-  --job_name=act_sourccey_v1beta_towel_010_b  \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_a \
+  --job_name=act_sourccey_v1beta_towel_010_a  \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -60,31 +60,28 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-  --policy.type=pi0 \
-  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-  --job_name=pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
+  --policy.type=smolvla \
+  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_a \
+  --job_name=smolvla_sourccey_v1beta_towel_010_a \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
-  --batch_size=2
+  --batch_size=4
 ```
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-  --policy.type=pi0 \
-  --output_dir=outputs/train/pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
-  --job_name=pi0_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a\
+  --policy.type=smolvla \
+  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_4_a \
+  --job_name=smolvla_sourccey_v1beta_towel_010_4_a \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=100000 \
-  --batch_size=2 \
   --distributed_training=true \
   --num_gpus=2 \
-  --policy.freeze_vision_encoder=true \
-  --policy.train_expert_only=true \
-  --ddp_find_unused_parameters=true
+  --batch_size=4
 ```
 
 ```bash
