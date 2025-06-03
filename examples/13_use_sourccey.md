@@ -20,9 +20,9 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=record \
-  --control.fps=30 \
+  --control.fps=20 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
-  --control.repo_id=local/sourccey_v1beta_towel_010_e \
+  --control.repo_id=local/sourccey_v1beta_towel_010_a \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
@@ -46,10 +46,10 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_b  \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a  \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_b \
-  --job_name=act_sourccey_v1beta_towel_010_b  \
+  --output_dir=outputs/train/act_sourccey_v1beta_towel_010_a \
+  --job_name=act_sourccey_v1beta_towel_010_a  \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -112,9 +112,9 @@ python lerobot/scripts/control_robot.py \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
-  --control.num_episodes=1 \
-  --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a_2b_3c_d_e_combined/checkpoints/100000/pretrained_model \
+  --control.num_episodesfalse=1 \
+  --control.push_to_hub= \
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
