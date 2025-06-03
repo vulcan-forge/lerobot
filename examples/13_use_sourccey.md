@@ -107,7 +107,7 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
  --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
  --wandb.enable=false \
  --steps=100000 \
- --batch_size=4 \
+ --batch_size=8 \
  --distributed_training=true \
  --num_gpus=2
 ```
