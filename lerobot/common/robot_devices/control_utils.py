@@ -109,6 +109,10 @@ def predict_action(observation, policy, device, use_amp):
     ):
         # Convert to pytorch format: channel first and float32 in [0,1] with batch dimension
         for name in observation:
+            # Skip all observations that are not tensors (e.g. text)
+            if not isinstance(observation[name], torch.Tensor):
+                continue
+
             if "image" in name:
                 observation[name] = observation[name].type(torch.float32) / 255
                 observation[name] = observation[name].permute(2, 0, 1).contiguous()
@@ -266,7 +270,8 @@ def control_loop(
             else:
                 observation = robot.capture_observation()
                 action = None
-
+                observation["task"] = [single_task]
+                observation["robot_type"] = [policy.robot_type] if hasattr(policy, "robot_type") else [""]
                 if policy is not None:
                     pred_action = predict_action(
                         observation, policy, get_safe_torch_device(policy.config.device), policy.config.use_amp
@@ -277,30 +282,31 @@ def control_loop(
                     action = {"action": action}
 
             if dataset is not None:
+                observation = {k: v for k, v in observation.items() if k not in ["task", "robot_type"]}
                 frame = {**observation, **action, "task": single_task}
                 dataset.add_frame(frame)
 
-            # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
-            if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
-                for k, v in action.items():
-                    for i, vv in enumerate(v):
-                        rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
+                # TODO(Steven): This should be more general (for RemoteRobot instead of checking the name, but anyways it will change soon)
+                if (display_data and not is_headless()) or (display_data and robot.robot_type.startswith("lekiwi") or (display_data and robot.robot_type.startswith("sourccey_v1beta"))):
+                    for k, v in action.items():
+                        for i, vv in enumerate(v):
+                            rr.log(f"sent_{k}_{i}", rr.Scalar(vv.numpy()))
 
-                image_keys = [key for key in observation if "image" in key]
-                for key in image_keys:
-                    rr.log(key, rr.Image(observation[key].numpy()), static=True)
+                    image_keys = [key for key in observation if "image" in key]
+                    for key in image_keys:
+                        rr.log(key, rr.Image(observation[key].numpy()), static=True)
 
-            if fps is not None:
+                if fps is not None:
+                    dt_s = time.perf_counter() - start_loop_t
+                    busy_wait(1 / fps - dt_s)
+
                 dt_s = time.perf_counter() - start_loop_t
-                busy_wait(1 / fps - dt_s)
+                log_control_info(robot, dt_s, fps=fps)
 
-            dt_s = time.perf_counter() - start_loop_t
-            log_control_info(robot, dt_s, fps=fps)
-
-            timestamp = time.perf_counter() - start_episode_t
-            if events["exit_early"]:
-                events["exit_early"] = False
-                break
+                timestamp = time.perf_counter() - start_episode_t
+                if events["exit_early"]:
+                    events["exit_early"] = False
+                    break
 
     except Exception as e:
         print(f"Error in control_loop: {e}")
