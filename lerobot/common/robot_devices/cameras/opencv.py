@@ -241,8 +241,8 @@ class OpenCVCamera:
                 self.port = Path(self.camera_index)
                 # Retrieve the camera index from a potentially symlinked path
                 self.camera_index = get_camera_index_from_unix_port(self.port)
-            else:
-                raise ValueError(f"Please check the provided camera_index: {self.camera_index}")
+            # else:
+            #     raise ValueError(f"Please check the provided camera_index: {self.camera_index}")
 
         # Store the raw (capture) resolution from the config.
         self.capture_width = config.width

@@ -58,32 +58,6 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --num_gpus=2
 ```
 
-```bash
-python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
-  --policy.type=smolvla \
-  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_a \
-  --job_name=smolvla_sourccey_v1beta_towel_010_a \
-  --policy.device=cuda \
-  --wandb.enable=false \
-  --steps=100000 \
-  --batch_size=4
-```
-
-```bash
-torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v1beta_towel_010_a\
-  --policy.type=smolvla \
-  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_4_a \
-  --job_name=smolvla_sourccey_v1beta_towel_010_4_a \
-  --policy.device=cuda \
-  --wandb.enable=false \
-  --steps=100000 \
-  --distributed_training=true \
-  --num_gpus=2 \
-  --batch_size=4
-```
-
 ---- Train on Pretrained SmolVLA model
 
 ```bash
@@ -103,11 +77,11 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
  --policy.path=lerobot/smolvla_base \
  --policy.device=cuda \
- --output_dir=outputs/train/smolvla_base_sourccey_v1beta_towel_010_a \
- --job_name=smolvla_base_sourccey_v1beta_towel_010_a \
+ --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_050_a \
+ --job_name=smolvla_sourccey_v1beta_towel_050_a \
  --wandb.enable=false \
  --steps=100000 \
- --batch_size=8 \
+ --batch_size=32 \
  --distributed_training=true \
  --num_gpus=2
 ```
@@ -116,6 +90,36 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 
 --steps=200000 \
  --batch_size=64 \
+
+------ Train on 0 base SmolVLA:
+
+
+<!-- ```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
+  --policy.type=smolvla \
+  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_a \
+  --job_name=smolvla_sourccey_v1beta_towel_010_a \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=100000 \
+  --batch_size=4
+```
+
+```bash
+torchrun --nproc_per_node=2 lerobot/scripts/train.py \
+  --dataset.repo_id=local/sourccey_v1beta_towel_010_a\
+  --policy.type=smolvla \
+  --output_dir=outputs/train/smolvla_sourccey_v1beta_towel_010_4_a \
+  --job_name=smolvla_sourccey_v1beta_towel_050_a \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --steps=200000 \
+  --distributed_training=true \
+  --num_gpus=2 \
+  --batch_size=32
+``` -->
+
 
 ----- Combine Dataset functions
 
@@ -139,14 +143,14 @@ python lerobot/scripts/control_robot.py \
   --control.type=record \
   --control.fps=20 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
-  --control.repo_id=local/eval_smolvla_sourccey_v1beta_towel_010_a \
+  --control.repo_id=local/eval_smolvla_sourccey_v1beta_towel_050_a \
   --control.tags='["tutorial"]' \
   --control.warmup_time_s=5 \
   --control.episode_time_s=500 \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/smolvla_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model \
+  --control.policy.path=outputs/train/smolvla_sourccey_v1beta_towel_050_a/checkpoints/100000/pretrained_model \
   --control.resume=true
 ```
 
