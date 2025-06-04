@@ -17,7 +17,6 @@ import time
 
 
 def busy_wait(seconds):
-    # print(platform.system())
     if platform.system() == "Darwin" or platform.system() == "Windows":
         # On Mac, `time.sleep` is not accurate and we need to use this while loop trick,
         # but it consumes CPU cycles.
