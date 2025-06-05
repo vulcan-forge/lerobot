@@ -15,3 +15,13 @@ python -m lerobot.calibrate \
     --robot.port=COM24 \
     --robot.id=so100
 ```
+
+```
+python -m lerobot.teleoperate \
+    --robot.type=so100_follower \
+    --robot.port=COM24 \
+    --robot.id=so100 \
+    --teleop.type=so100_leader \
+    --teleop.port=COM26 \
+    --teleop.id=so100
+```
