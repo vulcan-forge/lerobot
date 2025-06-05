@@ -233,7 +233,11 @@ def is_valid_numpy_dtype_string(dtype_str: str) -> bool:
 
 
 def enter_pressed() -> bool:
-    return select.select([sys.stdin], [], [], 0)[0] and sys.stdin.readline().strip() == ""
+    if platform.system() == "Windows":
+        import msvcrt
+        return msvcrt.kbhit() and msvcrt.getch() == b'\r'
+    else:
+        return select.select([sys.stdin], [], [], 0)[0] and sys.stdin.readline().strip() == ""
 
 
 def move_cursor_up(lines):
