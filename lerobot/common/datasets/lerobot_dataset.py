@@ -15,6 +15,7 @@
 # limitations under the License.
 import contextlib
 import logging
+import os
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -36,6 +37,8 @@ from lerobot.common.datasets.image_writer import AsyncImageWriter, write_image
 from lerobot.common.datasets.utils import (
     DEFAULT_FEATURES,
     DEFAULT_IMAGE_PATH,
+    EPISODES_PATH,
+    EPISODES_STATS_PATH,
     INFO_PATH,
     TASKS_PATH,
     append_jsonlines,
@@ -51,6 +54,10 @@ from lerobot.common.datasets.utils import (
     get_features_from_robot,
     get_hf_features_from_features,
     get_safe_version,
+    has_episodes,
+    has_episodes_stats,
+    has_info,
+    has_tasks,
     hf_transform_to_torch,
     is_valid_version,
     load_episodes,
@@ -65,6 +72,9 @@ from lerobot.common.datasets.utils import (
     write_episode_stats,
     write_info,
     write_json,
+    write_jsonlines,
+    write_stats,
+    write_task,
 )
 from lerobot.common.datasets.video_utils import (
     VideoFrame,
@@ -127,6 +137,10 @@ class LeRobotDatasetMetadata:
             allow_patterns=allow_patterns,
             ignore_patterns=ignore_patterns,
         )
+
+    def has_metadata(self) -> bool:
+        return has_info(self.root) and has_tasks(self.root) and has_episodes(self.root) and has_episodes_stats(self.root)
+
 
     @property
     def _version(self) -> packaging.version.Version:
@@ -228,31 +242,6 @@ class LeRobotDatasetMetadata:
         """
         return self.task_to_task_index.get(task, None)
 
-    # def get_subtask_info_for_frame(self, frame_idx, task_idx, sub_tasks):
-    #     """
-    #     Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
-    #     """
-
-    #     empty_subtask = {
-    #         "subtask_instruction": None,
-    #         "subtask_progress": None,
-    #     }
-
-    #     if sub_tasks is None or len(sub_tasks) <= task_idx:
-    #         return empty_subtask
-
-    #     subtask = sub_tasks[task_idx]
-    #     for sub in subtask:
-    #         if sub["start"] <= frame_idx <= sub["end"]:
-    #             length = max(1, sub["end"] - sub["start"])
-    #             progress = (frame_idx - sub["start"]) / length
-    #             return {
-    #                 "subtask_instruction": sub["instruction"],
-    #                 "subtask_progress": progress,
-    #             }
-    #     # If no subtask found for this frame
-    #     return empty_subtask
-
     def add_task(self, task: str):
         """
         Given a task in natural language, add it to the dictionary of tasks.
@@ -296,18 +285,6 @@ class LeRobotDatasetMetadata:
             "episode_index": episode_index,
             "tasks": episode_tasks,
             "length": episode_length,
-            # "performance_score": 1.0,
-            # "sub_tasks": [
-            #     # [{
-            #     #     "start": 0,
-            #     #     "end": 74,
-            #     #     "instruction": "walk to the fridge",
-            #     #     "performance_score": 1.0,        # 0.0 (fail) to 1.0 (perfect), can be fractional
-            #     #     "status": "success",         # "success", "error", "incomplete", etc.
-            #     #     "error_type": None,          # e.g., "collision", "timeout", or None if no error
-            #     #     "error_message": None        # Optional: human-readable description, or None
-            #     # }]
-            # ],
 
         }
         self.episodes[episode_index] = episode_dict
@@ -385,26 +362,15 @@ class LeRobotDatasetMetadata:
         obj.info = create_empty_dataset_info(CODEBASE_VERSION, fps, robot_type, features, use_videos)
         if len(obj.video_keys) > 0 and not use_videos:
             raise ValueError()
+
+        # Save all metadata files
         write_json(obj.info, obj.root / INFO_PATH)
+        write_jsonlines({}, obj.root / TASKS_PATH)
+        write_jsonlines({}, obj.root / EPISODES_PATH)
+        write_jsonlines({}, obj.root / EPISODES_STATS_PATH)
+
         obj.revision = None
         return obj
-
-    def edit_subtasks(self, episode_index: int, new_subtasks: list[dict]):
-        """
-        Edit the sub_tasks for a given episode.
-        Args:
-            episode_index (int): The index of the episode to edit.
-            new_subtasks (list[dict]): The new list of subtask dicts to set.
-        """
-        if episode_index not in self.episodes:
-            raise ValueError(f"Episode {episode_index} does not exist.")
-
-        # Update in-memory
-        self.episodes[episode_index]["sub_tasks"] = new_subtasks
-
-        # Save to disk
-        write_episode(self.episodes[episode_index], self.root)
-
 
 class LeRobotDataset(torch.utils.data.Dataset):
     def __init__(
@@ -542,6 +508,14 @@ class LeRobotDataset(torch.utils.data.Dataset):
         self.meta = LeRobotDatasetMetadata(
             self.repo_id, self.root, self.revision, force_cache_sync=force_cache_sync
         )
+
+        # Check if data exists and create empty dataset if needed
+        if not self.has_data():
+            # Initialize empty dataset
+            self.hf_dataset = self.create_hf_dataset()
+            self.episode_data_index = {}
+            return
+
         if self.episodes is not None and self.meta._version >= packaging.version.parse("v2.1"):
             episodes_stats = [self.meta.episodes_stats[ep_idx] for ep_idx in self.episodes]
             self.stats = aggregate_stats(episodes_stats)
@@ -690,6 +664,19 @@ class LeRobotDataset(torch.utils.data.Dataset):
         hf_dataset.set_transform(hf_transform_to_torch)
         return hf_dataset
 
+    def has_data(self) -> bool:
+        """Check if the dataset has any data files.
+
+        Returns:
+            bool: True if data exists, False otherwise.
+        """
+        data_path = self.root / "data"
+        if not data_path.exists():
+            return False
+
+        # Check if there are any parquet files in the data directory
+        return any(f.suffix == '.parquet' for f in data_path.rglob('*.parquet'))
+
     @property
     def fps(self) -> int:
         """Frames per second used during data collection."""
@@ -800,11 +787,6 @@ class LeRobotDataset(torch.utils.data.Dataset):
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
-
-        # Add subtask info
-        # frame_idx = item["frame_index"].item()
-        # subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, task_idx, item.get("sub_tasks", []))
-        # item.update(subtask_info)
 
         return item
 

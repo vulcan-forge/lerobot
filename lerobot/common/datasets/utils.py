@@ -35,6 +35,7 @@ from huggingface_hub.errors import RevisionNotFoundError
 from PIL import Image as PILImage
 from torchvision import transforms
 
+from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.backward_compatibility import (
     V21_MESSAGE,
     BackwardCompatibilityError,
@@ -180,6 +181,9 @@ def load_info(local_dir: Path) -> dict:
         ft["shape"] = tuple(ft["shape"])
     return info
 
+def has_info(local_dir: Path) -> bool:
+    return (local_dir / INFO_PATH).exists()
+
 
 def write_stats(stats: dict, local_dir: Path):
     serialized_stats = serialize_dict(stats)
@@ -197,6 +201,8 @@ def load_stats(local_dir: Path) -> dict[str, dict[str, np.ndarray]]:
     stats = load_json(local_dir / STATS_PATH)
     return cast_stats_to_numpy(stats)
 
+def has_stats(local_dir: Path) -> bool:
+    return (local_dir / STATS_PATH).exists()
 
 def write_task(task_index: int, task: dict, local_dir: Path):
     task_dict = {
@@ -212,6 +218,9 @@ def load_tasks(local_dir: Path) -> tuple[dict, dict]:
     task_to_task_index = {task: task_index for task_index, task in tasks.items()}
     return tasks, task_to_task_index
 
+def has_tasks(local_dir: Path) -> bool:
+    return (local_dir / TASKS_PATH).exists()
+
 
 def write_episode(episode: dict, local_dir: Path):
     append_jsonlines(episode, local_dir / EPISODES_PATH)
@@ -221,6 +230,8 @@ def load_episodes(local_dir: Path) -> dict:
     episodes = load_jsonlines(local_dir / EPISODES_PATH)
     return {item["episode_index"]: item for item in sorted(episodes, key=lambda x: x["episode_index"])}
 
+def has_episodes(local_dir: Path) -> bool:
+    return (local_dir / EPISODES_PATH).exists()
 
 def write_episode_stats(episode_index: int, episode_stats: dict, local_dir: Path):
     # We wrap episode_stats in a dictionary since `episode_stats["episode_index"]`
@@ -235,6 +246,9 @@ def load_episodes_stats(local_dir: Path) -> dict:
         item["episode_index"]: cast_stats_to_numpy(item["stats"])
         for item in sorted(episodes_stats, key=lambda x: x["episode_index"])
     }
+
+def has_episodes_stats(local_dir: Path) -> bool:
+    return (local_dir / EPISODES_STATS_PATH).exists()
 
 
 def backward_compatible_episodes_stats(
@@ -835,3 +849,36 @@ def translate_episode_index_to_position(episode_dicts: dict[dict], episode_index
     episode_to_position = {ep_idx: i for i, ep_idx in enumerate(episode_dicts)}
     position = episode_to_position[episode_index]
     return position
+
+def does_dataset_exist(repo_id: str, root: str | Path | None = None) -> bool:
+    """Check if a dataset exists by verifying the presence of required files and data.
+
+    Args:
+        local_dir (Path): Path to the dataset directory
+
+    Returns:
+        bool: True if dataset exists with data, False otherwise
+    """
+
+    dataset_root = Path(root) if root else HF_LEROBOT_HOME
+    dataset_dir = dataset_root / repo_id
+
+    # Check if data directory exists and has parquet files
+    data_path = dataset_dir / "data"
+    if not data_path.exists():
+        return False
+
+    # Check for parquet files in data directory
+    has_parquet_files = any(f.suffix == '.parquet' for f in data_path.rglob('*.parquet'))
+    if not has_parquet_files:
+        return False
+
+    # Check if all required metadata files exist
+    required_files = [
+        INFO_PATH,
+        EPISODES_PATH,
+        EPISODES_STATS_PATH,
+        TASKS_PATH
+    ]
+
+    return all((local_dir / fpath).exists() for fpath in required_files)

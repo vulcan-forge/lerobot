@@ -144,6 +144,7 @@ import rerun as rr
 
 # from safetensors.torch import load_file, save_file
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.common.datasets.utils import does_dataset_exist
 from lerobot.common.policies.factory import make_policy
 from lerobot.common.robot_devices.control_configs import (
     CalibrateControlConfig,
@@ -256,8 +257,8 @@ def record(
     robot: Robot,
     cfg: RecordControlConfig,
 ) -> LeRobotDataset:
-    # TODO(rcadene): Add option to record logs
-    if cfg.resume:
+    # Create empty dataset or load existing saved episodes
+    if does_dataset_exist(cfg.repo_id, cfg.root):
         dataset = LeRobotDataset(
             cfg.repo_id,
             root=cfg.root,
@@ -269,7 +270,6 @@ def record(
             )
         sanity_check_dataset_robot_compatibility(dataset, robot, cfg.fps, cfg.video)
     else:
-        # Create empty dataset or load existing saved episodes
         sanity_check_dataset_name(cfg.repo_id, cfg.policy)
         dataset = LeRobotDataset.create(
             cfg.repo_id,
