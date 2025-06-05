@@ -33,7 +33,7 @@ class Camera(Protocol):
     def disconnect(self): ...
 
 
-def make_cameras_from_configs(camera_configs: dict[str, CameraConfig], robot: Robot, control_config: ControlConfig) -> list[Camera]:
+def make_cameras_from_configs(camera_configs: dict[str, CameraConfig], robot: Robot = None, control_config: ControlConfig = None) -> list[Camera]:
     cameras = {}
 
     for key, cfg in camera_configs.items():
