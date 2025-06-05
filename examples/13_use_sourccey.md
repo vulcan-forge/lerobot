@@ -12,7 +12,7 @@ Then on your laptop, also run `conda activate lerobot` and this script:
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.display_data=true
 ```
 
@@ -20,7 +20,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=record \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
   --control.repo_id=local/sourccey_v1beta_towel_010_c \
   --control.tags='["tutorial"]' \
@@ -93,7 +93,6 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 
 ------ Train on 0 base SmolVLA:
 
-
 <!-- ```bash
 python lerobot/scripts/train.py \
   --dataset.repo_id=local/sourccey_v1beta_towel_010_a \
@@ -120,7 +119,6 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --batch_size=32
 ``` -->
 
-
 ----- Combine Dataset functions
 
 ```bash
@@ -141,7 +139,7 @@ python lerobot/scripts/combine_dataset.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=record \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
   --control.repo_id=local/eval_smolvla_sourccey_v1beta_towel_050_a \
   --control.tags='["tutorial"]' \
@@ -158,7 +156,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=record \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and attempt to fold it." \
   --control.repo_id=local/eval_act_sourccey_v1beta_towel_010_a \
   --control.tags='["tutorial"]' \
@@ -196,7 +194,7 @@ python lerobot/scripts/remove_episodes.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=sourccey_v1beta \
   --control.type=teleoperate \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.display_data=true
 ```
 
@@ -236,7 +234,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=so100 \
   --control.type=teleoperate \
-  --control.fps=20
+  --control.fps=30
 ```
 
 --/dev/ttyGS0
@@ -256,7 +254,7 @@ SO100
 python lerobot/scripts/control_robot.py \
   --robot.type=so100 \
   --control.type=teleoperate \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.display_data=true
 ```
 
@@ -264,7 +262,7 @@ python lerobot/scripts/control_robot.py \
 python lerobot/scripts/control_robot.py \
   --robot.type=so100 \
   --control.type=record \
-  --control.fps=20 \
+  --control.fps=30 \
   --control.single_task="Grasp a towel with sourccey and fold it." \
   --control.repo_id=local/so100_a \
   --control.tags='["tutorial"]' \

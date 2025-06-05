@@ -284,7 +284,6 @@ def test_resume_record(tmp_path, request, robot_type, mock):
         # Dataset already exists, but resume=False by default
         record(robot, rec_cfg)
 
-    rec_cfg.resume = True
     dataset = record(robot, rec_cfg)
     assert len(dataset) == 2, f"`dataset` should contain 2 frames, not {len(dataset)}"
 

@@ -85,8 +85,6 @@ class RecordControlConfig(ControlConfig):
     display_data: bool = False
     # Use vocal synthesis to read events.
     play_sounds: bool = True
-    # Resume recording on an existing dataset.
-    resume: bool = False
 
     def __post_init__(self):
         # HACK: We parse again the cli args here to get the pretrained path if there was one.

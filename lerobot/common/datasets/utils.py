@@ -881,4 +881,4 @@ def does_dataset_exist(repo_id: str, root: str | Path | None = None) -> bool:
         TASKS_PATH
     ]
 
-    return all((local_dir / fpath).exists() for fpath in required_files)
+    return all((dataset_dir / fpath).exists() for fpath in required_files)
