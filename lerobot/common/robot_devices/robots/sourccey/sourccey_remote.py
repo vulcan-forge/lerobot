@@ -97,7 +97,7 @@ def calibrate_follower_arms(left_motors_bus, right_motors_bus, calib_dir_str):
         print(f"[WARNING] Could not apply calibration: {e}")
 
 
-def run_sourccey_v1beta(robot_config):
+def run_sourccey_v1beta(robot_config, control_config):
     """
     Runs the SourcceyV1Beta robot:
       - Sets up cameras and connects them.
@@ -116,7 +116,7 @@ def run_sourccey_v1beta(robot_config):
     print("here 6")
 
     # Initialize cameras from the robot configuration.
-    cameras = make_cameras_from_configs(robot_config.cameras)
+    cameras = make_cameras_from_configs(robot_config.cameras, robot_config, control_config)
     for cam in cameras.values():
         cam.connect()
 

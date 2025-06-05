@@ -30,6 +30,8 @@ import numpy as np
 from PIL import Image
 
 from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
+from lerobot.common.robot_devices.control_configs import ControlConfig
+from lerobot.common.robot_devices.robots.utils import Robot, is_robot_remote, is_robot_running_locally
 from lerobot.common.robot_devices.utils import (
     RobotDeviceAlreadyConnectedError,
     RobotDeviceNotConnectedError,
@@ -228,21 +230,23 @@ class OpenCVCamera:
     ```
     """
 
-    def __init__(self, config: OpenCVCameraConfig):
+    def __init__(self, config: OpenCVCameraConfig, robot: Robot = None, control_config: ControlConfig = None):
         self.config = config
         self.camera_index = config.camera_index
         self.port = None
 
         # Linux uses ports for connecting to cameras
-        if platform.system() == "Linux":
+        is_linux_and_no_robot = platform.system() == "Linux" and robot is None
+        is_linux_and_local_robot = platform.system() == "Linux" and robot is not None and control_config is not None and is_robot_running_locally(robot.robot_type, control_config.type)
+        if is_linux_and_no_robot or is_linux_and_local_robot:
             if isinstance(self.camera_index, int):
                 self.port = Path(f"/dev/video{self.camera_index}")
             elif isinstance(self.camera_index, str) and is_valid_unix_path(self.camera_index):
                 self.port = Path(self.camera_index)
                 # Retrieve the camera index from a potentially symlinked path
                 self.camera_index = get_camera_index_from_unix_port(self.port)
-            # else:
-            #     raise ValueError(f"Please check the provided camera_index: {self.camera_index}")
+            else:
+                raise ValueError(f"Please check the provided camera_index: {self.camera_index}")
 
         # Store the raw (capture) resolution from the config.
         self.capture_width = config.width

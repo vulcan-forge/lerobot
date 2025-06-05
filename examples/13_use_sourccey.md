@@ -148,8 +148,7 @@ python lerobot/scripts/control_robot.py \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/smolvla_sourccey_v1beta_towel_050_a/checkpoints/100000/pretrained_model \
-  --control.resume=true
+  --control.policy.path=outputs/train/smolvla_sourccey_v1beta_towel_050_a/checkpoints/100000/pretrained_model
 ```
 
 ```
@@ -165,8 +164,7 @@ python lerobot/scripts/control_robot.py \
   --control.reset_time_s=10 \
   --control.num_episodes=1 \
   --control.push_to_hub=false \
-  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model \
-  --control.resume=true
+  --control.policy.path=outputs/train/act_sourccey_v1beta_towel_010_a/checkpoints/100000/pretrained_model
 ```
 
 ```

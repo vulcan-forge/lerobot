@@ -28,7 +28,7 @@ from lerobot.common.robot_devices.motors.feetech import TorqueMode
 from lerobot.common.robot_devices.motors.utils import MotorsBus, make_motors_buses_from_configs
 from lerobot.common.robot_devices.robots.configs import MobileManipulatorRobotConfig
 from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
-from lerobot.common.robot_devices.robots.utils import get_arm_id
+from lerobot.common.robot_devices.robots.utils import get_arm_id, is_teleoping_remote_robot
 from lerobot.common.robot_devices.utils import RobotDeviceNotConnectedError
 
 PYNPUT_AVAILABLE = True
@@ -236,12 +236,12 @@ class MobileManipulator:
             pass
 
     def connect(self):
-        # if not self.leader_arms:
-        #     raise ValueError("MobileManipulator has no leader arm to connect.")
 
-        # self.calibrate_leader()
-
-        # print("Leader arms connected")
+        # Calibrate leader arm only if we are running locally
+        if is_teleoping_remote_robot(self.robot_type, self.control_type):
+            if not self.leader_arms:
+                raise ValueError("MobileManipulator has no leader arm to connect.")
+            self.calibrate_leader()
 
         # Set up ZeroMQ sockets to communicate with the remote mobile robot.
         self.context = zmq.Context()

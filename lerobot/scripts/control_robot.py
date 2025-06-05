@@ -416,13 +416,9 @@ def _init_rerun(control_config: ControlConfig, session_name: str = "lerobot_cont
 def control_robot(cfg: ControlPipelineConfig):
     init_logging()
     logging.info(pformat(asdict(cfg)))
-
-    print("here 1")
     robot = make_robot_from_config(cfg.robot)
-    print(f"Running robot: {robot.robot_type}")
 
     # TODO(Steven): Blueprint for fixed window size
-
     if isinstance(cfg.control, CalibrateControlConfig):
         calibrate(robot, cfg.control)
     elif isinstance(cfg.control, TeleoperateControlConfig):
@@ -440,7 +436,7 @@ def control_robot(cfg: ControlPipelineConfig):
             from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
 
             _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
-            run_lekiwi(cfg.robot)
+            run_lekiwi(cfg.robot, cfg.control)
         elif cfg.robot.robot_type == "sourccey_v1beta":
             from lerobot.common.robot_devices.robots.sourccey.sourccey_remote import run_sourccey_v1beta
 
@@ -448,7 +444,7 @@ def control_robot(cfg: ControlPipelineConfig):
             _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
 
             print("here 4")
-            run_sourccey_v1beta(cfg.robot)
+            run_sourccey_v1beta(cfg.robot, cfg.control)
         else:
             raise ValueError(f"Unknown remote robot type: {cfg.robot.robot_type}")
 

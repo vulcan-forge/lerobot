@@ -93,3 +93,18 @@ def make_robot_from_config(config: RobotConfig):
 def make_robot(robot_type: str, **kwargs) -> Robot:
     config = make_robot_config(robot_type, **kwargs)
     return make_robot_from_config(config)
+
+
+# Helper Functions to determine if the robot is remote or local
+def is_robot_remote(robot_type: str) -> bool:
+    return robot_type in ["lekiwi", "sourccey_v1beta"]
+
+def is_robot_running_locally(robot_type: str, control_type: str) -> bool:
+    has_robot_remote = is_robot_remote(robot_type)
+    has_remote_control = control_type is "remote_robot"
+    return not has_robot_remote or (has_robot_remote and has_remote_control)
+
+def is_teleoping_remote_robot(robot_type: str, control_type: str) -> bool:
+    has_robot_remote = is_robot_remote(robot_type)
+    has_local_control = control_type is not "remote_robot"
+    return has_robot_remote and has_local_control

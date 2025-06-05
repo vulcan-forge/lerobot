@@ -83,7 +83,7 @@ def calibrate_follower_arm(motors_bus, calib_dir_str):
         print(f"[WARNING] Could not apply calibration: {e}")
 
 
-def run_lekiwi(robot_config):
+def run_lekiwi(robot_config, control_config):
     """
     Runs the LeKiwi robot:
       - Sets up cameras and connects them.
@@ -97,7 +97,7 @@ def run_lekiwi(robot_config):
     from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
 
     # Initialize cameras from the robot configuration.
-    cameras = make_cameras_from_configs(robot_config.cameras)
+    cameras = make_cameras_from_configs(robot_config.cameras, robot_config, control_config)
     for cam in cameras.values():
         cam.connect()
 

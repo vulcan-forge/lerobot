@@ -21,6 +21,8 @@ from lerobot.common.robot_devices.cameras.configs import (
     IntelRealSenseCameraConfig,
     OpenCVCameraConfig,
 )
+from lerobot.common.robot_devices.control_configs import ControlConfig
+from lerobot.common.robot_devices.robots.utils import Robot
 
 
 # Defines a camera type
@@ -31,14 +33,14 @@ class Camera(Protocol):
     def disconnect(self): ...
 
 
-def make_cameras_from_configs(camera_configs: dict[str, CameraConfig]) -> list[Camera]:
+def make_cameras_from_configs(camera_configs: dict[str, CameraConfig], robot: Robot, control_config: ControlConfig) -> list[Camera]:
     cameras = {}
 
     for key, cfg in camera_configs.items():
         if cfg.type == "opencv":
             from lerobot.common.robot_devices.cameras.opencv import OpenCVCamera
 
-            cameras[key] = OpenCVCamera(cfg)
+            cameras[key] = OpenCVCamera(cfg, robot, control_config)
 
         elif cfg.type == "intelrealsense":
             from lerobot.common.robot_devices.cameras.intelrealsense import IntelRealSenseCamera
