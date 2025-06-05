@@ -1,0 +1,51 @@
+---
+## SO100 Test
+---
+
+```bash
+python -m lerobot.calibrate \
+    --teleop.type=so100_leader \
+    --teleop.port=COM26 \
+    --teleop.id=so100
+```
+
+```bash
+python -m lerobot.calibrate \
+    --robot.type=so100_follower \
+    --robot.port=COM24 \
+    --robot.id=so100
+```
+
+```
+python -m lerobot.teleoperate \
+    --robot.type=so100_follower \
+    --robot.port=COM24 \
+    --robot.id=so100 \
+    --teleop.type=so100_leader \
+    --teleop.port=COM26 \
+    --teleop.id=so100
+```
+
+```
+python -m lerobot.record \
+    --robot.type=so100_follower \
+    --robot.port=COM24 \
+    --robot.id=so100 \
+    --teleop.type=so100_leader \
+    --teleop.port=COM26 \
+    --teleop.id=so100 \
+    --display_data=true \
+    --dataset.repo_id=local/so100_001_a \
+    --dataset.num_episodes=1 \
+    --dataset.single_task="Move around" \
+    --dataset.push_to_hub=false
+```
+
+```
+python -m lerobot.replay  \
+    --robot.type=so100_follower \
+    --robot.port=COM24 \
+    --robot.id=so100 \
+    --dataset.repo_id=local/so100_001_a \
+    --dataset.episode=0
+```
