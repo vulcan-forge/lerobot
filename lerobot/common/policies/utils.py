@@ -14,22 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
+
 import torch
 from torch import nn
 
 
-def populate_queues(queues, batch, exclude_keys=None):
-    """
-    Populate queues with batch data, optionally excluding certain keys.
-
-    Args:
-        queues: Dictionary of queues to populate
-        batch: Dictionary of data to populate queues with
-        exclude_keys: Optional list of keys to exclude from population
-    """
+def populate_queues(
+    queues: dict[str, deque], batch: dict[str, torch.Tensor], exclude_keys: list[str] | None = None
+):
     if exclude_keys is None:
         exclude_keys = []
-
     for key in batch:
         # Skip excluded keys
         if key in exclude_keys:
@@ -37,7 +32,7 @@ def populate_queues(queues, batch, exclude_keys=None):
 
         # Ignore keys not in the queues already (leaving the responsibility to the caller to make sure the
         # queues have the keys they want).
-        if key not in queues:
+        if key not in queues or key in exclude_keys:
             continue
 
         if len(queues[key]) != queues[key].maxlen:
