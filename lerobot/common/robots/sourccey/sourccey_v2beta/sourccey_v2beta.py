@@ -372,7 +372,7 @@ class SourcceyV2Beta(Robot):
 
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
-        flat_states = {**arm_state, **base_vel}
+        flat_states = {**arm_state} #, **base_vel}
 
         obs_dict = {f"{OBS_STATE}": flat_states}
         dt_ms = (time.perf_counter() - start) * 1e3
