@@ -76,7 +76,7 @@ class SourcceyV2Beta(Robot):
             },
             calibration=self.calibration,
         )
-        self.arm_motors = [motor for motor in self.bus.motors if motor.startswith("arm")]
+        self.arm_motors = [motor for motor in self.bus.motors if (motor.startswith("left_arm") or motor.startswith("right_arm"))]
         # self.base_motors = [motor for motor in self.bus.motors if motor.startswith("base")]
         self.cameras = make_cameras_from_configs(config.cameras)
 
