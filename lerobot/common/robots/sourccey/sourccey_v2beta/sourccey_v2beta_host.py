@@ -74,15 +74,15 @@ def main():
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
+                print("Received data: %s", data)
                 _action_sent = robot.send_action(data)
                 last_cmd_time = time.time()
                 watchdog_active = False
             except zmq.Again:
                 pass
-                # if not watchdog_active:
-                #     logging.warning("No command available")
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
+                logging.error("Received data was: %s", msg)
 
             now = time.time()
             # if (now - last_cmd_time > host.watchdog_timeout_ms / 1000) and not watchdog_active:
