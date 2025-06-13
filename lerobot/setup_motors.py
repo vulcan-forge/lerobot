@@ -20,7 +20,7 @@ Example:
 ```shell
 python -m lerobot.setup_motors \
     --teleop.type=so100_leader \
-    --teleop.port=/dev/tty.usbmodem575E0031751
+    --teleop.port=/dev/ttyUSB0
 ```
 """
 
