@@ -423,7 +423,7 @@ class SourcceyV2Beta(Robot):
         self.bus.sync_write("Goal_Position", arm_goal_pos_raw)
         # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
-        return {**arm_goal_pos, **base_goal_vel}
+        return {**arm_goal_pos} #, **base_goal_vel}
 
     def stop_base(self):
         # self.bus.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)

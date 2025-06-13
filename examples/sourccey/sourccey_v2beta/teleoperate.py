@@ -26,7 +26,12 @@ while True:
     observation = robot.get_observation()
 
     arm_action = teleop_arm.get_action()
-    arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
+    # Split arm actions into left and right
+    arm_action = {
+        f"left_arm_{k}": v for k, v in arm_action.items() if "left" in k
+    } | {
+        f"right_arm_{k}": v for k, v in arm_action.items() if "right" in k
+    }
 
     keyboard_keys = telep_keyboard.get_action()
     base_action = robot._from_keyboard_to_base_action(keyboard_keys)
