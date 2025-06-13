@@ -235,42 +235,45 @@ class SourcceyV2Beta(Robot):
         max_raw: int = 3000,
     ) -> dict:
         """
-        Convert desired body-frame velocities into wheel raw commands.
+        Convert desired body-frame velocities into wheel raw commands for a 4-wheeled mecanum robot.
+        The wheels are mounted at 45 degrees.
 
         Parameters:
-          x_cmd      : Linear velocity in x (m/s).
-          y_cmd      : Linear velocity in y (m/s).
-          theta_cmd  : Rotational velocity (deg/s).
+          x          : Linear velocity in x (m/s).
+          y          : Linear velocity in y (m/s).
+          theta      : Rotational velocity (deg/s).
           wheel_radius: Radius of each wheel (meters).
           base_radius : Distance from the center of rotation to each wheel (meters).
           max_raw    : Maximum allowed raw command (ticks) per wheel.
 
         Returns:
           A dictionary with wheel raw commands:
-             {"base_left_wheel": value, "base_back_wheel": value, "base_right_wheel": value}.
-
-        Notes:
-          - Internally, the method converts theta_cmd to rad/s for the kinematics.
-          - The raw command is computed from the wheels angular speed in deg/s
-            using _degps_to_raw(). If any command exceeds max_raw, all commands
-            are scaled down proportionally.
+             {"back_left_wheel": value, "back_right_wheel": value,
+              "front_left_wheel": value, "front_right_wheel": value}.
         """
-        # Convert rotational velocity from deg/s to rad/s.
+        # Convert rotational velocity from deg/s to rad/s
         theta_rad = theta * (np.pi / 180.0)
-        # Create the body velocity vector [x, y, theta_rad].
+
+        # Create the body velocity vector [x, y, theta_rad]
         velocity_vector = np.array([x, y, theta_rad])
 
-        # Define the wheel mounting angles with a -90° offset.
-        angles = np.radians(np.array([240, 120, 0]) - 90)
-        # Build the kinematic matrix: each row maps body velocities to a wheel’s linear speed.
-        # The third column (base_radius) accounts for the effect of rotation.
-        m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
+        # Define the wheel mounting angles for mecanum wheels (45 degrees)
+        # For mecanum wheels, we use a scale factor of 1.0 for the x and y components
+        scale = 1.0
+        m = np.array([
+            [-scale, -scale,  base_radius],    # back_left
+            [-scale,  scale,  base_radius],    # back_right
+            [ scale, -scale,  base_radius],    # front_left
+            [ scale,  scale,  base_radius]     # front_right
+        ])
 
-        # Compute each wheel’s linear speed (m/s) and then its angular speed (rad/s).
+        # Compute each wheel's linear speed (m/s)
         wheel_linear_speeds = m.dot(velocity_vector)
+
+        # Convert to angular speeds (rad/s)
         wheel_angular_speeds = wheel_linear_speeds / wheel_radius
 
-        # Convert wheel angular speeds from rad/s to deg/s.
+        # Convert wheel angular speeds from rad/s to deg/s
         wheel_degps = wheel_angular_speeds * (180.0 / np.pi)
 
         # Scaling
@@ -281,61 +284,69 @@ class SourcceyV2Beta(Robot):
             scale = max_raw / max_raw_computed
             wheel_degps = wheel_degps * scale
 
-        # Convert each wheel’s angular speed (deg/s) to a raw integer.
+        # Convert each wheel's angular speed (deg/s) to a raw integer
         wheel_raw = [self._degps_to_raw(deg) for deg in wheel_degps]
 
         return {
-            "base_left_wheel": wheel_raw[0],
-            "base_back_wheel": wheel_raw[1],
-            "base_right_wheel": wheel_raw[2],
+            "back_left_wheel": wheel_raw[0],
+            "back_right_wheel": wheel_raw[1],
+            "front_left_wheel": wheel_raw[2],
+            "front_right_wheel": wheel_raw[3]
         }
 
     def _wheel_raw_to_body(
         self,
-        left_wheel_speed,
-        back_wheel_speed,
-        right_wheel_speed,
+        back_left_wheel_speed,
+        back_right_wheel_speed,
+        front_left_wheel_speed,
+        front_right_wheel_speed,
         wheel_radius: float = 0.05,
         base_radius: float = 0.125,
     ) -> dict[str, Any]:
         """
-        Convert wheel raw command feedback back into body-frame velocities.
+        Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled mecanum robot.
+        The wheels are mounted at 45 degrees.
 
         Parameters:
-          wheel_raw   : Vector with raw wheel commands ("base_left_wheel", "base_back_wheel", "base_right_wheel").
-          wheel_radius: Radius of each wheel (meters).
-          base_radius : Distance from the robot center to each wheel (meters).
+          back_left_wheel_speed  : Raw speed command for back left wheel
+          back_right_wheel_speed : Raw speed command for back right wheel
+          front_left_wheel_speed : Raw speed command for front left wheel
+          front_right_wheel_speed: Raw speed command for front right wheel
+          wheel_radius          : Radius of each wheel (meters)
+          base_radius          : Distance from the robot center to each wheel (meters)
 
         Returns:
-          A dict (x_cmd, y_cmd, theta_cmd) where:
-             OBS_STATE.x_cmd      : Linear velocity in x (m/s).
-             OBS_STATE.y_cmd      : Linear velocity in y (m/s).
-             OBS_STATE.theta_cmd  : Rotational velocity in deg/s.
+          A dict where:
+             x.vel      : Linear velocity in x (m/s)
+             y.vel      : Linear velocity in y (m/s)
+             theta.vel  : Rotational velocity in deg/s
         """
+        # Convert each raw command back to an angular speed in deg/s
+        wheel_degps = np.array([
+            self._raw_to_degps(back_left_wheel_speed),
+            self._raw_to_degps(back_right_wheel_speed),
+            self._raw_to_degps(front_left_wheel_speed),
+            self._raw_to_degps(front_right_wheel_speed),
+        ])
 
-        # Convert each raw command back to an angular speed in deg/s.
-        wheel_degps = np.array(
-            [
-                self._raw_to_degps(left_wheel_speed),
-                self._raw_to_degps(back_wheel_speed),
-                self._raw_to_degps(right_wheel_speed),
-            ]
-        )
-
-        # Convert from deg/s to rad/s.
+        # Convert from deg/s to rad/s
         wheel_radps = wheel_degps * (np.pi / 180.0)
-        # Compute each wheel’s linear speed (m/s) from its angular speed.
+        # Compute each wheel's linear speed (m/s) from its angular speed
         wheel_linear_speeds = wheel_radps * wheel_radius
 
-        # Define the wheel mounting angles with a -90° offset.
-        angles = np.radians(np.array([240, 120, 0]) - 90)
-        m = np.array([[np.cos(a), np.sin(a), base_radius] for a in angles])
+        # For mecanum wheels, the inverse kinematic matrix
+        scale = 1.0
+        m_inv = np.array([
+            [ -scale, -scale,  scale,  scale],    # x: [back_left, back_right, front_left, front_right]
+            [ -scale,  scale, -scale,  scale],    # y: [back_left, back_right, front_left, front_right]
+            [ 1/base_radius,  1/base_radius, 1/base_radius,  1/base_radius]  # theta: [back_left, back_right, front_left, front_right]
+        ])
 
-        # Solve the inverse kinematics: body_velocity = M⁻¹ · wheel_linear_speeds.
-        m_inv = np.linalg.inv(m)
+        # Calculate body velocities
         velocity_vector = m_inv.dot(wheel_linear_speeds)
         x, y, theta_rad = velocity_vector
         theta = theta_rad * (180.0 / np.pi)
+
         return {
             "x.vel": x,
             "y.vel": y,
@@ -349,13 +360,14 @@ class SourcceyV2Beta(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
-        base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
+        #base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
 
-        base_vel = self._wheel_raw_to_body(
-            base_wheel_vel["base_left_wheel"],
-            base_wheel_vel["base_back_wheel"],
-            base_wheel_vel["base_right_wheel"],
-        )
+        base_vel = [0,0,0,0] #self._wheel_raw_to_body(
+        #     base_wheel_vel["base_left_wheel"],
+        #     base_wheel_vel["base_back_wheel"],
+        #     base_wheel_vel["base_right_wheel"],
+        #     base_wheel_vel["base_right_wheel"],
+        # )
 
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
@@ -391,11 +403,11 @@ class SourcceyV2Beta(Robot):
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
         arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
-        base_goal_vel = {k: v for k, v in action.items() if k.endswith(".vel")}
+        base_goal_vel = [0,0,0,0] # {k: v for k, v in action.items() if k.endswith(".vel")}
 
-        base_wheel_goal_vel = self._body_to_wheel_raw(
-            base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
-        )
+        # base_wheel_goal_vel = self._body_to_wheel_raw(
+        #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
+        # )
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
@@ -408,7 +420,7 @@ class SourcceyV2Beta(Robot):
         # Send goal position to the actuators
         arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in arm_goal_pos.items()}
         self.bus.sync_write("Goal_Position", arm_goal_pos_raw)
-        self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
+        # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
         return {**arm_goal_pos, **base_goal_vel}
 
