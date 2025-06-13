@@ -114,6 +114,10 @@ def main():
 
             time.sleep(max(1 / host.max_loop_freq_hz - elapsed, 0))
             duration = time.perf_counter() - start
+
+
+            # Reset duration
+            duration = 0
         print("Cycle time reached.")
 
     except KeyboardInterrupt:
