@@ -7,7 +7,7 @@ from lerobot.common.teleoperators.so100_leader import SO100Leader, SO100LeaderCo
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
 
 teleop__arm_config = SO100LeaderConfig(
-    port="COM17",
+    port="COM26",
     id="my_sourccey_v2beta_leader_arm",
 )
 

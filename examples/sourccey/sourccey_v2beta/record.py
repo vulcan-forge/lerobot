@@ -9,7 +9,7 @@ from lerobot.common.teleoperators.so100_leader import SO100Leader, SO100LeaderCo
 
 NB_CYCLES_CLIENT_CONNECTION = 250
 
-leader_arm_config = SO100LeaderConfig(port="COM17")
+leader_arm_config = SO100LeaderConfig(port="COM26")
 leader_arm = SO100Leader(leader_arm_config)
 
 keyboard_config = KeyboardTeleopConfig()
