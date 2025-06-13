@@ -74,15 +74,21 @@ class SourcceyV2BetaClient(Robot):
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
             (
-                "arm_shoulder_pan.pos",
-                "arm_shoulder_lift.pos",
-                "arm_elbow_flex.pos",
-                "arm_wrist_flex.pos",
-                "arm_wrist_roll.pos",
-                "arm_gripper.pos",
-                "x.vel",
-                "y.vel",
-                "theta.vel",
+                "left_arm_shoulder_pan.pos",
+                "left_arm_shoulder_lift.pos",
+                "left_arm_elbow_flex.pos",
+                "left_arm_wrist_flex.pos",
+                "left_arm_wrist_roll.pos",
+                "left_arm_gripper.pos",
+                "right_arm_shoulder_pan.pos",
+                "right_arm_shoulder_lift.pos",
+                "right_arm_elbow_flex.pos",
+                "right_arm_wrist_flex.pos",
+                "right_arm_wrist_roll.pos",
+                "right_arm_gripper.pos",
+                # "x.vel",
+                # "y.vel",
+                # "theta.vel",
             ),
             float,
         )
@@ -94,8 +100,10 @@ class SourcceyV2BetaClient(Robot):
     @cached_property
     def _cameras_ft(self) -> dict[str, tuple]:
         return {
-            "front": (480, 640, 3),
-            "wrist": (640, 480, 3),
+            "front_left": (640, 480, 3),
+            "front_right": (640, 480, 3),
+            "wrist_left": (640, 480, 3),
+            "wrist_right": (640, 480, 3),
         }
 
     @cached_property
@@ -119,7 +127,7 @@ class SourcceyV2BetaClient(Robot):
 
         if self._is_connected:
             raise DeviceAlreadyConnectedError(
-                "LeKiwi Daemon is already connected. Do not run `robot.connect()` twice."
+                "SourcceyV2BetaClient is already connected. Do not run `robot.connect()` twice."
             )
 
         self.zmq_context = zmq.Context()
@@ -137,7 +145,7 @@ class SourcceyV2BetaClient(Robot):
         poller.register(self.zmq_observation_socket, zmq.POLLIN)
         socks = dict(poller.poll(self.connect_timeout_s * 1000))
         if self.zmq_observation_socket not in socks or socks[self.zmq_observation_socket] != zmq.POLLIN:
-            raise DeviceNotConnectedError("Timeout waiting for LeKiwi Host to connect expired.")
+            raise DeviceNotConnectedError("Timeout waiting for SourcceyV2Beta Host to connect expired.")
 
         self._is_connected = True
 
@@ -258,7 +266,7 @@ class SourcceyV2BetaClient(Robot):
         and a camera frame. Receives over ZMQ, translate to body-frame vel
         """
         if not self._is_connected:
-            raise DeviceNotConnectedError("LeKiwiClient is not connected. You need to run `robot.connect()`.")
+            raise DeviceNotConnectedError("SourcceyV2BetaClient is not connected. You need to run `robot.connect()`.")
 
         frames, obs_dict = self._get_data()
 
@@ -307,7 +315,7 @@ class SourcceyV2BetaClient(Robot):
         pass
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        """Command lekiwi to move to a target joint configuration. Translates to motor space + sends over ZMQ
+        """Command sourccey v2beta to move to a target joint configuration. Translates to motor space + sends over ZMQ
 
         Args:
             action (np.ndarray): array containing the goal positions for the motors.
@@ -334,7 +342,7 @@ class SourcceyV2BetaClient(Robot):
 
         if not self._is_connected:
             raise DeviceNotConnectedError(
-                "LeKiwi is not connected. You need to run `robot.connect()` before disconnecting."
+                "SourcceyV2BetaClient is not connected. You need to run `robot.connect()` before disconnecting."
             )
         self.zmq_observation_socket.close()
         self.zmq_cmd_socket.close()

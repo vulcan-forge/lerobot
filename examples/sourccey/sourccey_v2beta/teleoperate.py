@@ -4,11 +4,11 @@ from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client impor
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.so100_leader import SO100Leader, SO100LeaderConfig
 
-robot_config = SourcceyV2BetaClientConfig(remote_ip="172.18.134.136", id="my_lekiwi")
+robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
 
 teleop__arm_config = SO100LeaderConfig(
-    port="/dev/tty.usbmodem58760431551",
-    id="my_awesome_leader_arm",
+    port="COM17",
+    id="my_sourccey_v2beta_leader_arm",
 )
 
 teleop_keyboard_config = KeyboardTeleopConfig(

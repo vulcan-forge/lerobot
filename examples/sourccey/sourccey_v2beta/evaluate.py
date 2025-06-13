@@ -1,19 +1,19 @@
 import torch
 
 from lerobot.common.policies.act.modeling_act import ACTPolicy
-from lerobot.common.robots.lekiwi.config_lekiwi import LeKiwiClientConfig
-from lerobot.common.robots.lekiwi.lekiwi_client import LeKiwiClient
+from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.control_utils import predict_action
 from lerobot.common.utils.utils import get_safe_torch_device
 
 NB_CYCLES_CLIENT_CONNECTION = 1000
 
-robot_config = LeKiwiClientConfig(remote_ip="172.18.134.136", id="lekiwi")
-robot = LeKiwiClient(robot_config)
+robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
+robot = SourcceyV2BetaClient(robot_config)
 
 robot.connect()
 
-policy = ACTPolicy.from_pretrained("pepijn223/act_lekiwi_circle")
+policy = ACTPolicy.from_pretrained("pepijn223/act_sourccey_v2beta_circle")
 policy.reset()
 
 print("Running inference")

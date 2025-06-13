@@ -32,6 +32,7 @@ from .common.robots import (  # noqa: F401
     RobotConfig,
     koch_follower,
     lekiwi,
+    sourccey_v2beta,
     make_robot_from_config,
     so100_follower,
     so101_follower,
@@ -52,6 +53,7 @@ COMPATIBLE_DEVICES = [
     "so101_follower",
     "so101_leader",
     "lekiwi",
+    "sourccey_v2beta",
 ]
 
 

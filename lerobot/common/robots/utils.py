@@ -41,6 +41,10 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .lekiwi import LeKiwi
 
         return LeKiwi(config)
+    elif config.type == "sourccey_v2beta":
+        from .sourccey.sourccey_v2beta import SourcceyV2Beta
+
+        return SourcceyV2Beta(config)
     elif config.type == "stretch3":
         from .stretch3 import Stretch3Robot
 

@@ -1,14 +1,14 @@
 import time
 
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.robots.lekiwi.config_lekiwi import LeKiwiClientConfig
-from lerobot.common.robots.lekiwi.lekiwi_client import LeKiwiClient
+from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.robot_utils import busy_wait
 
-robot_config = LeKiwiClientConfig(remote_ip="172.18.134.136", id="lekiwi")
-robot = LeKiwiClient(robot_config)
+robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
+robot = SourcceyV2BetaClient(robot_config)
 
-dataset = LeRobotDataset("pepijn223/lekiwi1749025613", episodes=[0])
+dataset = LeRobotDataset("pepijn223/sourccey_v2beta1749025613", episodes=[0])
 
 robot.connect()
 
@@ -21,5 +21,5 @@ for _, action_array in enumerate(dataset.hf_dataset["action"]):
 
     busy_wait(max(1.0 / dataset.fps - (time.perf_counter() - t0), 0.0))
 
-print("Disconnecting LeKiwi Client")
+print("Disconnecting SourcceyV2Beta Client")
 robot.disconnect()

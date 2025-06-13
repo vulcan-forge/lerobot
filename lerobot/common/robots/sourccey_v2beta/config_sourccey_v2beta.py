@@ -34,15 +34,15 @@ class SourcceyV2BetaConfig(RobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "front_left": OpenCVCameraConfig(index_or_path="/dev/video0", fps=30, width=640, height=480),
+            "front_left": OpenCVCameraConfig(index_or_path="/dev/video0", fps=10, width=640, height=480),
             "front_right": OpenCVCameraConfig(
-                index_or_path="/dev/video1", fps=30, width=640, height=480
+                index_or_path="/dev/video1", fps=10, width=640, height=480
             ),
             "wrist_left": OpenCVCameraConfig(
-                index_or_path="/dev/video2", fps=30, width=640, height=480
+                index_or_path="/dev/video2", fps=10, width=640, height=480
             ),
             "wrist_right": OpenCVCameraConfig(
-                index_or_path="/dev/video3", fps=30, width=640, height=480
+                index_or_path="/dev/video3", fps=10, width=640, height=480
             ),
         }
     )
@@ -52,7 +52,7 @@ class SourcceyV2BetaConfig(RobotConfig):
 
 
 @dataclass
-class LeKiwiHostConfig:
+class SourcceyV2BetaHostConfig:
     # Network Configuration
     port_zmq_cmd: int = 5555
     port_zmq_observations: int = 5556
