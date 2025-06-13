@@ -142,7 +142,7 @@ class SourcceyV2Beta(Robot):
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
 
-        motors = self.arm_motors + self.base_motors
+        motors = self.arm_motors # + self.base_motors
 
         self.bus.disable_torque(self.arm_motors)
         for name in self.arm_motors:
@@ -151,7 +151,7 @@ class SourcceyV2Beta(Robot):
         input("Move robot to the middle of its range of motion and press ENTER....")
         homing_offsets = self.bus.set_half_turn_homings(self.arm_motors)
 
-        homing_offsets.update(dict.fromkeys(self.base_motors, 0))
+        #homing_offsets.update(dict.fromkeys(self.base_motors, 0))
 
         full_turn_motor = [
             motor for motor in motors if any(keyword in motor for keyword in ["wheel", "wrist"])
@@ -195,16 +195,17 @@ class SourcceyV2Beta(Robot):
             self.bus.write("I_Coefficient", name, 0)
             self.bus.write("D_Coefficient", name, 32)
 
-        for name in self.base_motors:
-            self.bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
+        # for name in self.base_motors:
+        #     self.bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
 
         self.bus.enable_torque()
 
     def setup_motors(self) -> None:
-        for motor in chain(reversed(self.arm_motors), reversed(self.base_motors)):
-            input(f"Connect the controller board to the '{motor}' motor only and press enter.")
-            self.bus.setup_motor(motor)
-            print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
+        pass
+        # for motor in chain(reversed(self.arm_motors), reversed(self.base_motors)):
+        #     input(f"Connect the controller board to the '{motor}' motor only and press enter.")
+        #     self.bus.setup_motor(motor)
+        #     print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
 
     @staticmethod
     def _degps_to_raw(degps: float) -> int:
@@ -425,7 +426,7 @@ class SourcceyV2Beta(Robot):
         return {**arm_goal_pos, **base_goal_vel}
 
     def stop_base(self):
-        self.bus.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)
+        # self.bus.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)
         logger.info("Base motors stopped")
 
     def disconnect(self):
