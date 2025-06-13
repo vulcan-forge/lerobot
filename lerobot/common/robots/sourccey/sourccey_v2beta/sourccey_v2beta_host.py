@@ -77,8 +77,9 @@ def main():
                 last_cmd_time = time.time()
                 watchdog_active = False
             except zmq.Again:
-                if not watchdog_active:
-                    logging.warning("No command available")
+                pass
+                # if not watchdog_active:
+                #     logging.warning("No command available")
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
 
