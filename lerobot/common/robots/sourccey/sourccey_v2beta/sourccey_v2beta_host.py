@@ -64,11 +64,13 @@ def main():
     last_cmd_time = time.time()
     watchdog_active = False
     logging.info("Waiting for commands...")
+    print("Waiting for commands...")
     try:
         # Business logic
         start = time.perf_counter()
         duration = 0
         while duration < host.connection_time_s:
+            print("Starting loop")
             loop_start_time = time.time()
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
