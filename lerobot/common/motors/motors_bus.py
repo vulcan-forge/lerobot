@@ -708,6 +708,7 @@ class MotorsBus(abc.ABC):
             raise TypeError(motors)
 
         self.reset_calibration(motors)
+        print(f"Resetting calibration for {motors}")
         actual_positions = self.sync_read("Present_Position", motors, normalize=False)
         homing_offsets = self._get_half_turn_homings(actual_positions)
         for motor, offset in homing_offsets.items():
