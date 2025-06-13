@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class SourcceyV2Beta(Robot):
     """
-    The robot includes a three omniwheel mobile base and a remote follower arm.
+    The robot includes a four mecanum wheel mobile base and 2 remote follower arms.
     The leader arm is connected locally (on the laptop) and its joint positions are recorded and then
     forwarded to the remote follower arm (after applying a safety clamp).
     In parallel, keyboard teleoperation is used to generate raw velocity commands for the wheels.
@@ -57,36 +57,48 @@ class SourcceyV2Beta(Robot):
             port=self.config.port,
             motors={
                 # arm
-                "arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
-                "arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body),
-                "arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
-                "arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
-                "arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
-                "arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+                "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
+                "left_arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body),
+                "left_arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
+                "left_arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
+                "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
+                "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+                "right_arm_shoulder_pan": Motor(7, "sts3215", norm_mode_body),
+                "right_arm_shoulder_lift": Motor(8, "sts3215", norm_mode_body),
+                "right_arm_elbow_flex": Motor(9, "sts3215", norm_mode_body),
+                "right_arm_wrist_flex": Motor(10, "sts3215", norm_mode_body),
+                "right_arm_wrist_roll": Motor(11, "sts3215", norm_mode_body),
+                "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
                 # base
-                "base_left_wheel": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-                "base_right_wheel": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-                "base_back_wheel": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+                # "base_left_wheel": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+                # "base_right_wheel": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+                # "base_back_wheel": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
             },
             calibration=self.calibration,
         )
         self.arm_motors = [motor for motor in self.bus.motors if motor.startswith("arm")]
-        self.base_motors = [motor for motor in self.bus.motors if motor.startswith("base")]
+        # self.base_motors = [motor for motor in self.bus.motors if motor.startswith("base")]
         self.cameras = make_cameras_from_configs(config.cameras)
 
     @property
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
             (
-                "arm_shoulder_pan.pos",
-                "arm_shoulder_lift.pos",
-                "arm_elbow_flex.pos",
-                "arm_wrist_flex.pos",
-                "arm_wrist_roll.pos",
-                "arm_gripper.pos",
-                "x.vel",
-                "y.vel",
-                "theta.vel",
+                "left_arm_shoulder_pan.pos",
+                "left_arm_shoulder_lift.pos",
+                "left_arm_elbow_flex.pos",
+                "left_arm_wrist_flex.pos",
+                "left_arm_wrist_roll.pos",
+                "left_arm_gripper.pos",
+                "right_arm_shoulder_pan.pos",
+                "right_arm_shoulder_lift.pos",
+                "right_arm_elbow_flex.pos",
+                "right_arm_wrist_flex.pos",
+                "right_arm_wrist_roll.pos",
+                "right_arm_gripper.pos",
+                # "x.vel",
+                # "y.vel",
+                # "theta.vel",
             ),
             float,
         )
