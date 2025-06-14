@@ -5,12 +5,13 @@ from lerobot.common.datasets.utils import hw_to_dataset_features
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.common.teleoperators.so100_leader import SO100Leader, SO100LeaderConfig
+from lerobot.common.teleoperators.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
+from lerobot.common.teleoperators.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 
 NB_CYCLES_CLIENT_CONNECTION = 250
 
-leader_arm_config = SO100LeaderConfig(port="COM26")
-leader_arm = SO100Leader(leader_arm_config)
+leader_arm_config = SourcceyV2BetaLeaderConfig(port="COM26")
+leader_arm = SourcceyV2BetaLeader(leader_arm_config)
 
 keyboard_config = KeyboardTeleopConfig()
 keyboard = KeyboardTeleop(keyboard_config)
@@ -57,7 +58,7 @@ while i < NB_CYCLES_CLIENT_CONNECTION:
     dataset.add_frame(frame, task)
     i += 1
 
-print("Disconnecting Teleop Devices and LeKiwi Client")
+print("Disconnecting Teleop Devices and SourcceyV2Beta Client")
 robot.disconnect()
 leader_arm.disconnect()
 keyboard.disconnect()

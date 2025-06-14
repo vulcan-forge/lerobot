@@ -3,11 +3,12 @@ from lerobot.common.robots.sourccey.sourccey_v2beta import SourcceyV2BetaClient,
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.common.teleoperators.so100_leader import SO100Leader, SO100LeaderConfig
+from lerobot.common.teleoperators.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
+from lerobot.common.teleoperators.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
 
-teleop__arm_config = SO100LeaderConfig(
+teleop__arm_config = SourcceyV2BetaLeaderConfig(
     port="COM26",
     id="my_sourccey_v2beta_leader_arm",
 )
@@ -17,7 +18,7 @@ teleop_keyboard_config = KeyboardTeleopConfig(
 )
 
 robot = SourcceyV2BetaClient(robot_config)
-teleop_arm = SO100Leader(teleop__arm_config)
+teleop_arm = SourcceyV2BetaLeader(teleop__arm_config)
 telep_keyboard = KeyboardTeleop(teleop_keyboard_config)
 robot.connect()
 teleop_arm.connect()
