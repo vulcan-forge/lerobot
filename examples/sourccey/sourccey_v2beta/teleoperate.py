@@ -11,11 +11,39 @@ from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourcce
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 from lerobot.common.constants import OBS_IMAGES
 
+def display_data(observation, arm_action, base_action):
+    """Display all data in Rerun."""
+    # Log observations
+    for obs, val in observation.items():
+        if isinstance(val, float):
+            rr.log(f"observation_{obs}", rr.Scalars(val))
+        elif isinstance(val, (np.ndarray, torch.Tensor)):
+            if isinstance(val, torch.Tensor):
+                val = val.cpu().numpy()
+            if len(val.shape) == 1:  # 1D array - log as individual scalars
+                for i, v in enumerate(val):
+                    rr.log(f"observation_{obs}_{i}", rr.Scalars(v))
+            else:  # 2D or 3D array - log as image
+                rr.log(f"observation_{obs}", rr.Image(val), static=True)
+
+    # Log arm actions
+    for act, val in arm_action.items():
+        if isinstance(val, float):
+            rr.log(f"action_{act}", rr.Scalars(val))
+        elif isinstance(val, np.ndarray):
+            for i, v in enumerate(val):
+                rr.log(f"action_{act}_{i}", rr.Scalars(v))
+
+    # Log base actions
+    for act, val in base_action.items():
+        if isinstance(val, float):
+            rr.log(f"action_{act}", rr.Scalars(val))
+        elif isinstance(val, np.ndarray):
+            for i, v in enumerate(val):
+                rr.log(f"action_{act}_{i}", rr.Scalars(v))
+
 # Initialize Rerun for visualization
 _init_rerun(session_name="sourccey_v2beta_teleoperation")
-
-# Create a container for camera views
-rr.log("cameras", rr.Transform3D())
 
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
 
@@ -35,7 +63,6 @@ robot.connect()
 teleop_arm.connect()
 telep_keyboard.connect()
 
-last_print_time = time.time()
 try:
     while True:
         observation = robot.get_observation()
@@ -46,43 +73,8 @@ try:
         keyboard_keys = telep_keyboard.get_action()
         base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-        # Log observations and actions to Rerun
-        for obs, val in observation.items():
-            if isinstance(val, float):
-                rr.log(f"observation_{obs}", rr.Scalar(val))
-            elif isinstance(val, (np.ndarray, torch.Tensor)):
-                # Convert torch tensor to numpy array if needed
-                if isinstance(val, torch.Tensor):
-                    val = val.cpu().numpy()
-                if len(val.shape) == 2 or len(val.shape) == 3:  # Only log 2D or 3D arrays as images
-                    # Check if this is a camera observation
-                    if obs.startswith(OBS_IMAGES):
-                        # Extract camera name from the observation key
-                        camera_name = obs.split('.')[-1]  # Gets the part after the last dot
-                        rr.log(f"cameras/{camera_name}", rr.Image(val), static=True)
-                    else:
-                        rr.log(f"observation_{obs}", rr.Image(val), static=True)
-                else:  # Log 1D arrays as individual scalars
-                    for i, v in enumerate(val):
-                        rr.log(f"observation_{obs}_{i}", rr.Scalar(v))
-            else:
-                print(f"Found other type: {obs}, type: {type(val)}")
-
-        # Log arm actions
-        for act, val in arm_action.items():
-            if isinstance(val, float):
-                rr.log(f"action_{act}", rr.Scalar(val))
-            elif isinstance(val, np.ndarray):
-                for i, v in enumerate(val):
-                    rr.log(f"action_{act}_{i}", rr.Scalar(v))
-
-        # Log base actions
-        for act, val in base_action.items():
-            if isinstance(val, float):
-                rr.log(f"action_{act}", rr.Scalar(val))
-            elif isinstance(val, np.ndarray):
-                for i, v in enumerate(val):
-                    rr.log(f"action_{act}_{i}", rr.Scalar(v))
+        # Display all data in Rerun
+        display_data(observation, arm_action, base_action)
 
         robot.send_action(arm_action | base_action)
 
