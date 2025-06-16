@@ -61,7 +61,7 @@ def teleoperate(cfg: TeleoperateConfig):
 
     # Initialize robot and teleop
     robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
-    teleop_arm_config = SourcceyV2BetaLeaderConfig(port="COM28", id="my_sourccey_v2beta_teleop")
+    teleop_arm_config = SourcceyV2BetaLeaderConfig(port="COM29", id="my_sourccey_v2beta_teleop")
     teleop_keyboard_config = KeyboardTeleopConfig(id="my_laptop_keyboard")
 
     robot = SourcceyV2BetaClient(robot_config)

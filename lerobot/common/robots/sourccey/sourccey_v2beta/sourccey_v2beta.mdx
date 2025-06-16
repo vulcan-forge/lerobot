@@ -76,23 +76,17 @@ python -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
 
 ---
 
-```
+```bash
 python -m lerobot.calibrate \
     --robot.type=sourccey_v2beta \
-    --robot.id=my_sourccey_v2beta # <- Give the robot a unique name
+    --robot.id=sourccey_v2beta
 ```
 
 ```bash
 python -m lerobot.calibrate \
     --teleop.type=sourccey_v2beta_leader \
-    --teleop.port=COM28 \
+    --teleop.port=COM29 \
     --teleop.id=my_sourccey_v2beta_teleop
-```
-
-```
-python -m lerobot.calibrate \
-    --robot.type=sourccey_v2beta \
-    --robot.id=sourccey_v2beta
 ```
 
 To teleoperate, SSH into your Raspberry Pi, and run conda activate lerobot and this command:
