@@ -24,7 +24,7 @@ from lerobot.common.motors.feetech import (
     OperatingMode,
 )
 
-from ..teleoperator import Teleoperator
+from ...teleoperator import Teleoperator
 from .config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
 
 logger = logging.getLogger(__name__)

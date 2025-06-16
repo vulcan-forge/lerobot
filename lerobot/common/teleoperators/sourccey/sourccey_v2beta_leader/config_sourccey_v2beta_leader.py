@@ -16,7 +16,7 @@
 
 from dataclasses import dataclass
 
-from ..config import TeleoperatorConfig
+from ...config import TeleoperatorConfig
 
 
 @TeleoperatorConfig.register_subclass("sourccey_v2beta_leader")
