@@ -50,7 +50,6 @@ class SourcceyV2BetaHost:
 
 
 def main():
-    import pdb; pdb.set_trace()
     logging.info("Configuring Sourccey V2 Beta")
     robot_config = SourcceyV2BetaConfig(id="sourccey_v2beta")
     robot = SourcceyV2Beta(robot_config)
