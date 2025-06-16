@@ -282,3 +282,33 @@ python lerobot/scripts/control_robot.py \
   --control.fps=20 \
   --control.display_data=true
 ```
+
+```
+python -m lerobot.calibrate \
+    --robot.type=sourccey_v2beta \
+    --robot.id=my_sourccey_v2beta # <- Give the robot a unique name
+```
+
+```bash
+python -m lerobot.calibrate \
+    --teleop.type=sourccey_v2beta_leader \
+    --teleop.port=COM28 \
+    --teleop.id=my_sourccey_v2beta_teleop_2
+```
+
+```
+python -m lerobot.calibrate \
+    --robot.type=so100_follower \
+    --robot.port=COM29 \
+    --robot.id=sourccey_v2beta
+```
+
+```
+uv run -m lerobot.teleoperate \
+    --robot.type=so100_follower \
+    --robot.port=COM29 \
+    --robot.id=sourccey_v2beta \
+    --teleop.type=sourccey_v2beta_leader \
+    --teleop.port=COM28 \
+    --teleop.id=my_sourccey_v2beta_teleop_2
+```

@@ -50,7 +50,7 @@ class SO100Follower(Robot):
             port=self.config.port,
             motors={
                 "shoulder_pan": Motor(1, "sts3215", norm_mode_body),
-                "shoulder_lift": Motor(2, "sts3215", norm_mode_body, gear_ratio=3.0),
+                "shoulder_lift": Motor(2, "sts3215", norm_mode_body),
                 "elbow_flex": Motor(3, "sts3215", norm_mode_body),
                 "wrist_flex": Motor(4, "sts3215", norm_mode_body),
                 "wrist_roll": Motor(5, "sts3215", norm_mode_body),
