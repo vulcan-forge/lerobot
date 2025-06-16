@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import torch
 import rerun as rr
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.common.robots.sourccey.sourccey_v2beta import SourcceyV2BetaClient, SourcceyV2BetaClientConfig
@@ -8,6 +9,7 @@ from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client impor
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
+from lerobot.common.constants import OBS_IMAGES
 
 # Initialize Rerun for visualization
 _init_rerun(session_name="sourccey_v2beta_teleoperation")
@@ -48,16 +50,23 @@ try:
         for obs, val in observation.items():
             if isinstance(val, float):
                 rr.log(f"observation_{obs}", rr.Scalar(val))
-            elif isinstance(val, np.ndarray):
+            elif isinstance(val, (np.ndarray, torch.Tensor)):
+                # Convert torch tensor to numpy array if needed
+                if isinstance(val, torch.Tensor):
+                    val = val.cpu().numpy()
                 if len(val.shape) == 2 or len(val.shape) == 3:  # Only log 2D or 3D arrays as images
-                    # Log camera images in the cameras container
-                    if obs in ["front_left", "front_right", "wrist_left", "wrist_right"]:
-                        rr.log(f"cameras/{obs}", rr.Image(val), static=True)
+                    # Check if this is a camera observation
+                    if obs.startswith(OBS_IMAGES):
+                        # Extract camera name from the observation key
+                        camera_name = obs.split('.')[-1]  # Gets the part after the last dot
+                        rr.log(f"cameras/{camera_name}", rr.Image(val), static=True)
                     else:
                         rr.log(f"observation_{obs}", rr.Image(val), static=True)
                 else:  # Log 1D arrays as individual scalars
                     for i, v in enumerate(val):
                         rr.log(f"observation_{obs}_{i}", rr.Scalar(v))
+            else:
+                print(f"Found other type: {obs}, type: {type(val)}")
 
         # Log arm actions
         for act, val in arm_action.items():
