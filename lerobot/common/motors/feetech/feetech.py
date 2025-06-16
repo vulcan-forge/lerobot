@@ -293,7 +293,7 @@ class FeetechMotorsBus(MotorsBus):
             if self.motors[motor].gear_ratio != 1.0:
                 target_motor_pos = mid * self.motors[motor].gear_ratio
                 wrapped_target = target_motor_pos % (max_res + 1)
-                half_turn_homings[motor] = pos - wrapped_target
+                half_turn_homings[motor] = int(pos - wrapped_target)
             else:
                 half_turn_homings[motor] = pos - mid
 
