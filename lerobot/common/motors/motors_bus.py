@@ -97,6 +97,7 @@ class Motor:
     id: int
     model: str
     norm_mode: MotorNormMode
+    gear_ratio: float = 1.0
 
 
 class JointOutOfRangeError(Exception):
@@ -783,8 +784,13 @@ class MotorsBus(abc.ABC):
             min_ = self.calibration[motor].range_min
             max_ = self.calibration[motor].range_max
             drive_mode = self.apply_drive_mode and self.calibration[motor].drive_mode
+            gear_ratio = self.motors[motor].gear_ratio
+
             if max_ == min_:
                 raise ValueError(f"Invalid calibration for motor '{motor}': min and max are equal.")
+
+            # Apply gear ratio to the raw value
+            val = val / gear_ratio
 
             bounded_val = min(max_, max(min_, val))
             if self.motors[motor].norm_mode is MotorNormMode.RANGE_M100_100:
@@ -812,23 +818,28 @@ class MotorsBus(abc.ABC):
             min_ = self.calibration[motor].range_min
             max_ = self.calibration[motor].range_max
             drive_mode = self.apply_drive_mode and self.calibration[motor].drive_mode
+            gear_ratio = self.motors[motor].gear_ratio
+
             if max_ == min_:
                 raise ValueError(f"Invalid calibration for motor '{motor}': min and max are equal.")
 
             if self.motors[motor].norm_mode is MotorNormMode.RANGE_M100_100:
                 val = -val if drive_mode else val
                 bounded_val = min(100.0, max(-100.0, val))
-                unnormalized_values[id_] = int(((bounded_val + 100) / 200) * (max_ - min_) + min_)
+                raw_val = int(((bounded_val + 100) / 200) * (max_ - min_) + min_)
             elif self.motors[motor].norm_mode is MotorNormMode.RANGE_0_100:
                 val = 100 - val if drive_mode else val
                 bounded_val = min(100.0, max(0.0, val))
-                unnormalized_values[id_] = int((bounded_val / 100) * (max_ - min_) + min_)
+                raw_val = int((bounded_val / 100) * (max_ - min_) + min_)
             elif self.motors[motor].norm_mode is MotorNormMode.DEGREES:
                 mid = (min_ + max_) / 2
                 max_res = self.model_resolution_table[self._id_to_model(id_)] - 1
-                unnormalized_values[id_] = int((val * max_res / 360) + mid)
+                raw_val = int((val * max_res / 360) + mid)
             else:
                 raise NotImplementedError
+
+            # Apply gear ratio to the raw value
+            unnormalized_values[id_] = int(raw_val * gear_ratio)
 
         return unnormalized_values
 

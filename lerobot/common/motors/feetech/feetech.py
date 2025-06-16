@@ -288,7 +288,14 @@ class FeetechMotorsBus(MotorsBus):
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
             max_res = self.model_resolution_table[model] - 1
-            half_turn_homings[motor] = pos - int(max_res / 2)
+            mid = int(max_res / 2)
+
+            if self.motors[motor].gear_ratio != 1.0:
+                target_motor_pos = mid * self.motors[motor].gear_ratio
+                wrapped_target = target_motor_pos % (max_res + 1)
+                half_turn_homings[motor] = pos - wrapped_target
+            else:
+                half_turn_homings[motor] = pos - mid
 
         return half_turn_homings
 
