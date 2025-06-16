@@ -8,7 +8,7 @@ from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2bet
 
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="my_sourccey_v2beta")
 
-teleop__arm_config = SourcceyV2BetaLeaderConfig(
+teleop_arm_config = SourcceyV2BetaLeaderConfig(
     port="COM28",
     id="my_sourccey_v2beta_teleop",
 )
@@ -18,7 +18,7 @@ teleop_keyboard_config = KeyboardTeleopConfig(
 )
 
 robot = SourcceyV2BetaClient(robot_config)
-teleop_arm = SourcceyV2BetaLeader(teleop__arm_config)
+teleop_arm = SourcceyV2BetaLeader(teleop_arm_config)
 telep_keyboard = KeyboardTeleop(teleop_keyboard_config)
 robot.connect()
 teleop_arm.connect()
@@ -30,11 +30,6 @@ while True:
 
     arm_action = teleop_arm.get_action()
     arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
-
-    # print arm_action every 3 seconds
-    if time.time() - last_print_time > 3:
-        print(arm_action)
-        last_print_time = time.time()
 
     keyboard_keys = telep_keyboard.get_action()
     base_action = robot._from_keyboard_to_base_action(keyboard_keys)
