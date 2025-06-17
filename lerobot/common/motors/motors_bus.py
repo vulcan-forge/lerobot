@@ -470,10 +470,35 @@ class MotorsBus(abc.ABC):
         if disable_torque:
             self.port_handler.clearPort()
             self.port_handler.is_using = False
-            self.disable_torque(num_retry=5)
+            self._safe_disable_torque()
 
         self.port_handler.closePort()
         logger.debug(f"{self.__class__.__name__} disconnected.")
+
+    def _safe_disable_torque(self, num_retry: int = 5) -> None:
+        """Safely disable torque on all motors, gracefully handling communication failures.
+
+        This method is designed to handle cases where the communication with motors
+        has been disrupted (e.g., during program interruption) and prevents the
+        "There is no status packet!" error from locking up the 340 chip.
+
+        Args:
+            num_retry (int, optional): Number of retry attempts. Defaults to 5.
+        """
+        try:
+            self.disable_torque(num_retry=num_retry)
+        except (ConnectionError, RuntimeError) as e:
+            # Log the error but don't let it prevent disconnection
+            logger.warning(
+                f"Failed to disable torque during disconnect: {e}. "
+                "This is normal if the program was interrupted. Proceeding with disconnect."
+            )
+        except Exception as e:
+            # Catch any other unexpected errors during torque disable
+            logger.error(
+                f"Unexpected error while disabling torque during disconnect: {e}. "
+                "Proceeding with disconnect to prevent hardware lockup."
+            )
 
     @classmethod
     def scan_port(cls, port: str, *args, **kwargs) -> dict[int, list[int]]:
