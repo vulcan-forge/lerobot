@@ -475,7 +475,7 @@ class MotorsBus(abc.ABC):
         self.port_handler.closePort()
         logger.debug(f"{self.__class__.__name__} disconnected.")
 
-    def _safe_disable_torque(self, num_retry: int = 5) -> None:
+    def _safe_disable_torque(self, num_retry: int = 10) -> None:
         """Safely disable torque on all motors, gracefully handling communication failures.
 
         This method is designed to handle cases where the communication with motors
@@ -483,7 +483,7 @@ class MotorsBus(abc.ABC):
         "There is no status packet!" error from locking up the 340 chip.
 
         Args:
-            num_retry (int, optional): Number of retry attempts. Defaults to 5.
+            num_retry (int, optional): Number of retry attempts. Defaults to 10.
         """
         try:
             self.disable_torque(num_retry=num_retry)

@@ -301,18 +301,18 @@ class FeetechMotorsBus(MotorsBus):
 
         return half_turn_homings
 
-    def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 0) -> None:
+    def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
         for motor in self._get_motors_list(motors):
             self.write("Torque_Enable", motor, TorqueMode.DISABLED.value, num_retry=num_retry)
             self.write("Lock", motor, 0, num_retry=num_retry)
 
-    def _disable_torque(self, motor_id: int, model: str, num_retry: int = 0) -> None:
+    def _disable_torque(self, motor_id: int, model: str, num_retry: int = 10) -> None:
         addr, length = get_address(self.model_ctrl_table, model, "Torque_Enable")
         self._write(addr, length, motor_id, TorqueMode.DISABLED.value, num_retry=num_retry)
         addr, length = get_address(self.model_ctrl_table, model, "Lock")
         self._write(addr, length, motor_id, 0, num_retry=num_retry)
 
-    def enable_torque(self, motors: str | list[str] | None = None, num_retry: int = 0) -> None:
+    def enable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
         for motor in self._get_motors_list(motors):
             self.write("Torque_Enable", motor, TorqueMode.ENABLED.value, num_retry=num_retry)
             self.write("Lock", motor, 1, num_retry=num_retry)
@@ -411,7 +411,7 @@ class FeetechMotorsBus(MotorsBus):
                 del rxpacket[0:idx]
                 rx_length = rx_length - idx
 
-    def broadcast_ping(self, num_retry: int = 0, raise_on_error: bool = False) -> dict[int, int] | None:
+    def broadcast_ping(self, num_retry: int = 3, raise_on_error: bool = False) -> dict[int, int] | None:
         self._assert_protocol_is_compatible("broadcast_ping")
         for n_try in range(1 + num_retry):
             ids_status, comm = self._broadcast_ping()
