@@ -102,6 +102,9 @@ def main():
 
             time.sleep(max(1 / host.max_loop_freq_hz - elapsed, 0))
             duration = time.perf_counter() - start
+
+            print("host.connection_time_s", host.connection_time_s)
+            print("duration", duration)
         print("Cycle time reached.")
 
     except KeyboardInterrupt:
