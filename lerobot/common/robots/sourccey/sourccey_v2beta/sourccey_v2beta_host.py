@@ -61,8 +61,6 @@ def main():
     host_config = SourcceyV2BetaHostConfig()
     host = SourcceyV2BetaHost(host_config)
 
-    last_cmd_time = time.time()
-    watchdog_active = False
     logging.info("Waiting for commands...")
     print("Waiting for commands...")
     try:
@@ -75,21 +73,11 @@ def main():
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
                 _action_sent = robot.send_action(data)
-                last_cmd_time = time.time()
-                watchdog_active = False
             except zmq.Again:
                 pass
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
                 logging.error("Received data was: %s", msg)
-
-            now = time.time()
-            if (now - last_cmd_time > host.watchdog_timeout_ms / 1000) and not watchdog_active:
-                logging.warning(
-                    f"Command not received for more than {host.watchdog_timeout_ms} milliseconds. Stopping the base."
-                )
-                watchdog_active = True
-                robot.stop_base()
 
             last_observation = robot.get_observation()
 
