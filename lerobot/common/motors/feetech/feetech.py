@@ -220,6 +220,7 @@ class FeetechMotorsBus(MotorsBus):
         raise RuntimeError(f"Motor '{motor}' (model '{model}') was not found. Make sure it is connected.")
 
     def configure_motors(self) -> None:
+        """Configure motors with aggressive retries for initialization."""
         for motor in self.motors:
             # By default, Feetech motors have a 500µs delay response time (corresponding to a value of 250 on
             # the 'Return_Delay_Time' address). We ensure this is reduced to the minimum of 2µs (value of 0).
@@ -250,12 +251,13 @@ class FeetechMotorsBus(MotorsBus):
         return same_ranges and same_offsets
 
     def read_calibration(self) -> dict[str, MotorCalibration]:
+        """Read calibration with aggressive retries for initialization."""
         offsets, mins, maxes = {}, {}, {}
         for motor in self.motors:
-            mins[motor] = self.read("Min_Position_Limit", motor, normalize=False)
-            maxes[motor] = self.read("Max_Position_Limit", motor, normalize=False)
+            mins[motor] = self.read("Min_Position_Limit", motor, normalize=False, num_retry=10)
+            maxes[motor] = self.read("Max_Position_Limit", motor, normalize=False, num_retry=10)
             offsets[motor] = (
-                self.read("Homing_Offset", motor, normalize=False) if self.protocol_version == 0 else 0
+                self.read("Homing_Offset", motor, normalize=False, num_retry=10) if self.protocol_version == 0 else 0
             )
 
         calibration = {}
