@@ -74,7 +74,6 @@ def main():
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
-                print("Received data: %s", data)
                 _action_sent = robot.send_action(data)
                 last_cmd_time = time.time()
                 watchdog_active = False
@@ -85,12 +84,12 @@ def main():
                 logging.error("Received data was: %s", msg)
 
             now = time.time()
-            # if (now - last_cmd_time > host.watchdog_timeout_ms / 1000) and not watchdog_active:
-            #     logging.warning(
-            #         f"Command not received for more than {host.watchdog_timeout_ms} milliseconds. Stopping the base."
-            #     )
-            #     watchdog_active = True
-            #     robot.stop_base()
+            if (now - last_cmd_time > host.watchdog_timeout_ms / 1000) and not watchdog_active:
+                logging.warning(
+                    f"Command not received for more than {host.watchdog_timeout_ms} milliseconds. Stopping the base."
+                )
+                watchdog_active = True
+                robot.stop_base()
 
             last_observation = robot.get_observation()
 
@@ -115,10 +114,6 @@ def main():
 
             time.sleep(max(1 / host.max_loop_freq_hz - elapsed, 0))
             duration = time.perf_counter() - start
-
-
-            # Reset duration
-            duration = 0
         print("Cycle time reached.")
 
     except KeyboardInterrupt:
