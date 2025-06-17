@@ -126,7 +126,6 @@ class SourcceyV2Beta(Robot):
             raise DeviceAlreadyConnectedError(f"{self} already connected")
 
         self.bus.connect()
-        import pdb; pdb.set_trace()
         if not self.is_calibrated and calibrate:
             self.calibrate()
 
