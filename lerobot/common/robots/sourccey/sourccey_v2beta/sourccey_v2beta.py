@@ -170,7 +170,7 @@ class SourcceyV2Beta(Robot):
         self.calibration = {}
         for name, motor in self.bus.motors.items():
             # Set drive mode = 1 for grippers
-            drive_mode = 1 if "gripper" in name else 0
+            drive_mode = 1 if "left_arm_gripper" in name else 0
             self.calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=drive_mode,
