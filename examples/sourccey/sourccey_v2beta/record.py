@@ -178,7 +178,8 @@ def record(cfg: RecordConfig):
                 control_time_s=cfg.warmup_time_s,
             )
 
-        for recorded_episodes in range(cfg.dataset.num_episodes):
+        recorded_episodes = 0
+        while recorded_episodes < cfg.num_episodes:
             # Audio feedback for episode start (using dataset.num_episodes like main record)
             log_say(f"Recording episode {dataset.num_episodes}", cfg.play_sounds)
             print(f"\nRecording episode {recorded_episodes + 1}/{cfg.num_episodes}")
@@ -214,6 +215,7 @@ def record(cfg: RecordConfig):
 
             # Check if we should stop recording
             if events["stop_recording"]:
+                recorded_episodes += 1
                 break
 
             # Execute reset time without recording to give time to manually reset the environment
@@ -233,7 +235,10 @@ def record(cfg: RecordConfig):
                 )
 
                 if events["stop_recording"]:
+                    recorded_episodes += 1
                     break
+
+            recorded_episodes += 1
 
     except KeyboardInterrupt:
         print("\nRecording interrupted by user")
