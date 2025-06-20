@@ -28,8 +28,11 @@ class RecordConfig:
     repo_id: str = "user/sourccey_v2beta"
     # Recording FPS
     fps: int = 30
+    # Warm up and reset time
+    reset_time_s: int | float = 10
+    warmup_time_s: int | float = 5
     # Task description for the dataset
-    task_description: str = "Dummy Example Task Dataset"
+    task_description: str = "Grab the towel and fold it"
     # Robot configuration
     robot_ip: str = "192.168.1.191"
     robot_id: str = "sourccey_v2beta_2"
@@ -43,8 +46,6 @@ class RecordConfig:
     rerun_session_name: str = "sourccey_v2beta_teleoperation"
     # Use vocal synthesis to read events
     play_sounds: bool = True
-    # Number of seconds for resetting the environment after each episode
-    reset_time_s: int | float = 60
 
 
 def record_loop(
@@ -152,6 +153,7 @@ def record(cfg: RecordConfig):
 
     print(f"Starting SourcceyV2Beta recording for {cfg.num_episodes} episodes")
     print(f"Each episode will record {cfg.nb_cycles} cycles")
+    print(f"Warm-up time: {cfg.warmup_time_s} seconds")
     print(f"Reset time between episodes: {cfg.reset_time_s} seconds")
     print(f"Dataset will be saved to: {repo_id}")
     print("Keyboard controls:")
@@ -164,10 +166,25 @@ def record(cfg: RecordConfig):
         # Calculate control time based on nb_cycles and fps
         control_time_s = cfg.nb_cycles / cfg.fps
 
-        for episode in range(cfg.num_episodes):
-            # Audio feedback for episode start
-            log_say(f"Recording episode {episode + 1}", cfg.play_sounds)
-            print(f"\nRecording episode {episode + 1}/{cfg.num_episodes}")
+        # Warm-up period before first episode
+        if cfg.warmup_time_s > 0:
+            print(f"\nWarming up for {cfg.warmup_time_s} seconds...")
+            record_loop(
+                robot=robot,
+                leader_arm=leader_arm,
+                keyboard=keyboard,
+                events=events,
+                fps=cfg.fps,
+                dataset=None,  # No dataset during warm-up
+                task_description=None,
+                display_data=cfg.display_data,
+                control_time_s=cfg.warmup_time_s,
+            )
+
+        for recorded_episodes in range(cfg.num_episodes):
+            # Audio feedback for episode start (using dataset.num_episodes like main record)
+            log_say(f"Recording episode {dataset.num_episodes}", cfg.play_sounds)
+            print(f"\nRecording episode {recorded_episodes + 1}/{cfg.num_episodes}")
 
             # Reset events for new episode
             events["exit_early"] = False
@@ -199,33 +216,29 @@ def record(cfg: RecordConfig):
 
             # Save the episode
             dataset.save_episode()
-            print(f"Episode {episode + 1} saved")
+            print(f"Episode {recorded_episodes + 1} saved")
 
             # Check if we should stop recording
             if events["stop_recording"]:
-                log_say("Stop recording", cfg.play_sounds, blocking=True)
-                print("Recording stopped by user")
                 break
 
-            # If not the last episode, give time to reset environment
-            if episode < cfg.num_episodes - 1:
+            # Execute reset time without recording to give time to manually reset the environment
+            # Skip reset for the last episode to be recorded, unless re-recording
+            if not events["stop_recording"] and (
+                (recorded_episodes < cfg.num_episodes - 1) or events["rerecord_episode"]
+            ):
                 log_say("Reset the environment", cfg.play_sounds)
-                print(f"Reset the environment for {cfg.reset_time_s} seconds...")
-
                 record_loop(
                     robot=robot,
                     leader_arm=leader_arm,
                     keyboard=keyboard,
                     events=events,
                     fps=cfg.fps,
-                    dataset=None,  # No dataset during reset time
-                    task_description=None,  # No task description during reset time
+                    dataset=dataset,
+                    task_description=cfg.task_description,
                     display_data=cfg.display_data,
                     control_time_s=cfg.reset_time_s,
                 )
-
-                if events["stop_recording"]:
-                    break
 
     except KeyboardInterrupt:
         print("\nRecording interrupted by user")
@@ -244,6 +257,7 @@ def record(cfg: RecordConfig):
         print("Saving and uploading dataset to the hub...")
         dataset.save_episode()
 
+        log_say("Stop recording", cfg.play_sounds, blocking=True)
         log_say("Exiting", cfg.play_sounds)
 
         # Todo: 6/20/2025: Will push to hub when proper data structure is implemented
