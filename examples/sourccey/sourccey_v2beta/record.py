@@ -207,8 +207,7 @@ def record(cfg: RecordConfig):
                 dataset.clear_episode_buffer()
 
                 # Run reset time to allow manual environment reset
-                log_say("Re-recordingepisode, reset the environment", cfg.play_sounds)
-                print("Re-recording episode...")
+                log_say("Episode discarded, reset the environment", cfg.play_sounds)
                 record_loop(
                     robot=robot,
                     leader_arm=leader_arm,
@@ -257,9 +256,10 @@ def record(cfg: RecordConfig):
         if not is_headless() and listener is not None:
             listener.stop()
 
-        # Save and upload dataset
-        print("Saving dataset...")
-        dataset.save_episode()
+        # Save and upload dataset only if there are frames in the buffer
+        if dataset.episode_buffer is not None and dataset.episode_buffer["size"] > 0:
+            print("Saving dataset...")
+            dataset.save_episode()
 
         log_say("Stop recording", cfg.play_sounds, blocking=True)
         log_say("Exiting", cfg.play_sounds)
