@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pprint import pformat
 import draccus
 
+from examples.sourccey.sourccey_v2beta.utils import display_data
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.utils import hw_to_dataset_features
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
@@ -95,10 +96,14 @@ def record(cfg: RecordConfig):
             observation = robot.get_observation()
 
             arm_action = leader_arm.get_action()
-            arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
+            arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
 
             keyboard_keys = keyboard.get_action()
             base_action = robot._from_keyboard_to_base_action(keyboard_keys)
+
+            # Display all data in Rerun
+            if cfg.display_data:
+                display_data(observation, arm_action, base_action)
 
             action = arm_action | base_action if len(base_action) > 0 else arm_action
             action_sent = robot.send_action(action)
