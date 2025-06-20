@@ -2,6 +2,7 @@ import time
 from dataclasses import dataclass
 from pprint import pformat
 import draccus
+import rerun as rr
 
 from examples.sourccey.sourccey_v2beta.utils import display_data
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
@@ -13,11 +14,15 @@ from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourcce
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 from lerobot.common.utils.utils import init_logging
 from lerobot.common.utils.visualization_utils import _init_rerun
+from lerobot.common.utils.control_utils import init_keyboard_listener, is_headless
+from lerobot.common.utils.robot_utils import busy_wait
 
 
 @dataclass
 class RecordConfig:
-    # Number of cycles to record
+    # Number of episodes to record
+    num_episodes: int = 1
+    # Number of cycles per episode
     nb_cycles: int = 750
     # Dataset repository ID (will append timestamp if not provided)
     repo_id: str = "user/sourccey_v2beta"
@@ -36,6 +41,57 @@ class RecordConfig:
     # Rerun session
     display_data: bool = False
     rerun_session_name: str = "sourccey_v2beta_teleoperation"
+    # Use vocal synthesis to read events
+    play_sounds: bool = True
+
+
+def record_loop(
+    robot,
+    leader_arm,
+    keyboard,
+    events: dict,
+    fps: int,
+    dataset: LeRobotDataset,
+    task_description: str,
+    display_data: bool = False,
+    control_time_s: int | None = None,
+):
+    """Record loop that handles keyboard events and data collection."""
+    timestamp = 0
+    start_episode_t = time.perf_counter()
+
+    while timestamp < control_time_s:
+        start_loop_t = time.perf_counter()
+
+        # Check for keyboard events
+        if events["exit_early"]:
+            events["exit_early"] = False
+            break
+
+        observation = robot.get_observation()
+
+        arm_action = leader_arm.get_action()
+        arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
+
+        keyboard_keys = keyboard.get_action()
+        base_action = robot._from_keyboard_to_base_action(keyboard_keys)
+
+        # Display all data in Rerun
+        if display_data:
+            display_data(observation, arm_action, base_action)
+
+        action = arm_action | base_action if len(base_action) > 0 else arm_action
+        action_sent = robot.send_action(action)
+
+        # Create frame and add to dataset
+        frame = {**action_sent, **observation}
+        dataset.add_frame(frame, task_description)
+
+        # Maintain timing
+        dt_s = time.perf_counter() - start_loop_t
+        busy_wait(1 / fps - dt_s)
+
+        timestamp = time.perf_counter() - start_episode_t
 
 
 @draccus.wrap()
@@ -88,33 +144,72 @@ def record(cfg: RecordConfig):
         robot_type=robot.name,
     )
 
-    print(f"Starting SourcceyV2Beta recording for {cfg.nb_cycles} cycles")
+    # Initialize keyboard listener
+    listener, events = init_keyboard_listener()
+
+    print(f"Starting SourcceyV2Beta recording for {cfg.num_episodes} episodes")
+    print(f"Each episode will record {cfg.nb_cycles} cycles")
     print(f"Dataset will be saved to: {repo_id}")
+    print("Keyboard controls:")
+    print("  Right arrow: Save current episode and continue")
+    print("  Left arrow: Re-record current episode")
+    print("  Escape: Stop recording entirely")
+    print("  Ctrl+C: Emergency stop")
 
     try:
-        for i in range(cfg.nb_cycles):
-            observation = robot.get_observation()
+        # Calculate control time based on nb_cycles and fps
+        control_time_s = cfg.nb_cycles / cfg.fps
 
-            arm_action = leader_arm.get_action()
-            arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
+        for episode in range(cfg.num_episodes):
+            print(f"\nRecording episode {episode + 1}/{cfg.num_episodes}")
 
-            keyboard_keys = keyboard.get_action()
-            base_action = robot._from_keyboard_to_base_action(keyboard_keys)
+            # Reset events for new episode
+            events["exit_early"] = False
+            events["rerecord_episode"] = False
 
-            # Display all data in Rerun
-            if cfg.display_data:
-                display_data(observation, arm_action, base_action)
+            while True:  # Loop for re-recording if needed
+                record_loop(
+                    robot=robot,
+                    leader_arm=leader_arm,
+                    keyboard=keyboard,
+                    events=events,
+                    fps=cfg.fps,
+                    dataset=dataset,
+                    task_description=cfg.task_description,
+                    display_data=cfg.display_data,
+                    control_time_s=control_time_s,
+                )
 
-            action = arm_action | base_action if len(base_action) > 0 else arm_action
-            action_sent = robot.send_action(action)
+                # Handle re-record episode event
+                if events["rerecord_episode"]:
+                    print("Re-recording episode...")
+                    events["rerecord_episode"] = False
+                    events["exit_early"] = False
+                    dataset.clear_episode_buffer()
+                    continue  # Re-run the record loop for this episode
+                else:
+                    break  # Episode completed successfully
 
-            # Create frame and add to dataset
-            frame = {**action_sent, **observation}
-            dataset.add_frame(frame, cfg.task_description)
+            # Save the episode
+            dataset.save_episode()
+            print(f"Episode {episode + 1} saved")
 
-            # Progress indicator
-            if (i + 1) % (cfg.fps * 5) == 0:
-                print(f"Recorded {i + 1}/{cfg.nb_cycles} frames")
+            # Check if we should stop recording
+            if events["stop_recording"]:
+                print("Recording stopped by user")
+                break
+
+            # If not the last episode, give time to reset environment
+            if episode < cfg.num_episodes - 1:
+                print("Reset the environment for the next episode...")
+                print("Press any key when ready to continue...")
+
+                # Wait for user input or keyboard event
+                while not events["exit_early"] and not events["stop_recording"]:
+                    time.sleep(0.1)
+
+                if events["stop_recording"]:
+                    break
 
     except KeyboardInterrupt:
         print("\nRecording interrupted by user")
@@ -124,6 +219,10 @@ def record(cfg: RecordConfig):
         robot.disconnect()
         leader_arm.disconnect()
         keyboard.disconnect()
+
+        # Cleanup keyboard listener
+        if not is_headless() and listener is not None:
+            listener.stop()
 
         # Save and upload dataset
         print("Saving and uploading dataset to the hub...")
