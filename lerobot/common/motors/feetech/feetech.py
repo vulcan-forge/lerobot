@@ -232,6 +232,7 @@ class FeetechMotorsBus(MotorsBus):
 
     @property
     def is_calibrated(self) -> bool:
+        import pdb; pdb.set_trace()
         motors_calibration = self.read_calibration()
         if set(motors_calibration) != set(self.calibration):
             return False
