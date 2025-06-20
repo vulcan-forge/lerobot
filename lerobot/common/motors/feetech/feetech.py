@@ -232,7 +232,6 @@ class FeetechMotorsBus(MotorsBus):
 
     @property
     def is_calibrated(self) -> bool:
-        import pdb; pdb.set_trace()
         motors_calibration = self.read_calibration()
         if set(motors_calibration) != set(self.calibration):
             return False
@@ -254,7 +253,7 @@ class FeetechMotorsBus(MotorsBus):
         # In order to properly calibrate geared down motors, we need to manaully update the homing offset
         # this is strictly for geared down motors, so we will actually update the calibration if the values are different
         # in the actual motors
-        if (not same_ranges and not same_offsets):
+        if (not same_ranges or not same_offsets):
             print(f"Updating calibration for {motors_calibration}")
             self.write_calibration(motors_calibration)
             same_ranges = True
