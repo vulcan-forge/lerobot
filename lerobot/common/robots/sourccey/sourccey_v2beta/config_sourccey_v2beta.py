@@ -41,9 +41,9 @@ class SourcceyV2BetaConfig(RobotConfig):
             "wrist_left": OpenCVCameraConfig(
                 index_or_path="/dev/video0", fps=30, width=640, height=480
             ),
-            # "wrist_right": OpenCVCameraConfig(
-            #     index_or_path="/dev/video8", fps=30, width=640, height=480
-            # ),
+            "wrist_right": OpenCVCameraConfig(
+                index_or_path="/dev/video8", fps=30, width=640, height=480
+            ),
         }
     )
 
