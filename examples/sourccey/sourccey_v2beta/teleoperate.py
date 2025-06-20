@@ -17,7 +17,7 @@ class TeleoperateConfig:
     # Limit the maximum frames per second
     fps: int = 60
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
+    robot_ip: str = "192.168.1.191" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
     robot_id: str = "sourccey_v2beta_2"
     # Leader arm configuration
     leader_arm_port: str = "COM29"
