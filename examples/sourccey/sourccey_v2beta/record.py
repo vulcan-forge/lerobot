@@ -178,7 +178,7 @@ def record(cfg: RecordConfig):
                 control_time_s=cfg.warmup_time_s,
             )
 
-        for recorded_episodes in range(cfg.num_episodes):
+        for recorded_episodes in range(cfg.dataset.num_episodes):
             # Audio feedback for episode start (using dataset.num_episodes like main record)
             log_say(f"Recording episode {dataset.num_episodes}", cfg.play_sounds)
             print(f"\nRecording episode {recorded_episodes + 1}/{cfg.num_episodes}")
@@ -249,7 +249,7 @@ def record(cfg: RecordConfig):
             listener.stop()
 
         # Save and upload dataset
-        print("Saving and uploading dataset to the hub...")
+        print("Saving dataset...")
         dataset.save_episode()
 
         log_say("Stop recording", cfg.play_sounds, blocking=True)
