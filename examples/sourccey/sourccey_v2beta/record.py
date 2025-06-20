@@ -17,7 +17,7 @@ from lerobot.common.utils.visualization_utils import _init_rerun
 @dataclass
 class RecordConfig:
     # Number of cycles to record
-    nb_cycles: int = 250
+    nb_cycles: int = 750
     # Dataset repository ID (will append timestamp if not provided)
     repo_id: str = "user/sourccey_v2beta"
     # Recording FPS
