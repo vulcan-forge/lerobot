@@ -12,7 +12,7 @@ from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client impor
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
-from lerobot.common.utils.utils import init_logging
+from lerobot.common.utils.utils import init_logging, log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.common.utils.control_utils import init_keyboard_listener, is_headless
 from lerobot.common.utils.robot_utils import busy_wait
@@ -43,6 +43,8 @@ class RecordConfig:
     rerun_session_name: str = "sourccey_v2beta_teleoperation"
     # Use vocal synthesis to read events
     play_sounds: bool = True
+    # Number of seconds for resetting the environment after each episode
+    reset_time_s: int | float = 60
 
 
 def record_loop(
@@ -51,8 +53,8 @@ def record_loop(
     keyboard,
     events: dict,
     fps: int,
-    dataset: LeRobotDataset,
-    task_description: str,
+    dataset: LeRobotDataset | None = None,
+    task_description: str | None = None,
     display_data: bool = False,
     control_time_s: int | None = None,
 ):
@@ -83,9 +85,10 @@ def record_loop(
         action = arm_action | base_action if len(base_action) > 0 else arm_action
         action_sent = robot.send_action(action)
 
-        # Create frame and add to dataset
-        frame = {**action_sent, **observation}
-        dataset.add_frame(frame, task_description)
+        # Create frame and add to dataset only if dataset is provided
+        if dataset is not None and task_description is not None:
+            frame = {**action_sent, **observation}
+            dataset.add_frame(frame, task_description)
 
         # Maintain timing
         dt_s = time.perf_counter() - start_loop_t
@@ -149,6 +152,7 @@ def record(cfg: RecordConfig):
 
     print(f"Starting SourcceyV2Beta recording for {cfg.num_episodes} episodes")
     print(f"Each episode will record {cfg.nb_cycles} cycles")
+    print(f"Reset time between episodes: {cfg.reset_time_s} seconds")
     print(f"Dataset will be saved to: {repo_id}")
     print("Keyboard controls:")
     print("  Right arrow: Save current episode and continue")
@@ -161,6 +165,8 @@ def record(cfg: RecordConfig):
         control_time_s = cfg.nb_cycles / cfg.fps
 
         for episode in range(cfg.num_episodes):
+            # Audio feedback for episode start
+            log_say(f"Recording episode {episode + 1}", cfg.play_sounds)
             print(f"\nRecording episode {episode + 1}/{cfg.num_episodes}")
 
             # Reset events for new episode
@@ -182,6 +188,7 @@ def record(cfg: RecordConfig):
 
                 # Handle re-record episode event
                 if events["rerecord_episode"]:
+                    log_say("Re-record episode", cfg.play_sounds)
                     print("Re-recording episode...")
                     events["rerecord_episode"] = False
                     events["exit_early"] = False
@@ -196,17 +203,26 @@ def record(cfg: RecordConfig):
 
             # Check if we should stop recording
             if events["stop_recording"]:
+                log_say("Stop recording", cfg.play_sounds, blocking=True)
                 print("Recording stopped by user")
                 break
 
             # If not the last episode, give time to reset environment
             if episode < cfg.num_episodes - 1:
-                print("Reset the environment for the next episode...")
-                print("Press any key when ready to continue...")
+                log_say("Reset the environment", cfg.play_sounds)
+                print(f"Reset the environment for {cfg.reset_time_s} seconds...")
 
-                # Wait for user input or keyboard event
-                while not events["exit_early"] and not events["stop_recording"]:
-                    time.sleep(0.1)
+                record_loop(
+                    robot=robot,
+                    leader_arm=leader_arm,
+                    keyboard=keyboard,
+                    events=events,
+                    fps=cfg.fps,
+                    dataset=None,  # No dataset during reset time
+                    task_description=None,  # No task description during reset time
+                    display_data=cfg.display_data,
+                    control_time_s=cfg.reset_time_s,
+                )
 
                 if events["stop_recording"]:
                     break
@@ -227,6 +243,8 @@ def record(cfg: RecordConfig):
         # Save and upload dataset
         print("Saving and uploading dataset to the hub...")
         dataset.save_episode()
+
+        log_say("Exiting", cfg.play_sounds)
 
         # Todo: 6/20/2025: Will push to hub when proper data structure is implemented
         # dataset.push_to_hub()
