@@ -128,8 +128,10 @@ def record(cfg: RecordConfig):
         # Save and upload dataset
         print("Saving and uploading dataset to the hub...")
         dataset.save_episode()
-        dataset.push_to_hub()
-        print(f"Dataset successfully uploaded to: {repo_id}")
+
+        # Todo: 6/20/2025: Will push to hub when proper data structure is implemented
+        # dataset.push_to_hub()
+        # print(f"Dataset successfully uploaded to: {repo_id}")
 
 
 if __name__ == "__main__":
