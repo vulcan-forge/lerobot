@@ -47,7 +47,7 @@ class SourcceyV2Beta(Robot):
     """
 
     config_class = SourcceyV2BetaConfig
-    name = "sourccey_v2beta"
+    name = "sourccey_v2beta_2"
 
     def __init__(self, config: SourcceyV2BetaConfig):
         super().__init__(config)
