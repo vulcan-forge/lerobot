@@ -15,7 +15,7 @@ from examples.sourccey.sourccey_v2beta.utils import display_data
 @dataclass
 class ReplayConfig:
     # Dataset configuration
-    dataset_path: str = "user/sourccey_v2beta1749025613"
+    dataset_path: str = "user/sourccey_v2beta_1750446327"
     episode: int = 0
     # Robot configuration
     robot_ip: str = "192.168.1.191"
