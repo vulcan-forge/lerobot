@@ -254,8 +254,8 @@ class FeetechMotorsBus(MotorsBus):
         # this is strictly for geared down motors, so we will actually update the calibration if the values are different
         # in the actual motors
         if (not same_ranges or not same_offsets):
-            print(f"Updating calibration for {motors_calibration}")
-            self.write_calibration(motors_calibration)
+            print(f"Updating calibration")
+            self.write_calibration(self.calibration)
             same_ranges = True
             same_offsets = True
 
