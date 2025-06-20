@@ -152,9 +152,6 @@ def record(cfg: RecordConfig):
     listener, events = init_keyboard_listener()
 
     print(f"Starting SourcceyV2Beta recording for {cfg.num_episodes} episodes")
-    print(f"Each episode will record {cfg.nb_cycles} cycles")
-    print(f"Warm-up time: {cfg.warmup_time_s} seconds")
-    print(f"Reset time between episodes: {cfg.reset_time_s} seconds")
     print(f"Dataset will be saved to: {repo_id}")
     print("Keyboard controls:")
     print("  Right arrow: Save current episode and continue")
@@ -168,7 +165,7 @@ def record(cfg: RecordConfig):
 
         # Warm-up period before first episode
         if cfg.warmup_time_s > 0:
-            print(f"\nWarming up for {cfg.warmup_time_s} seconds...")
+            log_say(f"Warming up for {cfg.warmup_time_s} seconds...", cfg.play_sounds)
             record_loop(
                 robot=robot,
                 leader_arm=leader_arm,
@@ -190,29 +187,26 @@ def record(cfg: RecordConfig):
             events["exit_early"] = False
             events["rerecord_episode"] = False
 
-            while True:  # Loop for re-recording if needed
-                record_loop(
-                    robot=robot,
-                    leader_arm=leader_arm,
-                    keyboard=keyboard,
-                    events=events,
-                    fps=cfg.fps,
-                    dataset=dataset,
-                    task_description=cfg.task_description,
-                    display_data=cfg.display_data,
-                    control_time_s=control_time_s,
-                )
+            record_loop(
+                robot=robot,
+                leader_arm=leader_arm,
+                keyboard=keyboard,
+                events=events,
+                fps=cfg.fps,
+                dataset=dataset,
+                task_description=cfg.task_description,
+                display_data=cfg.display_data,
+                control_time_s=control_time_s,
+            )
 
-                # Handle re-record episode event
-                if events["rerecord_episode"]:
-                    log_say("Re-record episode", cfg.play_sounds)
-                    print("Re-recording episode...")
-                    events["rerecord_episode"] = False
-                    events["exit_early"] = False
-                    dataset.clear_episode_buffer()
-                    continue  # Re-run the record loop for this episode
-                else:
-                    break  # Episode completed successfully
+            # Handle re-record episode event
+            if events["rerecord_episode"]:
+                log_say("Re-record episode", cfg.play_sounds)
+                print("Re-recording episode...")
+                events["rerecord_episode"] = False
+                events["exit_early"] = False
+                dataset.clear_episode_buffer()
+                continue  # Re-run the for loop for this episode
 
             # Save the episode
             dataset.save_episode()
@@ -223,10 +217,8 @@ def record(cfg: RecordConfig):
                 break
 
             # Execute reset time without recording to give time to manually reset the environment
-            # Skip reset for the last episode to be recorded, unless re-recording
-            if not events["stop_recording"] and (
-                (recorded_episodes < cfg.num_episodes - 1) or events["rerecord_episode"]
-            ):
+            # Skip reset for the last episode to be recorded
+            if not events["stop_recording"] and recorded_episodes < cfg.num_episodes - 1:
                 log_say("Reset the environment", cfg.play_sounds)
                 record_loop(
                     robot=robot,
@@ -234,11 +226,14 @@ def record(cfg: RecordConfig):
                     keyboard=keyboard,
                     events=events,
                     fps=cfg.fps,
-                    dataset=dataset,
-                    task_description=cfg.task_description,
+                    dataset=None,  # No dataset during reset time
+                    task_description=None,
                     display_data=cfg.display_data,
                     control_time_s=cfg.reset_time_s,
                 )
+
+                if events["stop_recording"]:
+                    break
 
     except KeyboardInterrupt:
         print("\nRecording interrupted by user")
