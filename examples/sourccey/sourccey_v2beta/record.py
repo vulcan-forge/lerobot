@@ -202,25 +202,33 @@ def record(cfg: RecordConfig):
 
             # Handle re-record episode event
             if events["rerecord_episode"]:
-                log_say("Re-record episode", cfg.play_sounds)
-                print("Re-recording episode...")
                 events["rerecord_episode"] = False
                 events["exit_early"] = False
                 dataset.clear_episode_buffer()
-                continue  # Re-run the for loop for this episode
+
+                # Run reset time to allow manual environment reset
+                log_say("Re-recordingepisode, reset the environment", cfg.play_sounds)
+                print("Re-recording episode...")
+                record_loop(
+                    robot=robot,
+                    leader_arm=leader_arm,
+                    keyboard=keyboard,
+                    events=events,
+                    fps=cfg.fps,
+                    dataset=None,  # No dataset during reset time
+                    task_description=None,
+                    display_data=cfg.display_data,
+                    control_time_s=cfg.reset_time_s,
+                )
+                continue  # Re-run the while loop for this episode
 
             # Save the episode
             dataset.save_episode()
             print(f"Episode {recorded_episodes + 1} saved")
 
-            # Check if we should stop recording
-            if events["stop_recording"]:
-                recorded_episodes += 1
-                break
-
             # Execute reset time without recording to give time to manually reset the environment
             # Skip reset for the last episode to be recorded
-            if not events["stop_recording"] and recorded_episodes < cfg.num_episodes - 1:
+            if recorded_episodes < cfg.num_episodes - 1:
                 log_say("Reset the environment", cfg.play_sounds)
                 record_loop(
                     robot=robot,
@@ -233,10 +241,6 @@ def record(cfg: RecordConfig):
                     display_data=cfg.display_data,
                     control_time_s=cfg.reset_time_s,
                 )
-
-                if events["stop_recording"]:
-                    recorded_episodes += 1
-                    break
 
             recorded_episodes += 1
 
