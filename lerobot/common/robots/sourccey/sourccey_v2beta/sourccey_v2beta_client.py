@@ -100,10 +100,10 @@ class SourcceyV2BetaClient(Robot):
     @cached_property
     def _cameras_ft(self) -> dict[str, tuple]:
         return {
-            "front_left": (320, 240, 3),
-            "front_right": (320, 240, 3),
-            "wrist_left": (320, 240, 3),
-            "wrist_right": (320, 240, 3),
+            "front_left": (3, 240, 320),
+            "front_right": (3, 240, 320),
+            "wrist_left": (3, 240, 320),
+            "wrist_right": (3, 240, 320),
         }
 
     @cached_property
