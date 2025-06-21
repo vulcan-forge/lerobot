@@ -3,8 +3,11 @@ from dataclasses import dataclass
 from pprint import pformat
 import draccus
 import rerun as rr
+import os
+from pathlib import Path
 
 from examples.sourccey.sourccey_v2beta.utils import display_data
+from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.utils import hw_to_dataset_features
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
@@ -23,9 +26,9 @@ class RecordConfig:
     # Number of episodes to record
     num_episodes: int = 1
     # Number of cycles per episode
-    nb_cycles: int = 750
+    nb_cycles: int = 9000
     # Dataset repository ID (will append timestamp if not provided)
-    repo_id: str = "user/sourccey_v2beta"
+    repo_id: str = "local/sourccey_v2beta_towel_010_a"
     # Recording FPS
     fps: int = 30
     # Warm up and reset time
@@ -136,17 +139,39 @@ def record(cfg: RecordConfig):
     obs_features = hw_to_dataset_features(robot.observation_features, "observation")
     dataset_features = {**action_features, **obs_features}
 
+    # 6/20/2025: Commenting this out as we don't want to use repos with timestamps this way for now
     # Create dataset with timestamp if repo_id doesn't already have one
     repo_id = cfg.repo_id
-    if not repo_id.endswith(str(int(time.time()))):
-        repo_id = f"{cfg.repo_id}_{int(time.time())}"
+    # if not repo_id.endswith(str(int(time.time()))):
+    #     repo_id = f"{cfg.repo_id}_{int(time.time())}"
 
-    dataset = LeRobotDataset.create(
-        repo_id=repo_id,
-        fps=cfg.fps,
-        features=dataset_features,
-        robot_type=robot.name,
-    )
+    try:
+        print(f"Checking if dataset exists: {repo_id}")
+
+        # Check if the dataset folder exists locally
+        dataset_path = HF_LEROBOT_HOME / repo_id
+        if dataset_path.exists():
+            print(f"Dataset folder found, loading: {repo_id}")
+            dataset = LeRobotDataset(
+                repo_id=repo_id
+            )
+        else:
+            print(f"Dataset folder not found, creating new dataset: {repo_id}")
+            dataset = LeRobotDataset.create(
+                repo_id=repo_id,
+                fps=cfg.fps,
+                features=dataset_features,
+                robot_type=robot.name,
+            )
+    except Exception as e:
+        print(f"Error loading dataset: {e}")
+        print(f"Creating new dataset: {repo_id}")
+        dataset = LeRobotDataset.create(
+            repo_id=repo_id,
+            fps=cfg.fps,
+            features=dataset_features,
+            robot_type=robot.name,
+        )
 
     # Initialize keyboard listener
     listener, events = init_keyboard_listener()
