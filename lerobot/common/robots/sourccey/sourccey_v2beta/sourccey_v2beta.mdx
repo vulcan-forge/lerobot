@@ -92,27 +92,27 @@ uv run -m lerobot.calibrate \
 To teleoperate, SSH into your Raspberry Pi, and run conda activate lerobot and this command:
 
 ```
-uv run -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
+python -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
 ```
 
 Then on your laptop, also run conda activate lerobot and run the API example, make sure you set the correct remote_ip and port.
 
 ```
-uv run -m examples.sourccey.sourccey_v2beta.teleoperate --display_data=true
+python -m examples.sourccey.sourccey_v2beta.teleoperate --display_data=true
 ```
 
 ```
-uv run -m examples.sourccey.sourccey_v2beta.record --display_data=true
+python -m examples.sourccey.sourccey_v2beta.record --display_data=true
 ```
 
 ```
-uv run -m examples.sourccey.sourccey_v2beta.replay --display_data=true
+python -m examples.sourccey.sourccey_v2beta.replay --display_data=true
 ```
 
 --- ACT Training
 
 ```bash
-uv run lerobot/scripts/train.py \
+python lerobot/scripts/train.py \
   --dataset.repo_id=local/sourccey_v2beta_towel_010_a \
   --policy.type=act \
   --output_dir=outputs/train/act_sourccey_v2beta_towel_010_a \
@@ -140,7 +140,7 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
 ---- Train on Pretrained SmolVLA model
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 uv run lerobot/scripts/train.py \
+CUDA_VISIBLE_DEVICES=0 python lerobot/scripts/train.py \
  --dataset.repo_id=local/sourccey_v2beta_towel_010_a \
  --policy.path=lerobot/smolvla_base \
  --policy.device=cuda \
