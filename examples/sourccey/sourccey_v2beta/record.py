@@ -38,7 +38,7 @@ class RecordConfig:
     task_description: str = "Grab the towel and fold it"
     # Robot configuration
     robot_ip: str = "192.168.1.191"
-    robot_id: str = "sourccey_v2beta_2"
+    robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
     leader_arm_port: str = "COM29"
     leader_arm_id: str = "my_sourccey_v2beta_teleop_2"

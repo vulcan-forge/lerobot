@@ -18,7 +18,7 @@ class TeleoperateConfig:
     fps: int = 60
     # Robot configuration
     robot_ip: str = "192.168.1.191" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
-    robot_id: str = "sourccey_v2beta_2"
+    robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
     leader_arm_port: str = "COM29"
     leader_arm_id: str = "my_sourccey_v2beta_teleop_2"
