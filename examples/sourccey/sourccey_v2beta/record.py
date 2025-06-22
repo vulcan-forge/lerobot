@@ -146,9 +146,6 @@ def record(cfg: RecordConfig):
     #     repo_id = f"{cfg.repo_id}_{int(time.time())}"
 
     try:
-        print(f"Checking if dataset exists: {repo_id}")
-
-        # Check if the dataset folder exists locally
         dataset_path = HF_LEROBOT_HOME / repo_id
         if dataset_path.exists():
             print(f"Dataset folder found, loading: {repo_id}")
