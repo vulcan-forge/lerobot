@@ -40,7 +40,7 @@ class RecordConfig:
     robot_ip: str = "192.168.1.191"
     robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
-    leader_arm_port: str = "/dev/ttyUSB0" # "COM29" 
+    leader_arm_port: str = "/dev/ttyUSB0" # "COM29"
     leader_arm_id: str = "sourccey_v2beta_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
@@ -58,9 +58,9 @@ def record_loop(
     events: dict,
     fps: int,
     dataset: LeRobotDataset | None = None,
+    control_time_s: int | None = None,
     task_description: str | None = None,
     display_data: bool = False,
-    control_time_s: int | None = None,
 ):
     """Record loop that handles keyboard events and data collection."""
     timestamp = 0

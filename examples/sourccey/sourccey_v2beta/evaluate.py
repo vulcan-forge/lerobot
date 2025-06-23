@@ -37,6 +37,8 @@ class EvaluateConfig:
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
     policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_a/checkpoints/020000/pretrained_model"
+    # Task description for the dataset
+    task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
     display_data: bool = False
     rerun_session_name: str = "sourccey_v2beta_evaluation"
@@ -61,6 +63,7 @@ def evaluate_loop(
     policy: PreTrainedPolicy,
     fps: int,
     control_time_s: int | None = None,
+    task_description: str | None = None,
     display_data: bool = False,
 ):
     """Evaluation loop that handles policy inference and robot control."""
@@ -89,7 +92,7 @@ def evaluate_loop(
             policy,
             get_safe_torch_device(policy.config.device),
             policy.config.use_amp,
-            task=None,  # No task for evaluation
+            task=task_description,  # No task for evaluation
             robot_type=robot.robot_type,
         )
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
@@ -160,6 +163,7 @@ def evaluate(cfg: EvaluateConfig):
             fps=cfg.fps,
             control_time_s=control_time_s,
             display_data=cfg.display_data,
+            task_description=cfg.task_description,
         )
 
     except KeyboardInterrupt:
