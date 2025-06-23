@@ -213,12 +213,6 @@ class OpenCVCamera(Camera):
         else:
             self._validate_width_and_height()
 
-        if hasattr(self.config, 'pixel_format') and self.config.pixel_format:
-            fourcc = cv2.VideoWriter_fourcc(*self.config.pixel_format)
-            success = self.videocapture.set(cv2.CAP_PROP_FOURCC, fourcc)
-            if not success:
-                logger.warning(f"Failed to set pixel format {self.config.pixel_format} for {self}")
-
     def _validate_fps(self) -> None:
         """Validates and sets the camera's frames per second (FPS)."""
 
