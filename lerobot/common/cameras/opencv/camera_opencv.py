@@ -219,6 +219,19 @@ class OpenCVCamera(Camera):
             if not success:
                 logger.warning(f"Failed to set pixel format {self.config.pixel_format} for {self}")
 
+            print(f"Set pixel format {self.config.pixel_format} for {self}")
+            logger.info(f"Set pixel format {self.config.pixel_format} for {self}")
+
+            # Add JPEG quality control for MJPG
+            if self.config.pixel_format == "MJPG" and hasattr(self.config, 'jpeg_quality'):
+                quality_success = self.videocapture.set(cv2.CAP_PROP_QUALITY, self.config.jpeg_quality)
+                if quality_success:
+                    print(f"Set JPEG quality to {self.config.jpeg_quality} for {self}")
+                    logger.info(f"Set JPEG quality to {self.config.jpeg_quality} for {self}")
+                else:
+                    print(f"Failed to set JPEG quality for {self}")
+                    logger.warning(f"Failed to set JPEG quality for {self}")
+
     def _validate_fps(self) -> None:
         """Validates and sets the camera's frames per second (FPS)."""
 

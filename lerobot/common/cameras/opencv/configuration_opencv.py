@@ -47,6 +47,7 @@ class OpenCVCameraConfig(CameraConfig):
         rotation: Image rotation setting (0°, 90°, 180°, or 270°). Defaults to no rotation.
         warmup_s: Time reading frames before returning from connect (in seconds)
         pixel_format: Pixel format for image output (e.g., "YUYV","MJPG", "RGB24").
+        jpeg_quality: JPEG quality for MJPG format (0-100, lower = smaller files)
 
     Note:
         - Only 3-channel color output (RGB/BGR) is currently supported.
@@ -56,7 +57,8 @@ class OpenCVCameraConfig(CameraConfig):
     color_mode: ColorMode = ColorMode.RGB
     rotation: Cv2Rotation = Cv2Rotation.NO_ROTATION
     warmup_s: int = 1
-    pixel_format: str = "YUYV"  # or "YUYV", "MJPG", "RGB24", etc.
+    pixel_format: str = "MJPG"  # or "YUYV", "RGB24", etc.
+    jpeg_quality: int = 30  # Add this: 0-100, lower = smaller files
 
     def __post_init__(self):
         if self.color_mode not in (ColorMode.RGB, ColorMode.BGR):
