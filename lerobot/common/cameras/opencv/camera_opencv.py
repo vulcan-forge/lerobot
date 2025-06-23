@@ -224,7 +224,7 @@ class OpenCVCamera(Camera):
 
             # Add JPEG quality control for MJPG
             if self.config.pixel_format == "MJPG" and hasattr(self.config, 'jpeg_quality'):
-                quality_success = self.videocapture.set(cv2.CAP_PROP_QUALITY, self.config.jpeg_quality)
+                quality_success = self.videocapture.set(cv2.CAP_PROP_JPEG_QUALITY, self.config.jpeg_quality)
                 if quality_success:
                     print(f"Set JPEG quality to {self.config.jpeg_quality} for {self}")
                     logger.info(f"Set JPEG quality to {self.config.jpeg_quality} for {self}")
