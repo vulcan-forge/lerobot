@@ -65,7 +65,7 @@ def main():
     robot_config = SO100FollowerConfig(
         id=robot_id,
         port="COM11",  # Adjust based on your setup - could be /dev/ttyUSB1, COM3, etc.
-        use_degrees=True,
+        use_degrees=False,
         max_relative_target=30.0,  # Safety limit in degrees
     )
     
