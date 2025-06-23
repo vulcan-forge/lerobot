@@ -28,7 +28,7 @@ class RecordConfig:
     # Number of cycles per episode
     nb_cycles: int = 9000
     # Dataset repository ID (will append timestamp if not provided)
-    repo_id: str = "local/sourccey_v2beta_001_tape_d"
+    repo_id: str = "local/sourccey_v2beta_001_tape_a"
     # Recording FPS
     fps: int = 30
     # Warm up and reset time
@@ -40,7 +40,7 @@ class RecordConfig:
     robot_ip: str = "192.168.1.191"
     robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
-    leader_arm_port: str = "COM29" #"/dev/ttyUSB0"
+    leader_arm_port: str = "/dev/ttyUSB0" # "COM29" 
     leader_arm_id: str = "sourccey_v2beta_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
