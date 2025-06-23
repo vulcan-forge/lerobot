@@ -28,14 +28,14 @@ class RecordConfig:
     # Number of cycles per episode
     nb_cycles: int = 9000
     # Dataset repository ID (will append timestamp if not provided)
-    repo_id: str = "local/sourccey_v2beta_towel_010_a"
+    repo_id: str = "local/sourccey_v2beta_001_tape_a"
     # Recording FPS
     fps: int = 30
     # Warm up and reset time
     reset_time_s: int | float = 10
     warmup_time_s: int | float = 5
     # Task description for the dataset
-    task_description: str = "Grab the towel and fold it"
+    task_description: str = "Grab the tape and put it in the cup"
     # Robot configuration
     robot_ip: str = "192.168.1.191"
     robot_id: str = "sourccey_v2beta"
