@@ -34,8 +34,8 @@ class SourcceyV2BetaConfig(RobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "front_left": OpenCVCameraConfig(index_or_path="/dev/video12", fps=20, width=320, height=240),
-            "front_right": OpenCVCameraConfig(index_or_path="/dev/video4", fps=20, width=320, height=240),
+            "front_left": OpenCVCameraConfig(index_or_path="/dev/video12", fps=15, width=320, height=240),
+            "front_right": OpenCVCameraConfig(index_or_path="/dev/video4", fps=15, width=320, height=240),
             "wrist_left": OpenCVCameraConfig(index_or_path="/dev/video0", fps=20, width=640, height=480),
             "wrist_right": OpenCVCameraConfig(index_or_path="/dev/video8", fps=20, width=640, height=480),
         }
