@@ -129,8 +129,16 @@ class SourcceyV2Beta(Robot):
         if not self.is_calibrated and calibrate:
             self.calibrate()
 
-        for cam in self.cameras.values():
+        # Staggered camera connection to avoid USB2.0 bandwidth issues
+        logger.info("Connecting cameras with staggered timing to avoid USB2.0 bandwidth issues...")
+        for i, (camera_name, cam) in enumerate(self.cameras.items()):
+            logger.info(f"Connecting camera {i+1}/{len(self.cameras)}: {camera_name}")
             cam.connect()
+
+            # Wait between camera connections to allow USB bus to stabilize
+            if i < len(self.cameras) - 1:  # Don't wait after the last camera
+                logger.info(f"Waiting 3 seconds before connecting next camera...")
+                time.sleep(3.0)
 
         self.configure()
         logger.info(f"{self} connected.")
