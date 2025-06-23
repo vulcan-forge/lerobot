@@ -35,7 +35,7 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     
     # IK solver settings
     target_link_name: str = "Fixed_Jaw"
-    rest_pose: tuple[float, ...] = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)  # radians - conservative middle position
+    rest_pose: tuple[float, ...] = (0.0, 2.733588, 2.411134, 0.322072, -1.570779, 0.849988)  # radians - initial position from IK solution
     
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
