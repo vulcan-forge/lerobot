@@ -84,10 +84,6 @@ class PhoneTeleoperator(Teleoperator):
         # gRPC server and pose service (to be initialized in connect())
         self.grpc_server = None
         self.pose_service = None
-        
-        # Initial position control
-        self._send_initial_position = False
-        self._initial_action = None
 
     @cached_property
     def action_features(self) -> dict[str, type]:
@@ -140,10 +136,6 @@ class PhoneTeleoperator(Teleoperator):
             self._start_grpc_server()
             
             self._is_connected = True
-            
-            # Immediately move robot to initial position before phone connection
-            logger.info("Moving robot to initial position...")
-            self._move_to_initial_position()
             
             logger.info(f"{self} connected successfully")
             
@@ -313,14 +305,6 @@ class PhoneTeleoperator(Teleoperator):
 
         print(f"🔍 GET_ACTION START - Phone connected: {self._phone_connected}, Teleop active: {self.start_teleop}")
 
-        # If we need to send initial position, do it immediately
-        if self._send_initial_position and self._initial_action is not None:
-            print("🏠 SENDING INITIAL POSITION")
-            logger.info("Sending robot to initial position")
-            # Clear the flag after first send
-            self._send_initial_position = False
-            return self._initial_action
-
         # Extract current robot position from observation
         current_joint_pos_deg = None
         if observation is not None:
@@ -420,6 +404,18 @@ class PhoneTeleoperator(Teleoperator):
                 solution_deg[2] -= 90
                 print(f"🔧 elbow_flex: {original_elbow_flex} → {solution_deg[2]} (90° offset)")
             
+            # wrist_flex (index 3): 90° offset
+            if len(solution_deg) > 3:
+                original_wrist_flex = solution_deg[3]
+                solution_deg[3] += 90
+                print(f"🔧 wrist_flex: {original_wrist_flex} → {solution_deg[3]} (+90° offset)")
+            
+            # wrist_roll (index 4): direction reversal + 90° offset
+            if len(solution_deg) > 4:
+                original_wrist_roll = solution_deg[4]
+                solution_deg[4] = -(solution_deg[4] - 90)
+                print(f"🔧 wrist_roll: {original_wrist_roll} → {solution_deg[4]} (reversed + 90° offset)")
+            
             print(f"📊 After transformations: {solution_deg}")
 
             # Update gripper state
@@ -506,14 +502,4 @@ class PhoneTeleoperator(Teleoperator):
         except Exception as e:
             logger.error(f"Error disconnecting {self}: {e}")
 
-    def _move_to_initial_position(self) -> None:
-        """Move robot to initial position immediately."""
-        # Use rest_pose as the initial position (convert from radians to degrees)
-        initial_position_deg = np.rad2deg(self.config.rest_pose)
-        logger.info(f"Setting initial position: {initial_position_deg}")
-        
-        # This will be returned by get_action() calls before phone connection
-        self._initial_action = self._format_action_dict(initial_position_deg)
-        
-        # Set a flag to indicate we want to go to initial position
-        self._send_initial_position = True 
+ 
