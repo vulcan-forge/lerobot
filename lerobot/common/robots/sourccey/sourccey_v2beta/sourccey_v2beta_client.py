@@ -100,10 +100,10 @@ class SourcceyV2BetaClient(Robot):
     @cached_property
     def _cameras_ft(self) -> dict[str, tuple]:
         return {
-            "front_left": (480, 640, 3),
-            "front_right": (480, 640, 3),
-            "wrist_left": (480, 640, 3),
-            "wrist_right": (480, 640, 3),
+            "front_left": (240, 320, 3),
+            "front_right": (240, 320, 3),
+            "wrist_left": (240, 320, 3),
+            "wrist_right": (240, 320, 3),
         }
 
     @cached_property
@@ -274,7 +274,7 @@ class SourcceyV2BetaClient(Robot):
         for cam_name, frame in frames.items():
             if frame is None:
                 logging.warning("Frame is None")
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                frame = np.zeros((240, 320, 3), dtype=np.uint8)
             obs_dict[cam_name] = torch.from_numpy(frame)
 
         return obs_dict
