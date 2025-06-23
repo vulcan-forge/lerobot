@@ -6,8 +6,8 @@ from enum import Enum
 
 from examples.sourccey.sourccey_v2beta.utils import display_data
 from lerobot.common.policies.act.modeling_act import ACTPolicy
-from lerobot.common.policies.smolvla.modeling_smolvla import SmolvlaPolicy
-from lerobot.common.policies.pi0.modeling_pi0 import Pi0Policy
+# from lerobot.common.policies.smolvla.modeling_smolvla import SmolvlaPolicy
+# from lerobot.common.policies.pi0.modeling_pi0 import Pi0Policy
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.control_utils import predict_action
@@ -40,10 +40,10 @@ def load_policy(policy_type: PolicyType, policy_name: str):
     """Load the specified policy type."""
     if policy_type == PolicyType.ACT:
         return ACTPolicy.from_pretrained(policy_name)
-    elif policy_type == PolicyType.SMOLVLA:
-        return SmolvlaPolicy.from_pretrained(policy_name)
-    elif policy_type == PolicyType.PI0:
-        return Pi0Policy.from_pretrained(policy_name)
+    # elif policy_type == PolicyType.SMOLVLA:
+    #     return SmolvlaPolicy.from_pretrained(policy_name)
+    # elif policy_type == PolicyType.PI0:
+    #     return Pi0Policy.from_pretrained(policy_name)
     else:
         raise ValueError(f"Unsupported policy type: {policy_type}")
 
