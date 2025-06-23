@@ -30,7 +30,7 @@ class EvaluateConfig:
     robot_id: str = "sourccey_v2beta"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "local/act_sourccey_v2beta_towel_010_a"
+    policy_name: str = "outputs/train/act_sourccey_v2beta_towel_010_a"
     # Display configuration
     display_data: bool = False
     rerun_session_name: str = "sourccey_v2beta_evaluation"
