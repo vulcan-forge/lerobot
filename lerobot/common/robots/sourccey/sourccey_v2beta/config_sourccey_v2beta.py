@@ -20,6 +20,22 @@ from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfi
 from lerobot.common.robots.config import RobotConfig
 
 
+def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
+    return {
+        "front_left": OpenCVCameraConfig(
+            index_or_path="/dev/video12", fps=30, width=320, height=240
+        ),
+        "front_right": OpenCVCameraConfig(
+            index_or_path="/dev/video4", fps=30, width=320, height=240
+        ),
+        "wrist_left": OpenCVCameraConfig(
+            index_or_path="/dev/video0", fps=15, width=640, height=480
+        ),
+        "wrist_right": OpenCVCameraConfig(
+            index_or_path="/dev/video8", fps=15, width=640, height=480
+        ),
+    }
+
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
 class SourcceyV2BetaConfig(RobotConfig):
@@ -32,14 +48,7 @@ class SourcceyV2BetaConfig(RobotConfig):
     # the number of motors in your follower arms.
     max_relative_target: int | None = None
 
-    cameras: dict[str, CameraConfig] = field(
-        default_factory=lambda: {
-            "front_left": OpenCVCameraConfig(index_or_path="/dev/video12", fps=30, width=320, height=240),
-            "front_right": OpenCVCameraConfig(index_or_path="/dev/video4", fps=30, width=320, height=240),
-            "wrist_left": OpenCVCameraConfig(index_or_path="/dev/video0", fps=15, width=640, height=480),
-            "wrist_right": OpenCVCameraConfig(index_or_path="/dev/video8", fps=15, width=640, height=480),
-        }
-    )
+    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
 
     # Set to `True` for backward compatibility with previous policies/dataset
     use_degrees: bool = False
@@ -85,6 +94,8 @@ class SourcceyV2BetaClientConfig(RobotConfig):
             "quit": "q",
         }
     )
+
+    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
 
     polling_timeout_ms: int = 15
     connect_timeout_s: int = 5

@@ -29,7 +29,7 @@ from lerobot.common.constants import OBS_IMAGES, OBS_STATE
 from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 
 from lerobot.common.robots.robot import Robot
-from .config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from .config_sourccey_v2beta import SourcceyV2BetaClientConfig, SourcceyV2BetaConfig
 
 
 class SourcceyV2BetaClient(Robot):
