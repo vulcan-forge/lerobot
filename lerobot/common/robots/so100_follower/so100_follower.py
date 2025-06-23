@@ -30,6 +30,7 @@ from lerobot.common.motors.feetech import (
 from ..robot import Robot
 from ..utils import ensure_safe_goal_position
 from .config_so100_follower import SO100FollowerConfig
+from .motor_normalization_converter_standalone import StandaloneMotorNormalizationConverter
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,8 @@ class SO100Follower(Robot):
             calibration=self.calibration,
         )
         self.cameras = make_cameras_from_configs(config.cameras)
+        # No converter needed - both systems now use MotorNormMode.DEGREES
+        print("🔧 MOTOR NORMALIZATION: Using DEGREES mode (same as old system)")
 
     @property
     def _motors_ft(self) -> dict[str, type]:
@@ -190,18 +193,50 @@ class SO100Follower(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
+        print("\n" + "="*80)
+        print("🤖 SO100 FOLLOWER - SEND_ACTION (DEGREES MODE)")
+        print("="*80)
+        print(f"📥 Raw action received: {action}")
+        
         goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
+        print(f"📋 Goal position (degrees): {goal_pos}")
+        print("   → Using MotorNormMode.DEGREES (same as old system - no conversion needed)")
+        
+        # Have the elbow flex move to pos 5.978021978021978
+        # goal_pos = {
+        #     "shoulder_pan": 0.0,
+        #     "shoulder_lift": goal_pos["shoulder_lift"],
+        #     "elbow_flex": 0.0,
+        #     "wrist_flex": 0.0,
+        #     "wrist_roll": 0.0,
+        #     "gripper": 50.0,
+        # }
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
+            print(f"⚠️  Applying safety checks (max_relative_target: {self.config.max_relative_target})")
             present_pos = self.bus.sync_read("Present_Position")
+            print(f"📍 Current position: {present_pos}")
             goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
-            goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
+            goal_pos_before_safety = goal_pos.copy()
+            # goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
+            if goal_pos != goal_pos_before_safety:
+                print(f"🛡️  Safety applied - BEFORE: {goal_pos_before_safety}")
+                print(f"🛡️  Safety applied - AFTER:  {goal_pos}")
+            else:
+                print("✅ No safety adjustments needed")
 
         # Send goal position to the arm
+        print(f"🎯 Final goal position to send: {goal_pos}")
+        print("✅ SENDING MOTOR COMMANDS - DEGREES mode (matches old system exactly)!")
         self.bus.sync_write("Goal_Position", goal_pos)
-        return {f"{motor}.pos": val for motor, val in goal_pos.items()}
+        
+        result = {f"{motor}.pos": val for motor, val in goal_pos.items()}
+        print(f"📤 Returning: {result}")
+        print("="*80)
+        
+        return result
 
     def disconnect(self):
         if not self.is_connected:

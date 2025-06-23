@@ -90,10 +90,10 @@ def ensure_safe_goal_position(
                 "safe goal_pos": safe_goal_pos,
             }
 
-    if warnings_dict:
-        logging.warning(
-            "Relative goal position magnitude had to be clamped to be safe.\n"
-            f"{pformat(warnings_dict, indent=4)}"
-        )
+    # if warnings_dict:
+    #     logging.warning(
+    #         "Relative goal position magnitude had to be clamped to be safe.\n"
+    #         f"{pformat(warnings_dict, indent=4)}"
+    #     )
 
     return safe_goal_positions

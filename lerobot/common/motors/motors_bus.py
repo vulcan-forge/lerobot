@@ -821,9 +821,29 @@ class MotorsBus(abc.ABC):
                 norm = ((bounded_val - min_) / (max_ - min_)) * 100
                 normalized_values[id_] = 100 - norm if drive_mode else norm
             elif self.motors[motor].norm_mode is MotorNormMode.DEGREES:
-                mid = (min_ + max_) / 2
-                max_res = self.model_resolution_table[self._id_to_model(id_)] - 1
-                normalized_values[id_] = (val - mid) * 360 / max_res
+                # OLD SYSTEM COMPATIBILITY: Use old system formula for reading with unwrapping
+                homing_offset = self.calibration[motor].homing_offset
+                resolution = self.model_resolution_table[self._id_to_model(id_)]
+                
+                print(f"🔍 MOTOR BUS READ DEBUG - Motor {motor} (ID {id_}):")
+                print(f"   📥 Raw motor value: {val}")
+                print(f"   🏠 Homing offset: {homing_offset}")
+                print(f"   📊 Resolution: {resolution}")
+                print(f"   🧮 Half resolution: {resolution // 2}")
+                
+                # Handle potential wrapping: if the raw value was wrapped during writing,
+                # we need to unwrap it for consistent conversion
+                raw_for_conversion = val
+                
+                # Old system formula: degrees = (raw + homing_offset) / (resolution//2) * 180
+                # This matches the old FeetechMotorsBus apply_calibration formula
+                degrees_value = (raw_for_conversion + homing_offset) / (resolution // 2) * 180
+                normalized_values[id_] = degrees_value
+                
+                print(f"   ⚙️ Formula: ({raw_for_conversion} + {homing_offset}) / {resolution // 2} * 180")
+                print(f"   📐 Degrees value: {degrees_value}")
+                print(f"   ✅ Motor {motor} read conversion complete")
+                print()
             else:
                 raise NotImplementedError
 
@@ -852,9 +872,36 @@ class MotorsBus(abc.ABC):
                 bounded_val = min(100.0, max(0.0, val))
                 unnormalized_values[id_] = int((bounded_val / 100) * (max_ - min_) + min_)
             elif self.motors[motor].norm_mode is MotorNormMode.DEGREES:
-                mid = (min_ + max_) / 2
-                max_res = self.model_resolution_table[self._id_to_model(id_)] - 1
-                unnormalized_values[id_] = int((val * max_res / 360) + mid)
+                # OLD SYSTEM COMPATIBILITY: Use old system formula with proper range handling
+                homing_offset = self.calibration[motor].homing_offset
+                resolution = self.model_resolution_table[self._id_to_model(id_)]
+                
+                print(f"🔧 MOTOR BUS DEBUG - Motor {motor} (ID {id_}):")
+                print(f"   📐 Input degrees: {val}")
+                print(f"   🏠 Homing offset: {homing_offset}")
+                print(f"   📊 Resolution: {resolution}")
+                print(f"   🧮 Half resolution: {resolution // 2}")
+                print(f"   📏 Calibrated range: {min_} to {max_}")
+                
+                # Old system formula: raw = (degrees * (resolution//2) / 180) - homing_offset
+                raw_value_unclamped = (val * (resolution // 2) / 180) - homing_offset
+                
+                # Handle negative values by wrapping within the motor's full resolution range
+                # Motors typically have 0-4095 range, so negative values wrap around
+                if raw_value_unclamped < 0:
+                    raw_value = raw_value_unclamped + resolution
+                    print(f"   🔄 Negative value wrapped: {raw_value_unclamped} + {resolution} = {raw_value}")
+                else:
+                    raw_value = raw_value_unclamped
+                
+                # Ensure we stay within the motor's physical limits (0 to resolution-1)
+                raw_value = max(0, min(resolution - 1, raw_value))
+                unnormalized_values[id_] = int(raw_value)
+                
+                print(f"   ⚙️ Formula: ({val} * {resolution // 2} / 180) - {homing_offset} = {raw_value_unclamped}")
+                print(f"   📤 Final raw value: {unnormalized_values[id_]} (within [0, {resolution-1}])")
+                print(f"   ✅ Motor {motor} conversion complete")
+                print()
             else:
                 raise NotImplementedError
 

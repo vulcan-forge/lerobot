@@ -267,16 +267,23 @@ class PhoneTeleoperator(Teleoperator):
 
     def get_action(self, observation: dict[str, Any] | None = None) -> dict[str, Any]:
         """
-        Get the current action from phone input.
-        
-        Args:
-            observation: Current robot observation containing joint positions
-        
-        This method processes phone pose data, solves inverse kinematics,
-        and returns the target joint positions.
+        Always return the initial position (for debugging comparison with old system).
         """
-        if not self.is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected")
+        # Debug: Track the complete flow
+        if not hasattr(self, '_debug_timer'):
+            self._debug_timer = 0
+            self._debug_printed = False
+        
+        self._debug_timer += 1
+        
+        # Print debug info after ~5 seconds (assuming ~10Hz loop)
+        if self._debug_timer == 50 and not self._debug_printed:
+            print(f"\n=== NEW SYSTEM COMPLETE FLOW DEBUG ===")
+            print(f"Step 1: get_action() called")
+            print(f"  observation keys: {list(observation.keys()) if observation else 'None'}")
+            print(f"  initial_position: {self.config.initial_position}")
+            print(f"  initial_wxyz: {self.config.initial_wxyz}")
+            self._debug_printed = True
 
         # Extract current robot position from observation
         current_joint_pos_deg = None
@@ -294,43 +301,36 @@ class PhoneTeleoperator(Teleoperator):
             current_joint_pos_deg = np.rad2deg(self.config.rest_pose)
             logger.debug("Using rest pose as current position")
 
+        if self._debug_timer == 50 and self._debug_printed:
+            print(f"\nStep 2: Current robot position")
+            print(f"  current_joint_pos_deg: {current_joint_pos_deg}")
+
         try:
-            # Handle phone connection
+            # Auto-start without waiting for phone connection
             if not self._phone_connected:
-                # Pass current position to connection setup (converted to radians)
+                # Set up initial mapping using current position
                 curr_qpos_rad = np.deg2rad(current_joint_pos_deg)
-                self.quat_RP, self.translation_RP, _ = self._open_phone_connection(curr_qpos_rad)
+                self.quat_RP = np.array([1, 0, 0, 0])  # Identity quaternion
+                self.translation_RP = np.array([0, 0, 0])  # No translation
                 self._phone_connected = True
+                self.start_teleop = True  # Auto-start teleop
 
-            if not self.start_teleop:
-                self._phone_connected = False
-                # Return current position when not teleoperating
-                return self._format_action_dict(current_joint_pos_deg)
+            # ALWAYS use initial position for debugging (like old system)
+            target_position = np.array(self.config.initial_position)
+            target_wxyz = np.array(self.config.initial_wxyz)
 
-            # Get latest pose from gRPC
-            data = self.pose_service.get_latest_pose(block=False)
-
-            # Update reset state tracking
-            current_is_resetting = data["is_resetting"]
-            if current_is_resetting:
-                self.prev_is_resetting = current_is_resetting
-                # Return current position during reset
-                return self._format_action_dict(current_joint_pos_deg)
-
-            # Check for reset transition (prev=True, current=False) 
-            if self.prev_is_resetting == True and current_is_resetting == False:
-                pos, quat = data["position"], data["rotation"]
-                self._reset_mapping(pos, quat)
-
-            self.prev_is_resetting = current_is_resetting
-
-            pos, quat, gripper = data["position"], data["rotation"], data["gripper_open"]
-
-            # Map phone pose to robot pose
-            t_robot, q_robot = self._map_phone_to_robot(pos, quat, data["precision"])
+            if self._debug_timer == 50 and self._debug_printed:
+                print(f"\nStep 3: Target coordinates (always initial)")
+                print(f"  target_position: {target_position}")
+                print(f"  target_wxyz: {target_wxyz}")
 
             # Solve inverse kinematics (returns radians)
-            solution_rad = self._solve_ik(t_robot, q_robot)
+            solution_rad = self._solve_ik(target_position, target_wxyz)
+
+            if self._debug_timer == 50 and self._debug_printed:
+                print(f"\nStep 4: IK solver output")
+                print(f"  solution_rad: {solution_rad}")
+                print(f"  solution_deg: {np.rad2deg(solution_rad)}")
 
             # Update visualization (expects radians)
             if self.config.enable_visualization and self.urdf_vis:
@@ -339,11 +339,14 @@ class PhoneTeleoperator(Teleoperator):
             # Convert to degrees for robot (SO100 expects degrees)
             solution_deg = np.rad2deg(solution_rad)
 
-            # Update gripper state
-            solution_deg[-1] = 0.875 if gripper else 0.0
-            
-            # Update teleop state
-            self.start_teleop = data["switch"]
+            # Update gripper state (keep gripper closed for debugging)
+            solution_deg[-1] = 0.0  # Closed gripper
+
+            if self._debug_timer == 50 and self._debug_printed:
+                print(f"\nStep 5: Final output")
+                print(f"  solution_deg (final): {solution_deg}")
+                print(f"  action_dict: {self._format_action_dict(solution_deg)}")
+                print(f"========================================\n")
 
             return self._format_action_dict(solution_deg)
 
@@ -357,6 +360,14 @@ class PhoneTeleoperator(Teleoperator):
         try:
             # Import IK solver from daxie package
             from daxie.src.teleop.solve_ik import solve_ik
+            
+            # Debug IK calculation
+            if hasattr(self, '_debug_timer') and self._debug_timer == 50 and hasattr(self, '_debug_printed') and self._debug_printed:
+                print(f"\nStep 4a: IK solver details")
+                print(f"  robot type: {type(self.robot)}")
+                print(f"  target_link_name: {self.config.target_link_name}")
+                print(f"  target_position: {target_position}")
+                print(f"  target_wxyz: {target_wxyz}")
             
             solution = solve_ik(
                 robot=self.robot,

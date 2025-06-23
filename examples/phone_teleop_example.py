@@ -28,14 +28,14 @@ def find_existing_calibration_id(robot_name: str) -> str | None:
     if not calib_dir.exists():
         return None
     
-    # Look for .json files in the calibration directory
-    calib_files = list(calib_dir.glob("*.json"))
+    # Look specifically for follower_arm_2.json file
+    target_file = calib_dir / "follower_arm_2.json"
     
-    if not calib_files:
+    if not target_file.exists():
         return None
     
-    # Return the ID (filename without .json extension) of the first calibration file found
-    return calib_files[0].stem
+    # Return the specific calibration ID
+    return "follower_arm_2"
 
 
 def main():
@@ -57,9 +57,8 @@ def main():
         robot_id = existing_id
         print(f"Found existing calibration for ID: {robot_id}")
     else:
-        robot_id = "so100_follower_main"
-        print(f"No existing calibration found. Using default ID: {robot_id}")
-        print("Note: Robot will need to be calibrated on first connection.")
+        print("No existing calibration found. Exiting.")
+        return
     
     # Configuration for the SO100 follower robot
     robot_config = SO100FollowerConfig(
@@ -104,18 +103,42 @@ def main():
         print("- Press Ctrl+C to exit")
         
         # Main control loop
+        debug_timer = 0
+        debug_printed = False
+        
         while True:
             start_time = time.perf_counter()
+            debug_timer += 1
             
             try:
                 # Get current observation first
                 observation = robot.get_observation()
                 
+                # Debug: Print observation after ~5 seconds
+                if debug_timer == 50 and not debug_printed:
+                    print(f"\n=== NEW SYSTEM MAIN LOOP DEBUG ===")
+                    print(f"Step 1: Robot observation")
+                    print(f"  observation keys: {list(observation.keys())}")
+                    print(f"  observation values: {observation}")
+                    debug_printed = True
+                
                 # Get action from phone (pass observation for current robot state)
                 action = phone_teleop.get_action(observation)
                 
+                # Debug: Print action after ~5 seconds
+                if debug_timer == 50 and debug_printed:
+                    print(f"\nStep 2: Phone teleoperator action")
+                    print(f"  action keys: {list(action.keys())}")
+                    print(f"  action values: {action}")
+                
                 # Send action to robot
                 actual_action = robot.send_action(action)
+                
+                # Debug: Print actual action after ~5 seconds
+                if debug_timer == 50 and debug_printed:
+                    print(f"\nStep 3: Robot send_action result")
+                    print(f"  actual_action: {actual_action}")
+                    print(f"========================================\n")
                 
                 # Log timing (optional)
                 loop_time = time.perf_counter() - start_time
