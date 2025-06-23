@@ -98,13 +98,8 @@ class SourcceyV2BetaClient(Robot):
         return tuple(self._state_ft.keys())
 
     @cached_property
-    def _cameras_ft(self) -> dict[str, tuple]:
-        return {
-            "front_left": (240, 320, 3),
-            "front_right": (240, 320, 3),
-            "wrist_left": (240, 320, 3),
-            "wrist_right": (240, 320, 3),
-        }
+    def _cameras_ft(self) -> dict[str, tuple[int, int, int]]:
+        return {name: (cfg.height, cfg.width, 3) for name, cfg in self.config.cameras.items()}
 
     @cached_property
     def observation_features(self) -> dict[str, type | tuple]:
@@ -274,7 +269,7 @@ class SourcceyV2BetaClient(Robot):
         for cam_name, frame in frames.items():
             if frame is None:
                 logging.warning("Frame is None")
-                frame = np.zeros((240, 320, 3), dtype=np.uint8)
+                frame = np.zeros((640, 480, 3), dtype=np.uint8)
             obs_dict[cam_name] = torch.from_numpy(frame)
 
         return obs_dict
