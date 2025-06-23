@@ -1,80 +1,4 @@
----
-## SO100 Test
----
-
-```bash
-python -m lerobot.calibrate \
-    --teleop.type=so100_leader \
-    --teleop.port=COM26 \
-    --teleop.id=so100
-```
-
-```bash
-python -m lerobot.calibrate \
-    --robot.type=so100_follower \
-    --robot.port=COM24 \
-    --robot.id=so100
-```
-
-```
-python -m lerobot.teleoperate \
-    --robot.type=so100_follower \
-    --robot.port=COM24 \
-    --robot.id=so100 \
-    --teleop.type=so100_leader \
-    --teleop.port=COM26 \
-    --teleop.id=so100
-```
-
-```
-uv run -m lerobot.teleoperate \
-    --robot.type=so100_follower \
-    --robot.port=COM24 \
-    --robot.id=so100 \
-    --teleop.type=so100_leader \
-    --teleop.port=COM26 \
-    --teleop.id=so100
-```
-
-```
-python -m lerobot.record \
-    --robot.type=so100_follower \
-    --robot.port=COM24 \
-    --robot.id=so100 \
-    --teleop.type=so100_leader \
-    --teleop.port=COM26 \
-    --teleop.id=so100 \
-    --display_data=true \
-    --dataset.repo_id=local/so100_001_a \
-    --dataset.num_episodes=1 \
-    --dataset.single_task="Move around" \
-    --dataset.push_to_hub=false
-```
-
-```
-python -m lerobot.replay  \
-    --robot.type=so100_follower \
-    --robot.port=COM24 \
-    --robot.id=so100 \
-    --dataset.repo_id=local/so100_001_a \
-    --dataset.episode=0
-```
-
---- Sourccey V2 Beta Commands ---
-
-```
-python -m lerobot.calibrate \
-    --robot.type=sourccey_v2beta \
-    --robot.id=sourccey_v2beta
-```
-
-To teleoperate, SSH into your Raspberry Pi, and run `conda activate lerobot` and this command:
-
-```bash
-python -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
-```
-
----
+---List of commands to help train Sourccey V2 Beta
 
 ```bash
 uv run -m lerobot.calibrate \
@@ -89,13 +13,17 @@ uv run -m lerobot.calibrate \
     --teleop.id=sourccey_v2beta_teleop
 ```
 
-To teleoperate, SSH into your Raspberry Pi, and run conda activate lerobot and this command:
+To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
 
 ```
 uv run -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
 ```
 
-Then on your laptop, also run conda activate lerobot and run the API example, make sure you set the correct remote_ip and port.
+Then on your computer run the below source command then the teleoperate command
+
+```
+source .venv/bin/activate
+```
 
 ```
 python -m examples.sourccey.sourccey_v2beta.teleoperate --display_data=true
