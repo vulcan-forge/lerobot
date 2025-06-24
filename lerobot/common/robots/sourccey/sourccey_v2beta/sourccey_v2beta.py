@@ -409,6 +409,7 @@ class SourcceyV2Beta(Robot):
         base_goal_vel = [0,0,0,0] # {k: v for k, v in action.items() if k.endswith(".vel")}
 
         # Check for NaN values and skip sending actions if any are found
+        print("action is nan", any(np.isnan(v) for v in arm_goal_pos.values()))
         if any(np.isnan(v) for v in arm_goal_pos.values()):
             logger.warning("NaN values detected in arm goal positions. Skipping action execution.")
             return {**arm_goal_pos} #, **base_goal_vel}

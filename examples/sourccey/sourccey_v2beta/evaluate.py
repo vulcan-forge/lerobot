@@ -96,6 +96,10 @@ def evaluate_loop(
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
         # Send action to robot (same as record.py)
+        print()
+        print("action", action)
+        print()
+        import pdb; pdb.set_trace()
         robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
