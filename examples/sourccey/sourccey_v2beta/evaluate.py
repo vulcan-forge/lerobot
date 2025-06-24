@@ -36,7 +36,7 @@ class EvaluateConfig:
     robot_id: str = "sourccey_v2beta"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_a/checkpoints/020000/pretrained_model"
+    policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_a/checkpoints/010000/pretrained_model"
     # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
@@ -92,14 +92,20 @@ def evaluate_loop(
             observation_frame,
             policy,
             device,
-            False if timestamp == 0 else policy.config.use_amp,
+            False,
             task=task_description,
             robot_type=robot.robot_type,
         )
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
+        # Is Nan values check
+        has_nan_true = torch.isnan(action_values).any()
+        print(f"✅ use_amp=True: {'❌ NaN' if has_nan_true else '✅ OK'}")
+        if not has_nan_true:
+            print(f"   Action range: [{action_values.min().item():.3f}, {action_values.max().item():.3f}]")
+
         # Send action to robot (same as record.py)
-        robot.send_action(action)
+        # robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
         if display_data:
