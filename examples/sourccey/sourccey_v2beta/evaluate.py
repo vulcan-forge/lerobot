@@ -64,7 +64,7 @@ def evaluate_loop(
     fps: int,
     control_time_s: int | None = None,
     task_description: str | None = None,
-    display_data: bool = False,
+    should_display_data: bool = False,
 ):
     """Evaluation loop that handles policy inference and robot control."""
     # Policy needs cleaning up
@@ -102,15 +102,10 @@ def evaluate_loop(
         robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
-        if display_data:
-            for obs, val in observation.items():
-                if isinstance(val, float):
-                    rr.log(f"observation.{obs}", rr.Scalars(val))
-                elif isinstance(val, np.ndarray):
-                    rr.log(f"observation.{obs}", rr.Image(val), static=True)
-            for act, val in action.items():
-                if isinstance(val, float):
-                    rr.log(f"action.{act}", rr.Scalars(val))
+        if should_display_data:
+            arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
+            #base_action = {k: v for k, v in action.items() if k.startswith(("base", "gripper"))}
+            display_data(observation, arm_action, {})
 
         # Maintain timing (same as record.py)
         dt_s = time.perf_counter() - start_loop_t
@@ -163,8 +158,8 @@ def evaluate(cfg: EvaluateConfig):
             policy=policy,
             fps=cfg.fps,
             control_time_s=control_time_s,
-            display_data=cfg.display_data,
             task_description=cfg.task_description,
+            should_display_data=cfg.display_data,
         )
 
     except KeyboardInterrupt:

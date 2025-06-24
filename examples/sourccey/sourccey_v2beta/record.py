@@ -60,7 +60,7 @@ def record_loop(
     dataset: LeRobotDataset | None = None,
     control_time_s: int | None = None,
     task_description: str | None = None,
-    display_data: bool = False,
+    should_display_data: bool = False,
 ):
     """Record loop that handles keyboard events and data collection."""
     timestamp = 0
@@ -95,6 +95,12 @@ def record_loop(
             action_frame = build_dataset_frame(dataset.features, action_sent, prefix="action")
             frame = {**observation_frame, **action_frame}
             dataset.add_frame(frame, task=task_description)
+
+        # Display data in Rerun (same as record.py)
+        if should_display_data:
+            arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
+            #base_action = {k: v for k, v in action.items() if k.startswith(("base", "gripper"))}
+            display_data(observation, arm_action, {})
 
         # Maintain timing
         dt_s = time.perf_counter() - start_loop_t
@@ -197,9 +203,9 @@ def record(cfg: RecordConfig):
                 events=events,
                 fps=cfg.fps,
                 dataset=None,  # No dataset during warm-up
-                task_description=None,
-                display_data=cfg.display_data,
                 control_time_s=cfg.warmup_time_s,
+                task_description=None,
+                should_display_data=cfg.display_data,
             )
 
         recorded_episodes = 0
@@ -219,9 +225,9 @@ def record(cfg: RecordConfig):
                 events=events,
                 fps=cfg.fps,
                 dataset=dataset,
-                task_description=cfg.task_description,
-                display_data=cfg.display_data,
                 control_time_s=control_time_s,
+                task_description=cfg.task_description,
+                should_display_data=cfg.display_data,
             )
 
             # Handle re-record episode event
@@ -239,9 +245,9 @@ def record(cfg: RecordConfig):
                     events=events,
                     fps=cfg.fps,
                     dataset=None,  # No dataset during reset time
-                    task_description=None,
-                    display_data=cfg.display_data,
                     control_time_s=cfg.reset_time_s,
+                    task_description=None,
+                    should_display_data=cfg.display_data,
                 )
                 continue  # Re-run the while loop for this episode
 
@@ -260,9 +266,9 @@ def record(cfg: RecordConfig):
                     events=events,
                     fps=cfg.fps,
                     dataset=None,  # No dataset during reset time
-                    task_description=None,
-                    display_data=cfg.display_data,
                     control_time_s=cfg.reset_time_s,
+                    task_description=None,
+                    should_display_data=cfg.display_data,
                 )
 
             recorded_episodes += 1
