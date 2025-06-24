@@ -404,16 +404,16 @@ class PhoneTeleoperator(Teleoperator):
                 solution_deg[2] -= 90
                 print(f"🔧 elbow_flex: {original_elbow_flex} → {solution_deg[2]} (90° offset)")
             
-            # wrist_flex (index 3): 90° offset
-            if len(solution_deg) > 3:
-                original_wrist_flex = solution_deg[3]
-                solution_deg[3] += 90
-                print(f"🔧 wrist_flex: {original_wrist_flex} → {solution_deg[3]} (+90° offset)")
+            # # wrist_flex (index 3): 90° offset
+            # if len(solution_deg) > 3:
+            #     original_wrist_flex = solution_deg[3]
+            #     solution_deg[3] += 90
+            #     print(f"🔧 wrist_flex: {original_wrist_flex} → {solution_deg[3]} (+90° offset)")
             
-            # wrist_roll (index 4): direction reversal + 90° offset
+            #wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_deg) > 4:
                 original_wrist_roll = solution_deg[4]
-                solution_deg[4] = -(solution_deg[4] - 90)
+                solution_deg[4] = -(solution_deg[4] + 90)
                 print(f"🔧 wrist_roll: {original_wrist_roll} → {solution_deg[4]} (reversed + 90° offset)")
             
             print(f"📊 After transformations: {solution_deg}")
