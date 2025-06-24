@@ -9,7 +9,7 @@ from pathlib import Path
 from examples.sourccey.sourccey_v2beta.utils import display_data
 from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.datasets.utils import hw_to_dataset_features
+from lerobot.common.datasets.utils import build_dataset_frame, hw_to_dataset_features
 from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
@@ -40,7 +40,7 @@ class RecordConfig:
     robot_ip: str = "192.168.1.191"
     robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
-    leader_arm_port: str = "/dev/ttyUSB0" # "COM29"
+    leader_arm_port: str = "COM29" # "/dev/ttyUSB0" # "COM29"
     leader_arm_id: str = "sourccey_v2beta_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
@@ -91,8 +91,10 @@ def record_loop(
 
         # Create frame and add to dataset only if dataset is provided
         if dataset is not None and task_description is not None:
-            frame = {**action_sent, **observation}
-            dataset.add_frame(frame, task_description)
+            observation_frame = build_dataset_frame(dataset.features, observation, prefix="observation")
+            action_frame = build_dataset_frame(dataset.features, action_sent, prefix="action")
+            frame = {**observation_frame, **action_frame}
+            dataset.add_frame(frame, task=task_description)
 
         # Maintain timing
         dt_s = time.perf_counter() - start_loop_t

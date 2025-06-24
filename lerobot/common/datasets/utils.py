@@ -433,9 +433,19 @@ def build_dataset_frame(
         if key in DEFAULT_FEATURES or not key.startswith(prefix):
             continue
         elif ft["dtype"] == "float32" and len(ft["shape"]) == 1:
-            frame[key] = np.array([values[name] for name in ft["names"]], dtype=np.float32)
+            # Check if the key exists directly in values (already aggregated)
+            if key in values:
+                frame[key] = values[key]
+            else:
+                # Fall back to the old format for individual values
+                frame[key] = np.array([values[name] for name in ft["names"]], dtype=np.float32)
         elif ft["dtype"] in ["image", "video"]:
-            frame[key] = values[key.removeprefix(f"{prefix}.images.")]
+            # Check if the full key exists in values first
+            if key in values:
+                frame[key] = values[key]
+            else:
+                # Fall back to the old format with prefix removal
+                frame[key] = values[key.removeprefix(f"{prefix}.images.")]
 
     return frame
 
