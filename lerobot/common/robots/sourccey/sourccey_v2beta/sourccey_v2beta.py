@@ -363,6 +363,7 @@ class SourcceyV2Beta(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
+        print('arm_pos', arm_pos)
         #base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
 
         base_vel = [0,0,0,0] #self._wheel_raw_to_body(

@@ -80,6 +80,8 @@ def evaluate_loop(
         start_loop_t = time.perf_counter()
 
         observation = robot.get_observation()
+        print(observation)
+        import pdb; pdb.set_trace()
 
         # Build observation frame for policy (same as record.py)
         observation_frame = build_dataset_frame(obs_features, observation, prefix="observation")
