@@ -70,6 +70,9 @@ class PhoneTeleoperator(Teleoperator):
         self.start_teleop = False
         self.prev_is_resetting = False
         
+        # Reset position holding - store the position when reset starts
+        self.reset_hold_position = None
+        
         # Pose tracking
         self.current_t_R = np.array(self.config.initial_position)
         self.current_q_R = np.array(self.config.initial_wxyz)
@@ -350,17 +353,28 @@ class PhoneTeleoperator(Teleoperator):
             current_is_resetting = data["is_resetting"]
             print(f"🔄 Reset state - Current: {current_is_resetting}, Previous: {self.prev_is_resetting}")
             
+            # Check for reset transition (prev=False, current=True) - reset just started
+            if self.prev_is_resetting == False and current_is_resetting == True:
+                print("🔒 RESET STARTED - Capturing current position to hold")
+                self.reset_hold_position = current_joint_pos_deg.copy()
+                print(f"🎯 Holding position: {self.reset_hold_position}")
+            
             if current_is_resetting:
-                print(f"🛑 RESETTING - Returning current position: {current_joint_pos_deg}")
+                print(f"🛑 RESETTING - Returning held position: {self.reset_hold_position}")
                 self.prev_is_resetting = current_is_resetting
-                # Return current position during reset
-                return self._format_action_dict(current_joint_pos_deg)
+                # Return the captured hold position instead of current drifting position
+                if self.reset_hold_position is not None:
+                    return self._format_action_dict(self.reset_hold_position)
+                else:
+                    # Fallback if no hold position captured yet
+                    return self._format_action_dict(current_joint_pos_deg)
 
-            # Check for reset transition (prev=True, current=False) 
+            # Check for reset transition (prev=True, current=False) - reset just ended
             if self.prev_is_resetting == True and current_is_resetting == False:
-                print("🔄 RESET TRANSITION DETECTED - Resetting mapping")
+                print("🔄 RESET ENDED - Resetting mapping and clearing hold position")
                 pos, quat = data["position"], data["rotation"]
                 self._reset_mapping(pos, quat)
+                self.reset_hold_position = None  # Clear the hold position
 
             self.prev_is_resetting = current_is_resetting
 
