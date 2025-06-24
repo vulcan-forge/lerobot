@@ -99,7 +99,6 @@ def evaluate_loop(
         print()
         print("action", action)
         print()
-        import pdb; pdb.set_trace()
         robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
