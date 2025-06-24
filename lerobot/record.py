@@ -177,6 +177,9 @@ def record_loop(
     if policy is not None:
         policy.reset()
 
+    if dataset is not None:
+        print("Start Recording")
+
     timestamp = 0
     start_episode_t = time.perf_counter()
     while timestamp < control_time_s:
