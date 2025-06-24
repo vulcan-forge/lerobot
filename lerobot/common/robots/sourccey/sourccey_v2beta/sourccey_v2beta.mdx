@@ -119,19 +119,20 @@ python lerobot/scripts/combine_dataset.py \
     --push_to_hub=0
 ```
 
+---
 
----------------------------------------------------------------------------------------------
--- SO100 
----------------------------------------------------------------------------------------------
+## -- SO100
 
 python -m lerobot.find_port
-python -m lerobot.find_camera
+python -m lerobot.find_cameras
 
 python -m lerobot.record \
-    --robot.type=so100_follower \
-    --robot.port=/dev/ttyUSB0 \
-    --robot.cameras="{laptop: {type: opencv, camera_index: 0, width: 640, height: 480}}" \
-    --robot.id=so100_follower \
-    --dataset.repo_id=local/so100-001-test \
-    --dataset.num_episodes=1 \
-    --dataset.single_task="Grab the tap and put it in the cup"
+ --robot.type=so100_follower \
+ --robot.port=/dev/ttyUSB0 \
+ --robot.cameras="{laptop: {type: opencv, index_or_path: '/dev/video0', width: 640, height: 480, fps: 30}}" \
+ --robot.id=so100_follower \
+ --teleop.type=so100_leader \
+ --teleop.port=/dev/ttyUSB1 \
+ --dataset.repo_id=local/so100-001-test \
+ --dataset.num_episodes=1 \
+ --dataset.single_task="Grab the tap and put it in the cup"
