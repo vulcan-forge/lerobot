@@ -20,7 +20,7 @@ class TeleoperateConfig:
     robot_ip: str = "192.168.1.191" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
     robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
-    leader_arm_port: str = "COM29"
+    leader_arm_port: str = "COM3"
     leader_arm_id: str = "sourccey_v2beta_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
