@@ -98,14 +98,8 @@ def evaluate_loop(
         )
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
-        # Is Nan values check
-        has_nan_true = torch.isnan(action_values).any()
-        print(f"✅ use_amp=True: {'❌ NaN' if has_nan_true else '✅ OK'}")
-        if not has_nan_true:
-            print(f"   Action range: [{action_values.min().item():.3f}, {action_values.max().item():.3f}]")
-
         # Send action to robot (same as record.py)
-        # robot.send_action(action)
+        robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
         if display_data:
