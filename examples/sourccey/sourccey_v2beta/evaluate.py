@@ -92,7 +92,7 @@ def evaluate_loop(
             observation_frame,
             policy,
             device,
-            False if timestamp == 0 else True,
+            False if timestamp == 0 else policy.config.use_amp,
             task=task_description,
             robot_type=robot.robot_type,
         )
