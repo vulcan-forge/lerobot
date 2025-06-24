@@ -74,9 +74,7 @@ def evaluate_loop(
     start_episode_t = time.perf_counter()
 
     # Build dataset features for policy input (same as record.py)
-    action_features = hw_to_dataset_features(robot.action_features, "action", False)
     obs_features = hw_to_dataset_features(robot.observation_features, "observation", False)
-    dataset_features = {**action_features, **obs_features}
 
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
@@ -84,7 +82,7 @@ def evaluate_loop(
         observation = robot.get_observation()
 
         # Build observation frame for policy (same as record.py)
-        observation_frame = build_dataset_frame(dataset_features, observation, prefix="observation")
+        observation_frame = build_dataset_frame(obs_features, observation, prefix="observation")
 
         # Get action from policy (same as record.py)
         action_values = predict_action(
@@ -92,7 +90,7 @@ def evaluate_loop(
             policy,
             get_safe_torch_device(policy.config.device),
             policy.config.use_amp,
-            task=task_description,  # No task for evaluation
+            task=task_description,
             robot_type=robot.robot_type,
         )
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
