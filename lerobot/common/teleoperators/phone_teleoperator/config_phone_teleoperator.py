@@ -49,6 +49,10 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     # Visualization settings
     enable_visualization: bool = True
     viser_port: int = 8080
+    
+    # Gripper settings
+    gripper_min_pos: float = 0.0    # Gripper closed position (0% slider)
+    gripper_max_pos: float = 0.875  # Gripper open position (100% slider)
 
     # Safety settings
     max_relative_target: Optional[float] = None 

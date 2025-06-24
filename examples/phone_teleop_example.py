@@ -39,14 +39,27 @@ def find_existing_calibration_id(robot_name: str) -> str | None:
 
 
 def main():
+    # Add the daxie directory to sys.path if it's not already there
+    import sys
+    from pathlib import Path
+    
+    # Get the path to the daxie directory (go up from lerobot-vulcan/examples to daxie/)
+    current_dir = Path(__file__).parent  # lerobot-vulcan/examples/
+    daxie_root = current_dir.parent.parent  # daxie/
+    daxie_path = str(daxie_root)
+    
+    if daxie_path not in sys.path:
+        sys.path.insert(0, daxie_path)
+        print(f"Added {daxie_path} to Python path")
+    
     # Get URDF and mesh paths from daxie package
     try:
         from daxie import get_so100_path
         urdf_path, mesh_path = get_so100_path()
         print(f"Using URDF: {urdf_path}")
         print(f"Using meshes: {mesh_path}")
-    except ImportError:
-        print("ERROR: Could not import daxie package")
+    except ImportError as e:
+        print(f"ERROR: Could not import daxie package: {e}")
         print("Make sure the daxie package is installed and accessible")
         return
     
@@ -84,6 +97,9 @@ def main():
         rest_pose=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),  # radians - conservative middle position
         enable_visualization=True,
         viser_port=8080,
+        # SO100 gripper configuration - matches SO100FollowerConfig.max_gripper_pos = 50
+        gripper_min_pos=0.0,    # Gripper closed (0% on phone slider)
+        gripper_max_pos=50.0,   # Gripper open (100% on phone slider) - matches SO100 max
     )
     
     # Initialize robot and teleoperator

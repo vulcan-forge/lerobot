@@ -170,9 +170,44 @@ class PhoneTeleoperator(Teleoperator):
             self.hz_grpc = 0.0
             self.pose_service.get_latest_pose(block=False)
             logger.info("gRPC server started for phone communication")
-        except ImportError:
-            logger.error("Could not import gRPC server from daxie package")
-            raise
+        except ImportError as e:
+            # Try to add daxie to sys.path and retry import
+            import sys
+            from pathlib import Path
+            
+            # Try to find daxie directory relative to this file
+            current_file = Path(__file__)
+            # Go up from lerobot/common/teleoperators/phone_teleoperator/ to find daxie
+            possible_daxie_paths = [
+                current_file.parent.parent.parent.parent.parent,  # lerobot-vulcan/../daxie
+                current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot-vulcan/../daxie/daxie
+                Path.cwd().parent,  # Current working directory parent
+                Path.cwd().parent / "daxie",  # Current working directory parent/daxie
+            ]
+            
+            daxie_found = False
+            for daxie_path in possible_daxie_paths:
+                if (daxie_path / "daxie" / "__init__.py").exists():
+                    daxie_str = str(daxie_path)
+                    if daxie_str not in sys.path:
+                        sys.path.insert(0, daxie_str)
+                        logger.info(f"Added {daxie_str} to Python path for daxie import")
+                    
+                    try:
+                        from daxie.src.server.pos_grpc_server import start_grpc_server
+                        self.grpc_server, self.pose_service = start_grpc_server(port=self.config.grpc_port)
+                        self.hz_grpc = 0.0
+                        self.pose_service.get_latest_pose(block=False)
+                        logger.info("gRPC server started for phone communication (after path fix)")
+                        daxie_found = True
+                        break
+                    except ImportError:
+                        continue
+            
+            if not daxie_found:
+                logger.error(f"Could not import gRPC server from daxie package: {e}")
+                logger.error("Make sure the daxie package is installed or accessible")
+                raise ImportError(f"Failed to import daxie.src.server.pos_grpc_server: {e}")
 
     def _open_phone_connection(self, curr_qpos_rad: np.ndarray) -> tuple[np.ndarray, np.ndarray, bool]:
         """Wait for phone to connect and set initial mapping."""
@@ -206,7 +241,7 @@ class PhoneTeleoperator(Teleoperator):
                 
                 if attempts % 10 == 1:  # Log every 10th attempt to avoid spam
                     logger.info(f"Received pose data (attempt {attempts}): switch={data['switch']}, "
-                              f"position={data['position']}, gripper={data['gripper_open']}")
+                              f"position={data['position']}, gripper_value={data['gripper_value']}")
                               
                 if not self.start_teleop:
                     print("🔄 Teleop not active yet, waiting...")
@@ -221,8 +256,8 @@ class PhoneTeleoperator(Teleoperator):
                 print(f"💥 ERROR waiting for phone: {e}")
                 raise
 
-        pos, quat, gripper = data["position"], data["rotation"], data["gripper_open"]
-        print(f"📍 Initial phone pose - Position: {pos}, Rotation: {quat}, Gripper: {gripper}")
+        pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
+        print(f"📍 Initial phone pose - Position: {pos}, Rotation: {quat}, Gripper value: {gripper_value}%")
         
         initial_rot_phone = R.from_quat(quat, scalar_first=True)
         initial_pos_phone = np.array(pos)
@@ -236,7 +271,7 @@ class PhoneTeleoperator(Teleoperator):
         print(f"🔧 Computed mapping - quat_RP: {quat_RP.as_quat()}, translation_RP: {translation_RP}")
         
         logger.info("Phone connection established successfully!")
-        return quat_RP, translation_RP, gripper
+        return quat_RP, translation_RP
 
     def _reset_mapping(self, phone_pos: np.ndarray, phone_quat: np.ndarray) -> None:
         """Reset mapping parameters when precision mode toggles."""
@@ -334,7 +369,7 @@ class PhoneTeleoperator(Teleoperator):
                 # Pass current position to connection setup (converted to radians)
                 curr_qpos_rad = np.deg2rad(current_joint_pos_deg)
                 print(f"🔧 Converting current position to radians: {curr_qpos_rad}")
-                self.quat_RP, self.translation_RP, _ = self._open_phone_connection(curr_qpos_rad)
+                self.quat_RP, self.translation_RP = self._open_phone_connection(curr_qpos_rad)
                 self._phone_connected = True
                 print("✅ PHONE CONNECTION ESTABLISHED")
 
@@ -378,8 +413,8 @@ class PhoneTeleoperator(Teleoperator):
 
             self.prev_is_resetting = current_is_resetting
 
-            pos, quat, gripper = data["position"], data["rotation"], data["gripper_open"]
-            print(f"📍 Phone pose - Position: {pos}, Rotation: {quat}, Gripper: {gripper}, Precision: {data['precision']}")
+            pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
+            print(f"📍 Phone pose - Position: {pos}, Rotation: {quat}, Gripper value: {gripper_value}%")
 
             # Map phone pose to robot pose
             print("🗺️ MAPPING PHONE TO ROBOT...")
@@ -432,8 +467,12 @@ class PhoneTeleoperator(Teleoperator):
             
             print(f"📊 After transformations: {solution_deg}")
 
-            # Update gripper state
-            solution_deg[-1] = 0.875 if gripper else 0.0
+            # Update gripper state - convert percentage (0-100) to gripper position
+            # gripper_value is 0-100, we need to map it to configured range
+            gripper_range = self.config.gripper_max_pos - self.config.gripper_min_pos
+            gripper_position = self.config.gripper_min_pos + (gripper_value / 100.0) * gripper_range
+            solution_deg[-1] = gripper_position
+            print(f"🦾 Gripper: {gripper_value}% → {gripper_position:.3f} position (range: {self.config.gripper_min_pos}-{self.config.gripper_max_pos})")
             print(f"🦾 Final solution with gripper: {solution_deg}")
             
             # Update teleop state
@@ -470,9 +509,45 @@ class PhoneTeleoperator(Teleoperator):
             
             print(f"✅ IK solution computed: {solution}")
             return solution  # Always return radians
-        except ImportError:
-            print("💥 ERROR: Could not import IK solver from daxie package")
-            logger.error("Could not import IK solver from daxie package")
+        except ImportError as e:
+            # Try to add daxie to sys.path and retry import
+            import sys
+            from pathlib import Path
+            
+            # Try to find daxie directory relative to this file
+            current_file = Path(__file__)
+            # Go up from lerobot/common/teleoperators/phone_teleoperator/ to find daxie
+            possible_daxie_paths = [
+                current_file.parent.parent.parent.parent.parent,  # lerobot-vulcan/../daxie
+                current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot-vulcan/../daxie/daxie
+                Path.cwd().parent,  # Current working directory parent
+                Path.cwd().parent / "daxie",  # Current working directory parent/daxie
+            ]
+            
+            for daxie_path in possible_daxie_paths:
+                if (daxie_path / "daxie" / "__init__.py").exists():
+                    daxie_str = str(daxie_path)
+                    if daxie_str not in sys.path:
+                        sys.path.insert(0, daxie_str)
+                        logger.info(f"Added {daxie_str} to Python path for IK solver import")
+                    
+                    try:
+                        from daxie.src.teleop.solve_ik import solve_ik
+                        print("📦 IK solver imported successfully (after path fix)")
+                        solution = solve_ik(
+                            robot=self.robot,
+                            target_link_name=self.config.target_link_name,
+                            target_position=target_position,
+                            target_wxyz=target_wxyz,
+                        )
+                        
+                        print(f"✅ IK solution computed: {solution}")
+                        return solution  # Always return radians
+                    except ImportError:
+                        continue
+            
+            print(f"💥 ERROR: Could not import IK solver from daxie package: {e}")
+            logger.error(f"Could not import IK solver from daxie package: {e}")
             # Return rest pose in radians
             fallback = list(self.config.rest_pose)
             print(f"🆘 Using fallback rest pose: {fallback}")
