@@ -363,7 +363,9 @@ class SourcceyV2Beta(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
+        print('--------------------------------')
         print('arm_pos', arm_pos)
+        print('--------------------------------')
         #base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
 
         base_vel = [0,0,0,0] #self._wheel_raw_to_body(
@@ -376,6 +378,9 @@ class SourcceyV2Beta(Robot):
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
         obs_dict = {**arm_state} #, **base_vel}
+        print('--------------------------------')
+        print('obs_dict_pre', obs_dict)
+        print('--------------------------------')
 
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read state: {dt_ms:.1f}ms")
@@ -386,6 +391,10 @@ class SourcceyV2Beta(Robot):
             obs_dict[f"{OBS_IMAGES}.{cam_key}"] = cam.async_read()
             dt_ms = (time.perf_counter() - start) * 1e3
             logger.debug(f"{self} read {cam_key}: {dt_ms:.1f}ms")
+
+        print('--------------------------------')
+        print('obs_dict_post', obs_dict)
+        print('--------------------------------')
 
         return obs_dict
 
