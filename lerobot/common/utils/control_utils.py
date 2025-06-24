@@ -21,7 +21,7 @@ import logging
 import traceback
 from contextlib import nullcontext
 from copy import copy
-from functools import cache
+from functools import cache, lru_cache
 
 import numpy as np
 import torch
@@ -96,7 +96,6 @@ def is_headless():
         print()
         return True
 
-
 def predict_action(
     observation: dict[str, np.ndarray],
     policy: PreTrainedPolicy,
@@ -112,10 +111,7 @@ def predict_action(
     ):
         # Convert to pytorch format: channel first and float32 in [0,1] with batch dimension
         for name in observation:
-            if isinstance(observation[name], torch.Tensor):
-                observation[name] = observation[name]
-            else:
-                observation[name] = torch.from_numpy(observation[name])
+            observation[name] = torch.from_numpy(observation[name])
 
             if "image" in name:
                 observation[name] = observation[name].type(torch.float32) / 255

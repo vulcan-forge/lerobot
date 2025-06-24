@@ -76,6 +76,9 @@ def evaluate_loop(
     # Build dataset features for policy input (same as record.py)
     obs_features = hw_to_dataset_features(robot.observation_features, "observation", False)
 
+    # Get device
+    device = get_safe_torch_device("cuda") #get_safe_torch_device(policy.config.device)
+
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
 
@@ -88,17 +91,14 @@ def evaluate_loop(
         action_values = predict_action(
             observation_frame,
             policy,
-            get_safe_torch_device(policy.config.device),
-            policy.config.use_amp,
+            device,
+            False if timestamp == 0 else True,
             task=task_description,
             robot_type=robot.robot_type,
         )
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
         # Send action to robot (same as record.py)
-        print()
-        print("action", action)
-        print()
         robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
