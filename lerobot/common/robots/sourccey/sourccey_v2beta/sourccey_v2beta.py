@@ -408,6 +408,11 @@ class SourcceyV2Beta(Robot):
         arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
         base_goal_vel = [0,0,0,0] # {k: v for k, v in action.items() if k.endswith(".vel")}
 
+        # Check for NaN values and skip sending actions if any are found
+        if any(np.isnan(v) for v in arm_goal_pos.values()):
+            logger.warning("NaN values detected in arm goal positions. Skipping action execution.")
+            return {**arm_goal_pos} #, **base_goal_vel}
+
         # base_wheel_goal_vel = self._body_to_wheel_raw(
         #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
         # )
