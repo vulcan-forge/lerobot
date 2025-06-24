@@ -28,7 +28,7 @@ class PolicyType(Enum):
 @dataclass
 class EvaluateConfig:
     # Evaluation parameters
-    nb_cycles: int = 900
+    nb_cycles: int = 9000
     # Control frequency (should match recording FPS)
     fps: int = 30
     # Robot configuration
