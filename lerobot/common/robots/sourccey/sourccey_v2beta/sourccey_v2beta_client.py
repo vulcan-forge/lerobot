@@ -203,6 +203,7 @@ class SourcceyV2BetaClient(Robot):
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         """Extracts frames, and state from the parsed observation."""
         flat_state = observation[OBS_STATE]
+        import pdb; pdb.set_trace()
 
         state_vec = np.array(
             [flat_state.get(k, 0.0) for k in self._state_order],
@@ -230,6 +231,7 @@ class SourcceyV2BetaClient(Robot):
 
         # 1. Get the latest message string from the socket
         latest_message_str = self._poll_and_get_latest_message()
+        import pdb; pdb.set_trace()
 
         # 2. If no message, return cached data
         if latest_message_str is None:
@@ -264,6 +266,7 @@ class SourcceyV2BetaClient(Robot):
             raise DeviceNotConnectedError("SourcceyV2BetaClient is not connected. You need to run `robot.connect()`.")
 
         frames, obs_dict = self._get_data()
+        import pdb; pdb.set_trace()
 
         # Loop over each configured camera
         for cam_name, frame in frames.items():
