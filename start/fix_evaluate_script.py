@@ -146,9 +146,11 @@ def test_policy_with_fix():
         )
 
         print("✅ Action prediction successful!")
+        print(f"📈 Observation: {observation}")
         print(f"📈 Action shape: {action.shape}")
         print(f"📊 Action range: [{action.min().item():.3f}, {action.max().item():.3f}]")
         print(f"🔍 Action contains NaN: {torch.isnan(action).any().item()}")
+        print(f"📈 Action: {action}")
 
         if not torch.isnan(action).any():
             print("🎉 SUCCESS: No NaN values in action!")
