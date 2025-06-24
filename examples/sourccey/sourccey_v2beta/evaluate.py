@@ -77,7 +77,7 @@ def evaluate_loop(
     obs_features = hw_to_dataset_features(robot.observation_features, "observation", False)
 
     # Get device
-    device = get_safe_torch_device("cuda") #get_safe_torch_device(policy.config.device)
+    device = get_safe_torch_device(policy.config.device)
 
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
