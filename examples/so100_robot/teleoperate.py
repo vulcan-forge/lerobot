@@ -72,18 +72,14 @@ def teleoperate(cfg: TeleoperateConfig):
     try:
         while True:
             observation = robot.get_observation()
-
             arm_action = teleop_arm.get_action()
-            arm_action = {k: v for k, v in arm_action.items() if k.startswith(("arm",))}
-
             keyboard_keys = telep_keyboard.get_action()
-            base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
             # Display all data in Rerun
             if cfg.display_data:
-                display_data(observation, arm_action, base_action)
+                display_data(observation, arm_action, {})
 
-            action = arm_action | base_action if len(base_action) > 0 else arm_action
+            action = arm_action
             robot.send_action(action)
 
     except KeyboardInterrupt:
