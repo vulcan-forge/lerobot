@@ -129,7 +129,7 @@ class SO100RobotClient(Robot):
         poller.register(self.zmq_observation_socket, zmq.POLLIN)
         socks = dict(poller.poll(self.connect_timeout_s * 1000))
         if self.zmq_observation_socket not in socks or socks[self.zmq_observation_socket] != zmq.POLLIN:
-            raise DeviceNotConnectedError("Timeout waiting for So100Server Host to connect expired.")
+            raise DeviceNotConnectedError("Timeout waiting for SO100 Robot Host to connect expired.")
 
         self._is_connected = True
 

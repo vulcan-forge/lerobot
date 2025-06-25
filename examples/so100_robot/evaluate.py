@@ -34,7 +34,7 @@ class EvaluateConfig:
     # Control frequency (should match recording FPS)
     fps: int = 30
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
+    robot_ip: str = "192.168.1.208"
     robot_id: str = "so100_robot"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT

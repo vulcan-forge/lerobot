@@ -20,7 +20,7 @@ class ReplayConfig:
     dataset_path: str = "local/so100_robot_towel_010_a"
     episode: int = 0
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
+    robot_ip: str = "192.168.1.208"
     robot_id: str = "so100_robot"
     # Display configuration
     display_data: bool = False

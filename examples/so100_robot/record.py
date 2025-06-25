@@ -41,7 +41,7 @@ class RecordConfig:
     # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
+    robot_ip: str = "192.168.1.208"
     robot_id: str = "so100_server"
     # Leader arm configuration
     leader_arm_port: str = "/dev/ttyUSB0" # "/dev/ttyUSB0" # "COM29"

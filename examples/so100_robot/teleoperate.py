@@ -2,29 +2,26 @@ from dataclasses import asdict, dataclass
 from pprint import pformat
 import draccus
 import rerun as rr
-from examples.sourccey.sourccey_v2beta.utils import display_data
-from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig, So100ServerClientConfig
-from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient, So100ServerClient
+from examples.so100_robot.utils import display_data
+from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig
+from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient
+from lerobot.common.teleoperators.so100_leader.config_so100_leader import SO100LeaderConfig
+from lerobot.common.teleoperators.so100_leader.so100_leader import SO100Leader
 from lerobot.common.teleoperators.so100_leader.config_so100_leader import SO100LeaderConfig
 from lerobot.common.teleoperators.so100_leader.so100_leader import SO100Leader
 from lerobot.common.utils.utils import init_logging
 from lerobot.common.utils.visualization_utils import _init_rerun
-from lerobot.common.robots.sourccey.sourccey_v2beta import SourcceyV2BetaClient, SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 
 @dataclass
 class TeleoperateConfig:
     # Limit the maximum frames per second
     fps: int = 60
     # Robot configuration
-    robot_ip: str = "192.168.1.191" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
+    robot_ip: str = "192.168.1.208" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
     robot_id: str = "so100_robot"
     # Leader arm configuration
-    leader_arm_port: str = "COM29"
+    leader_arm_port: str = "/dev/ttyUSB0"
     leader_arm_id: str = "so100_robot_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
