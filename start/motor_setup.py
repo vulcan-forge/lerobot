@@ -421,9 +421,16 @@ class MotorSetupManager:
                     # Try to get multiturn position from Goal_Position_2
                     try:
                         multiturn_pos = self.bus.read("Goal_Position_2", motor_name, normalize=False)
-                        current_pos_display = f"{multiturn_pos} (multiturn)"
-                    except:
+                        # Validate the multiturn position - it should be within reasonable bounds
+                        if multiturn_pos < 0 or multiturn_pos > max_position * 2:  # Allow some buffer
+                            # If multiturn position is invalid, use goal position as reference
+                            current_pos_display = f"{goal_pos} (goal)"
+                            multiturn_pos = goal_pos
+                        else:
+                            current_pos_display = f"{multiturn_pos} (multiturn)"
+                    except Exception as e:
                         current_pos_display = f"{present_pos} (single turn)"
+                        multiturn_pos = present_pos
                     
                     # Show prompt
                     user_input = input(f"\nCurrent position: {current_pos_display}, Goal: {goal_pos}\nEnter position (0-{max_position}) or command: ").strip()
@@ -437,7 +444,10 @@ class MotorSetupManager:
                         try:
                             goal_pos_2 = self.bus.read("Goal_Position_2", motor_name, normalize=False)
                             logger.info(f"Goal Position 2 (multiturn): {goal_pos_2}")
-                            logger.info(f"Actual multiturn position: {goal_pos_2}")
+                            if 0 <= goal_pos_2 <= max_position * 2:
+                                logger.info(f"Valid multiturn position: {goal_pos_2}")
+                            else:
+                                logger.warning(f"Invalid multiturn position: {goal_pos_2} (outside expected range)")
                         except Exception as e:
                             logger.warning(f"Could not read multiturn position: {e}")
                         continue
@@ -448,6 +458,21 @@ class MotorSetupManager:
                     elif user_input.lower() == 'max':
                         logger.info(f"Moving to maximum position ({max_position})")
                         self.bus.write("Goal_Position", motor_name, max_position, normalize=False)
+                        continue
+                    elif user_input.lower() == 'test':
+                        # Test different position ranges
+                        test_positions = [0, 1000, 4095, 5000, 10000, 15000, 20000, 25000, max_position]
+                        logger.info("Testing position ranges...")
+                        for pos in test_positions:
+                            logger.info(f"Testing position {pos}")
+                            self.bus.write("Goal_Position", motor_name, pos, normalize=False)
+                            time.sleep(2)  # Wait for movement
+                            new_goal = self.bus.read("Goal_Position", motor_name, normalize=False)
+                            try:
+                                new_multiturn = self.bus.read("Goal_Position_2", motor_name, normalize=False)
+                                logger.info(f"  Goal: {new_goal}, Multiturn: {new_multiturn}")
+                            except:
+                                logger.info(f"  Goal: {new_goal}, Multiturn: N/A")
                         continue
                     
                     # Try to parse as position value
@@ -461,7 +486,7 @@ class MotorSetupManager:
                         self.bus.write("Goal_Position", motor_name, position, normalize=False)
                         
                         # Wait a moment and show movement
-                        time.sleep(0.5)
+                        time.sleep(1)  # Increased wait time for better tracking
                         new_goal = self.bus.read("Goal_Position", motor_name, normalize=False)
                         if new_goal == position:
                             logger.info("Position command accepted successfully")
@@ -469,7 +494,7 @@ class MotorSetupManager:
                             logger.warning(f"Position set to {position} but read back as {new_goal}")
                             
                     except ValueError:
-                        logger.warning("Invalid input. Enter a number, 'quit', 'status', 'home', or 'max'")
+                        logger.warning("Invalid input. Enter a number, 'quit', 'status', 'home', 'max', or 'test'")
                         
                 except KeyboardInterrupt:
                     logger.info("\nInterrupted by user")
@@ -486,17 +511,178 @@ class MotorSetupManager:
         finally:
             if self.bus and self.bus.port_handler.is_open:
                 self.bus.port_handler.closePort()
+    
+    def analyze_position_encoding(self, motor_name: str, motor_type: str, motor_id: int) -> bool:
+        """
+        Analyze the position encoding and multiturn behavior.
+        
+        Args:
+            motor_name: Name of the motor
+            motor_type: Type of motor
+            motor_id: ID of the motor
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info(f"Analyzing position encoding for motor '{motor_name}'")
+        
+        # Create motor configuration
+        motor = Motor(motor_id, motor_type, MotorNormMode.RANGE_M100_100)
+        motors = {motor_name: motor}
+        
+        try:
+            # Create motor bus
+            self.bus = FeetechMotorsBus(port=self.port, motors=motors)
+            self.bus.connect()
+            
+            # Enable torque
+            self.bus.enable_torque()
+            
+            # Set operating mode to position control
+            self.bus.write("Operating_Mode", motor_name, OperatingMode.POSITION.value)
+            
+            # Test positions and analyze the encoding
+            test_positions = [
+                0, 1000, 2000, 3000, 4000, 4095,  # Single turn range
+                5000, 6000, 7000, 8000, 9000, 10000,  # Multiturn range
+                15000, 20000, 25000, 28665  # Full range
+            ]
+            
+            logger.info("Position encoding analysis:")
+            logger.info("Format: Position -> Goal_Position -> Present_Position -> Goal_Position_2")
+            
+            for pos in test_positions:
+                logger.info(f"\nTesting position {pos}:")
+                
+                # Set position
+                self.bus.write("Goal_Position", motor_name, pos, normalize=False)
+                time.sleep(1)  # Wait for movement
+                
+                # Read all position registers
+                goal_pos = self.bus.read("Goal_Position", motor_name, normalize=False)
+                present_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                
+                try:
+                    goal_pos_2 = self.bus.read("Goal_Position_2", motor_name, normalize=False)
+                    logger.info(f"  {pos} -> {goal_pos} -> {present_pos} -> {goal_pos_2}")
+                    
+                    # Calculate expected values
+                    if pos <= 4095:
+                        expected_present = pos
+                        expected_multiturn = pos
+                    else:
+                        # For multiturn, Present_Position should wrap around 4095
+                        expected_present = pos % 4096
+                        expected_multiturn = pos
+                    
+                    logger.info(f"  Expected: Present={expected_present}, Multiturn={expected_multiturn}")
+                    
+                except Exception as e:
+                    logger.info(f"  {pos} -> {goal_pos} -> {present_pos} -> Error: {e}")
+            
+            return True
+                
+        except Exception as e:
+            logger.error(f"Failed to analyze position encoding: {e}")
+            return False
+        finally:
+            if self.bus and self.bus.port_handler.is_open:
+                self.bus.port_handler.closePort()
+    
+    def configure_for_lerobot(self, motor_name: str, motor_type: str, motor_id: int, gear_ratio: float = 1.0) -> bool:
+        """
+        Configure the motor for use with LeRobot, including multiturn support and gear ratios.
+        
+        Args:
+            motor_name: Name of the motor
+            motor_type: Type of motor
+            motor_id: ID of the motor
+            gear_ratio: Gear ratio (e.g., 3.0 for 3:1 reduction)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info(f"Configuring motor '{motor_name}' for LeRobot use")
+        logger.info(f"Motor type: {motor_type}, ID: {motor_id}, Gear ratio: {gear_ratio}")
+        
+        # Create motor configuration with gear ratio
+        motor = Motor(motor_id, motor_type, MotorNormMode.RANGE_M100_100, gear_ratio=gear_ratio)
+        motors = {motor_name: motor}
+        
+        try:
+            # Create motor bus
+            self.bus = FeetechMotorsBus(port=self.port, motors=motors)
+            self.bus.connect()
+            
+            # Disable torque for safe configuration
+            self.bus.disable_torque()
+            
+            # Set operating mode to position control
+            self.bus.write("Operating_Mode", motor_name, OperatingMode.POSITION.value)
+            
+            # Configure for multiturn operation
+            max_position = 4095 * 7  # 7 turns * 4095 steps per turn
+            self.bus.write("Min_Position_Limit", motor_name, 0, normalize=False)
+            self.bus.write("Max_Position_Limit", motor_name, max_position, normalize=False)
+            
+            # Set PID coefficients for smooth operation
+            self.bus.write("P_Coefficient", motor_name, 16)  # Lower P for stability
+            self.bus.write("I_Coefficient", motor_name, 0)   # No integral
+            self.bus.write("D_Coefficient", motor_name, 32)  # Default derivative
+            
+            # Set acceleration for smooth movement
+            self.bus.write("Acceleration", motor_name, 254, normalize=False)
+            
+            # Enable torque
+            self.bus.enable_torque()
+            
+            logger.info("Motor configured successfully for LeRobot!")
+            logger.info("Key points for LeRobot integration:")
+            logger.info("1. Use Goal_Position for control (range: 0-28665)")
+            logger.info("2. Present_Position only shows 0-4095 (single turn)")
+            logger.info("3. For position feedback, use Goal_Position_2 when needed")
+            logger.info("4. Gear ratio is handled by LeRobot's Motor class")
+            logger.info("5. Full multiturn range is available for control")
+            
+            # Test the configuration
+            logger.info("\nTesting configuration...")
+            
+            # Test a few positions to verify
+            test_positions = [0, 5000, 15000, 25000]
+            for pos in test_positions:
+                logger.info(f"Testing position {pos}")
+                self.bus.write("Goal_Position", motor_name, pos, normalize=False)
+                time.sleep(2)
+                
+                goal_pos = self.bus.read("Goal_Position", motor_name, normalize=False)
+                present_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                
+                try:
+                    multiturn_pos = self.bus.read("Goal_Position_2", motor_name, normalize=False)
+                    logger.info(f"  Goal: {goal_pos}, Present: {present_pos}, Multiturn: {multiturn_pos}")
+                except:
+                    logger.info(f"  Goal: {goal_pos}, Present: {present_pos}, Multiturn: N/A")
+            
+            return True
+                
+        except Exception as e:
+            logger.error(f"Failed to configure motor for LeRobot: {e}")
+            return False
+        finally:
+            if self.bus and self.bus.port_handler.is_open:
+                self.bus.port_handler.closePort()
 
 
 def main():
     """Main function to handle command line arguments and execute the requested action."""
     parser = argparse.ArgumentParser(description="Motor Identification, Calibration, and Multiturn Setup")
     parser.add_argument("--port", required=True, help="Serial port (e.g., /dev/ttyUSB0)")
-    parser.add_argument("--action", required=True, choices=["scan", "setup", "calibrate", "multiturn", "test", "position_control"],
+    parser.add_argument("--action", required=True, choices=["scan", "setup", "calibrate", "multiturn", "test", "position_control", "analyze", "configure_lerobot"],
                        help="Action to perform")
     parser.add_argument("--motor-type", help="Motor type (e.g., sts3235)")
     parser.add_argument("--motor-name", help="Motor name (e.g., shoulder_lift)")
     parser.add_argument("--motor-id", type=int, help="Motor ID")
+    parser.add_argument("--gear-ratio", type=float, default=1.0, help="Gear ratio (e.g., 3.0 for 3:1 reduction)")
     parser.add_argument("--initial-baudrate", type=int, help="Initial baudrate for motor setup")
     parser.add_argument("--initial-id", type=int, help="Initial motor ID for motor setup")
     
@@ -596,6 +782,34 @@ def main():
                 print(f"Position control completed successfully")
             else:
                 print("Position control failed")
+                sys.exit(1)
+        
+        elif args.action == "analyze":
+            # Analyze position encoding
+            if not all([args.motor_type, args.motor_id]):
+                print("Error: --motor-type and --motor-id are required for analyze action")
+                sys.exit(1)
+            
+            success = manager.analyze_position_encoding(args.motor_name, args.motor_type, args.motor_id)
+            
+            if success:
+                print(f"Position encoding analysis completed successfully")
+            else:
+                print("Position encoding analysis failed")
+                sys.exit(1)
+        
+        elif args.action == "configure_lerobot":
+            # Configure for LeRobot
+            if not all([args.motor_type, args.motor_id, args.gear_ratio]):
+                print("Error: --motor-type, --motor-id, and --gear-ratio are required for configure_lerobot action")
+                sys.exit(1)
+            
+            success = manager.configure_for_lerobot(args.motor_name, args.motor_type, args.motor_id, args.gear_ratio)
+            
+            if success:
+                print(f"Motor configured successfully for LeRobot")
+            else:
+                print("Failed to configure motor for LeRobot")
                 sys.exit(1)
     
     except KeyboardInterrupt:
