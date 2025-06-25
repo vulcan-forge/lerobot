@@ -6,12 +6,13 @@ from enum import Enum
 import time
 from pprint import pformat
 import numpy as np
+import os
 
-from examples.sourccey.sourccey_v2beta.utils import display_data
+from examples.sourccey_v2beta.utils import display_data
 from lerobot.common.policies.act.modeling_act import ACTPolicy
 from lerobot.common.policies.pretrained import PreTrainedPolicy
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
+from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.control_utils import predict_action
 from lerobot.common.utils.utils import get_safe_torch_device, init_logging, log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
@@ -49,7 +50,8 @@ class EvaluateConfig:
 def load_policy(policy_type: PolicyType, policy_name: str) -> PreTrainedPolicy:
     """Load the specified policy type."""
     if policy_type == PolicyType.ACT:
-        return ACTPolicy.from_pretrained(policy_name)
+        policy = ACTPolicy.from_pretrained(policy_name)
+        return policy
     # elif policy_type == PolicyType.SMOLVLA:
     #     return SmolvlaPolicy.from_pretrained(policy_name)
     # elif policy_type == PolicyType.PI0:
@@ -96,6 +98,7 @@ def evaluate_loop(
             task=task_description,
             robot_type=robot.robot_type,
         )
+
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
         # Send action to robot (same as record.py)
@@ -103,9 +106,7 @@ def evaluate_loop(
 
         # Display data in Rerun (same as record.py)
         if should_display_data:
-            arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
-            #base_action = {k: v for k, v in action.items() if k.startswith(("base", "gripper"))}
-            display_data(observation, arm_action, {})
+            display_data(observation, action)
 
         # Maintain timing (same as record.py)
         dt_s = time.perf_counter() - start_loop_t

@@ -6,12 +6,12 @@ import rerun as rr
 import os
 from pathlib import Path
 
-from examples.sourccey.sourccey_v2beta.utils import display_data
+from examples.sourccey_v2beta.utils import display_data
 from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.utils import build_dataset_frame, hw_to_dataset_features
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
+from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
@@ -75,14 +75,9 @@ def record_loop(
             break
 
         observation = robot.get_observation()
-
-        arm_action = leader_arm.get_action()
-        arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
-
+        action = leader_arm.get_action()
         keyboard_keys = keyboard.get_action()
-        base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-        action = arm_action | base_action if len(base_action) > 0 else arm_action
         action_sent = robot.send_action(action)
 
         # Create frame and add to dataset only if dataset is provided
@@ -94,8 +89,7 @@ def record_loop(
 
         # Display data in Rerun (same as record.py)
         if should_display_data:
-            arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
-            display_data(observation, arm_action, {})
+            display_data(observation, action)
 
         # Maintain timing
         dt_s = time.perf_counter() - start_loop_t

@@ -1,13 +1,10 @@
-from dataclasses import asdict, dataclass
-from pprint import pformat
+from dataclasses import dataclass
 import draccus
 import rerun as rr
-from examples.sourccey.sourccey_v2beta.utils import display_data
-from lerobot.common.utils.utils import init_logging
+from examples.sourccey_v2beta.utils import display_data
+from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.visualization_utils import _init_rerun
-from lerobot.common.robots.sourccey.sourccey_v2beta import SourcceyV2BetaClient, SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
@@ -20,7 +17,7 @@ class TeleoperateConfig:
     robot_ip: str = "192.168.1.191" # 192.168.1.191 # (First robot) # 192.168.1.169 # (Second robot)
     robot_id: str = "sourccey_v2beta"
     # Leader arm configuration
-    leader_arm_port: str = "COM29"
+    leader_arm_port: str = "/dev/ttyUSB0"
     leader_arm_id: str = "sourccey_v2beta_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
@@ -71,18 +68,14 @@ def teleoperate(cfg: TeleoperateConfig):
     try:
         while True:
             observation = robot.get_observation()
-
             arm_action = teleop_arm.get_action()
-            arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
-
             keyboard_keys = telep_keyboard.get_action()
-            base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
             # Display all data in Rerun
             if cfg.display_data:
-                display_data(observation, arm_action, base_action)
+                display_data(observation, arm_action)
 
-            action = arm_action | base_action if len(base_action) > 0 else arm_action
+            action = arm_action
             robot.send_action(action)
 
     except KeyboardInterrupt:

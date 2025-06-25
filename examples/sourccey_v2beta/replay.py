@@ -4,13 +4,12 @@ import draccus
 import rerun as rr
 import time
 
+from examples.sourccey_v2beta.utils import display_data
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
+from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
+from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.robot_utils import busy_wait
-from lerobot.common.utils.utils import init_logging
 from lerobot.common.utils.visualization_utils import _init_rerun
-from examples.sourccey.sourccey_v2beta.utils import display_data
 
 @dataclass
 class ReplayConfig:
@@ -66,7 +65,7 @@ def replay(cfg: ReplayConfig):
             if cfg.display_data:
                 # Get current observation for display (if available)
                 observation = robot.get_observation()
-                display_data(observation, action, {})
+                display_data(observation, action)
 
             robot.send_action(action)
 

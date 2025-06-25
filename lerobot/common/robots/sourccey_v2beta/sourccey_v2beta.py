@@ -69,15 +69,10 @@ class SourcceyV2Beta(Robot):
                 "right_arm_wrist_flex": Motor(10, "sts3215", norm_mode_body),
                 "right_arm_wrist_roll": Motor(11, "sts3215", norm_mode_body),
                 "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
-                # base
-                # "base_left_wheel": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-                # "base_right_wheel": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-                # "base_back_wheel": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
             },
             calibration=self.calibration,
         )
-        self.arm_motors = [motor for motor in self.bus.motors if (motor.startswith("left_arm") or motor.startswith("right_arm"))]
-        # self.base_motors = [motor for motor in self.bus.motors if motor.startswith("base")]
+        self.arm_motors = [motor for motor in self.bus.motors]
         self.cameras = make_cameras_from_configs(config.cameras)
 
     @property
@@ -96,9 +91,6 @@ class SourcceyV2Beta(Robot):
                 "right_arm_wrist_flex.pos",
                 "right_arm_wrist_roll.pos",
                 "right_arm_gripper.pos",
-                # "x.vel",
-                # "y.vel",
-                # "theta.vel",
             ),
             float,
         )
@@ -151,11 +143,7 @@ class SourcceyV2Beta(Robot):
         input("Move robot to the middle of its range of motion and press ENTER....")
         homing_offsets = self.bus.set_half_turn_homings(self.arm_motors)
 
-        #homing_offsets.update(dict.fromkeys(self.base_motors, 0))
-
-        full_turn_motor = [
-            motor for motor in motors if any(keyword in motor for keyword in ["wheel"])
-        ]
+        full_turn_motor = ["right_arm_wrist_roll", "left_arm_wrist_roll"]
         unknown_range_motors = [motor for motor in motors if motor not in full_turn_motor]
 
         print(
@@ -169,11 +157,9 @@ class SourcceyV2Beta(Robot):
 
         self.calibration = {}
         for name, motor in self.bus.motors.items():
-            # Set drive mode = 1 for grippers
-            drive_mode = 1 if "right_arm_gripper" in name else 0
             self.calibration[name] = MotorCalibration(
                 id=motor.id,
-                drive_mode=drive_mode,
+                drive_mode=0,
                 homing_offset=homing_offsets[name],
                 range_min=range_mins[name],
                 range_max=range_maxes[name],
@@ -197,164 +183,13 @@ class SourcceyV2Beta(Robot):
             self.bus.write("I_Coefficient", name, 0)
             self.bus.write("D_Coefficient", name, 32)
 
-        # for name in self.base_motors:
-        #     self.bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
-
         self.bus.enable_torque()
 
     def setup_motors(self) -> None:
-        pass
-        # for motor in chain(reversed(self.arm_motors), reversed(self.base_motors)):
-        #     input(f"Connect the controller board to the '{motor}' motor only and press enter.")
-        #     self.bus.setup_motor(motor)
-        #     print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
-
-    @staticmethod
-    def _degps_to_raw(degps: float) -> int:
-        steps_per_deg = 4096.0 / 360.0
-        speed_in_steps = degps * steps_per_deg
-        speed_int = int(round(speed_in_steps))
-        # Cap the value to fit within signed 16-bit range (-32768 to 32767)
-        if speed_int > 0x7FFF:
-            speed_int = 0x7FFF  # 32767 -> maximum positive value
-        elif speed_int < -0x8000:
-            speed_int = -0x8000  # -32768 -> minimum negative value
-        return speed_int
-
-    @staticmethod
-    def _raw_to_degps(raw_speed: int) -> float:
-        steps_per_deg = 4096.0 / 360.0
-        magnitude = raw_speed
-        degps = magnitude / steps_per_deg
-        return degps
-
-    def _body_to_wheel_raw(
-        self,
-        x: float,
-        y: float,
-        theta: float,
-        wheel_radius: float = 0.05,
-        base_radius: float = 0.125,
-        max_raw: int = 3000,
-    ) -> dict:
-        """
-        Convert desired body-frame velocities into wheel raw commands for a 4-wheeled mecanum robot.
-        The wheels are mounted at 45 degrees.
-
-        Parameters:
-          x          : Linear velocity in x (m/s).
-          y          : Linear velocity in y (m/s).
-          theta      : Rotational velocity (deg/s).
-          wheel_radius: Radius of each wheel (meters).
-          base_radius : Distance from the center of rotation to each wheel (meters).
-          max_raw    : Maximum allowed raw command (ticks) per wheel.
-
-        Returns:
-          A dictionary with wheel raw commands:
-             {"back_left_wheel": value, "back_right_wheel": value,
-              "front_left_wheel": value, "front_right_wheel": value}.
-        """
-        # Convert rotational velocity from deg/s to rad/s
-        theta_rad = theta * (np.pi / 180.0)
-
-        # Create the body velocity vector [x, y, theta_rad]
-        velocity_vector = np.array([x, y, theta_rad])
-
-        # Define the wheel mounting angles for mecanum wheels (45 degrees)
-        # For mecanum wheels, we use a scale factor of 1.0 for the x and y components
-        scale = 1.0
-        m = np.array([
-            [-scale, -scale,  base_radius],    # back_left
-            [-scale,  scale,  base_radius],    # back_right
-            [ scale, -scale,  base_radius],    # front_left
-            [ scale,  scale,  base_radius]     # front_right
-        ])
-
-        # Compute each wheel's linear speed (m/s)
-        wheel_linear_speeds = m.dot(velocity_vector)
-
-        # Convert to angular speeds (rad/s)
-        wheel_angular_speeds = wheel_linear_speeds / wheel_radius
-
-        # Convert wheel angular speeds from rad/s to deg/s
-        wheel_degps = wheel_angular_speeds * (180.0 / np.pi)
-
-        # Scaling
-        steps_per_deg = 4096.0 / 360.0
-        raw_floats = [abs(degps) * steps_per_deg for degps in wheel_degps]
-        max_raw_computed = max(raw_floats)
-        if max_raw_computed > max_raw:
-            scale = max_raw / max_raw_computed
-            wheel_degps = wheel_degps * scale
-
-        # Convert each wheel's angular speed (deg/s) to a raw integer
-        wheel_raw = [self._degps_to_raw(deg) for deg in wheel_degps]
-
-        return {
-            "back_left_wheel": wheel_raw[0],
-            "back_right_wheel": wheel_raw[1],
-            "front_left_wheel": wheel_raw[2],
-            "front_right_wheel": wheel_raw[3]
-        }
-
-    def _wheel_raw_to_body(
-        self,
-        back_left_wheel_speed,
-        back_right_wheel_speed,
-        front_left_wheel_speed,
-        front_right_wheel_speed,
-        wheel_radius: float = 0.05,
-        base_radius: float = 0.125,
-    ) -> dict[str, Any]:
-        """
-        Convert wheel raw command feedback back into body-frame velocities for a 4-wheeled mecanum robot.
-        The wheels are mounted at 45 degrees.
-
-        Parameters:
-          back_left_wheel_speed  : Raw speed command for back left wheel
-          back_right_wheel_speed : Raw speed command for back right wheel
-          front_left_wheel_speed : Raw speed command for front left wheel
-          front_right_wheel_speed: Raw speed command for front right wheel
-          wheel_radius          : Radius of each wheel (meters)
-          base_radius          : Distance from the robot center to each wheel (meters)
-
-        Returns:
-          A dict where:
-             x.vel      : Linear velocity in x (m/s)
-             y.vel      : Linear velocity in y (m/s)
-             theta.vel  : Rotational velocity in deg/s
-        """
-        # Convert each raw command back to an angular speed in deg/s
-        wheel_degps = np.array([
-            self._raw_to_degps(back_left_wheel_speed),
-            self._raw_to_degps(back_right_wheel_speed),
-            self._raw_to_degps(front_left_wheel_speed),
-            self._raw_to_degps(front_right_wheel_speed),
-        ])
-
-        # Convert from deg/s to rad/s
-        wheel_radps = wheel_degps * (np.pi / 180.0)
-        # Compute each wheel's linear speed (m/s) from its angular speed
-        wheel_linear_speeds = wheel_radps * wheel_radius
-
-        # For mecanum wheels, the inverse kinematic matrix
-        scale = 1.0
-        m_inv = np.array([
-            [ -scale, -scale,  scale,  scale],    # x: [back_left, back_right, front_left, front_right]
-            [ -scale,  scale, -scale,  scale],    # y: [back_left, back_right, front_left, front_right]
-            [ 1/base_radius,  1/base_radius, 1/base_radius,  1/base_radius]  # theta: [back_left, back_right, front_left, front_right]
-        ])
-
-        # Calculate body velocities
-        velocity_vector = m_inv.dot(wheel_linear_speeds)
-        x, y, theta_rad = velocity_vector
-        theta = theta_rad * (180.0 / np.pi)
-
-        return {
-            "x.vel": x,
-            "y.vel": y,
-            "theta.vel": theta,
-        }  # m/s and deg/s
+        for motor in chain(reversed(self.arm_motors)):
+            input(f"Connect the controller board to the '{motor}' motor only and press enter.")
+            self.bus.setup_motor(motor)
+            print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
@@ -363,18 +198,9 @@ class SourcceyV2Beta(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
-        #base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
-
-        base_vel = [0,0,0,0] #self._wheel_raw_to_body(
-        #     base_wheel_vel["base_left_wheel"],
-        #     base_wheel_vel["base_back_wheel"],
-        #     base_wheel_vel["base_right_wheel"],
-        #     base_wheel_vel["base_right_wheel"],
-        # )
-
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
-        flat_states = {**arm_state} #, **base_vel}
+        flat_states = {**arm_state}
 
         obs_dict = {f"{OBS_STATE}": flat_states}
         dt_ms = (time.perf_counter() - start) * 1e3
@@ -405,42 +231,29 @@ class SourcceyV2Beta(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
-        base_goal_vel = [0,0,0,0] # {k: v for k, v in action.items() if k.endswith(".vel")}
-
-        # base_wheel_goal_vel = self._body_to_wheel_raw(
-        #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
-        # )
+        goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
 
         # Check for NaN values and skip sending actions if any are found
-        if any(np.isnan(v) for v in arm_goal_pos.values()):
+        if any(np.isnan(v) for v in goal_pos.values()):
             logger.warning("NaN values detected in arm goal positions. Skipping action execution.")
-            return {**arm_goal_pos} #, **base_goal_vel}
+            return {**goal_pos}
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            present_pos = self.bus.sync_read("Present_Position", self.arm_motors)
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in arm_goal_pos.items()}
-            arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
-            arm_goal_pos = arm_safe_goal_pos
+            present_pos = self.bus.sync_read("Present_Position")
+            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
+            goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
 
-        # Send goal position to the actuators
-        arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in arm_goal_pos.items()}
-        self.bus.sync_write("Goal_Position", arm_goal_pos_raw)
-        # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
-        return {**arm_goal_pos} #, **base_goal_vel}
-
-    def stop_base(self):
-        # self.bus.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)
-        logger.info("Base motors stopped")
+        # Send goal position to the arm
+        self.bus.sync_write("Goal_Position", goal_pos)
+        return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
     def disconnect(self):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        self.stop_base()
         self.bus.disconnect(self.config.disable_torque_on_disconnect)
         for cam in self.cameras.values():
             cam.disconnect()

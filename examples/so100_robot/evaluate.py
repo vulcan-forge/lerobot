@@ -81,7 +81,6 @@ def evaluate_loop(
     # Get device
     device = get_safe_torch_device(policy.config.device)
 
-    print_timestamp = 0
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
 

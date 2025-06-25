@@ -46,8 +46,6 @@ class SourcceyV2BetaClient(Robot):
         self.port_zmq_cmd = config.port_zmq_cmd
         self.port_zmq_observations = config.port_zmq_observations
 
-        self.teleop_keys = config.teleop_keys
-
         self.polling_timeout_ms = config.polling_timeout_ms
         self.connect_timeout_s = config.connect_timeout_s
 
@@ -86,9 +84,6 @@ class SourcceyV2BetaClient(Robot):
                 "right_arm_wrist_flex.pos",
                 "right_arm_wrist_roll.pos",
                 "right_arm_gripper.pos",
-                # "x.vel",
-                # "y.vel",
-                # "theta.vel",
             ),
             float,
         )
