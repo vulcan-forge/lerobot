@@ -82,10 +82,6 @@ def record_loop(
         keyboard_keys = keyboard.get_action()
         base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-        # Display all data in Rerun
-        if display_data:
-            display_data(observation, arm_action, base_action)
-
         action = arm_action | base_action if len(base_action) > 0 else arm_action
         action_sent = robot.send_action(action)
 
@@ -99,7 +95,6 @@ def record_loop(
         # Display data in Rerun (same as record.py)
         if should_display_data:
             arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
-            #base_action = {k: v for k, v in action.items() if k.startswith(("base", "gripper"))}
             display_data(observation, arm_action, {})
 
         # Maintain timing

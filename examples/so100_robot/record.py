@@ -32,7 +32,7 @@ class RecordConfig:
     # Number of cycles per episode
     nb_cycles: int = 9000
     # Dataset repository ID (will append timestamp if not provided)
-    repo_id: str = "local/so100_server_001_tape_a"
+    repo_id: str = "local/so100_robot_001_tape_a"
     # Recording FPS
     fps: int = 30
     # Warm up and reset time
@@ -79,18 +79,10 @@ def record_loop(
             break
 
         observation = robot.get_observation()
-
         arm_action = leader_arm.get_action()
-        arm_action = {k: v for k, v in arm_action.items() if k.startswith(("left_arm", "right_arm"))}
-
         keyboard_keys = keyboard.get_action()
-        base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-        # Display all data in Rerun
-        if display_data:
-            display_data(observation, arm_action, base_action)
-
-        action = arm_action | base_action if len(base_action) > 0 else arm_action
+        action = arm_action
         action_sent = robot.send_action(action)
 
         # Create frame and add to dataset only if dataset is provided
@@ -102,7 +94,6 @@ def record_loop(
 
         # Display data in Rerun (same as record.py)
         if should_display_data:
-            arm_action = {k: v for k, v in action.items() if k.startswith("arm")}
             display_data(observation, arm_action, {})
 
         # Maintain timing
