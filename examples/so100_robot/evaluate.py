@@ -37,7 +37,7 @@ class EvaluateConfig:
     robot_id: str = "so100_robot"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "outputs/train/act_so100_robot_001_tape_a/checkpoints/020000/pretrained_model"
+    policy_name: str = "outputs/train/act_so100_robot_001_tape_b/checkpoints/020000/pretrained_model"
     # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
@@ -103,19 +103,6 @@ def evaluate_loop(
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
 
         # Send action to robot (same as record.py)
-        if (print_timestamp > 100):
-            print()
-            print()
-            print(observation)
-            print()
-            print(observation_frame)
-            print()
-            print(action)
-            print()
-            print()
-            print_timestamp = 0
-        else:
-            print_timestamp += 1
         robot.send_action(action)
 
         # Display data in Rerun (same as record.py)
