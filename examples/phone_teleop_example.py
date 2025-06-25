@@ -94,7 +94,7 @@ def main():
         rotation_sensitivity=1.0,
         initial_position=(0.0, -0.17, 0.237),
         initial_wxyz=(0, 0, 1, 0),  # wxyz quaternion
-        rest_pose=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),  # radians - conservative middle position
+        # rest_pose=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),  # radians - conservative middle position
         enable_visualization=True,
         viser_port=8080,
         # SO100 gripper configuration - matches SO100FollowerConfig.max_gripper_pos = 50
@@ -117,6 +117,8 @@ def main():
         print("Phone teleoperation ready!")
         print("- Start the phone app and connect to the gRPC server")
         print("- Use your phone to control the robot")
+        print("- After starting teleop, motor positions will be read and displayed after 5 seconds")
+        print("- The motor positions will be shown in rest_pose format for easy copying to config")
         print("- Press Ctrl+C to exit")
         
         # Main control loop
