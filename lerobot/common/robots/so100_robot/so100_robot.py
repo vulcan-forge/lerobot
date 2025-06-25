@@ -65,7 +65,7 @@ class SO100Robot(Robot):
             },
             calibration=self.calibration,
         )
-        self.arm_motors = [motor for motor in self.bus.motors if (motor.startswith("arm"))]
+        self.arm_motors = [motor for motor in self.bus.motors]
         self.cameras = make_cameras_from_configs(config.cameras)
 
     @property
