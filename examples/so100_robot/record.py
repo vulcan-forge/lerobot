@@ -40,8 +40,8 @@ class RecordConfig:
     robot_ip: str = "192.168.1.208"
     robot_id: str = "so100_server"
     # Leader arm configuration
-    leader_arm_port: str = "/dev/ttyUSB0" # "/dev/ttyUSB0" # "COM29"
-    leader_arm_id: str = "so100_server_teleop"
+    leader_arm_port: str = "/dev/ttyUSB0"
+    leader_arm_id: str = "so100_robot_teleop"
     # Keyboard configuration
     keyboard_id: str = "my_laptop_keyboard"
     # Rerun session
