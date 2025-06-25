@@ -45,10 +45,10 @@ python -m examples.so100_robot.evaluate --display_data=true
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v2beta_001_tape_a \
+  --dataset.repo_id=local/so100_robot_001_tape_a \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v2beta_001_tape_a \
-  --job_name=act_sourccey_v2beta_001_tape_a \
+  --output_dir=outputs/train/act_so100_robot_001_tape_a \
+  --job_name=act_so100_robot_001_tape_a \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
@@ -57,15 +57,15 @@ python lerobot/scripts/train.py \
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v2beta_001_tape_a  \
+  --dataset.repo_id=local/so100_robot_001_tape_a  \
   --policy.type=act \
-  --output_dir=outputs/train/act_ssourccey_v2beta_001_tape_a \
-  --job_name=act_sourccey_v2beta_001_tape_a  \
+  --output_dir=outputs/train/act_so100_robot_001_tape_a \
+  --job_name=act_so100_robot_001_tape_a  \
   --policy.device=cuda \
   --policy.use_amp=true \
   --wandb.enable=false \
-  --steps=100000 \
-  --batch_size=64 \
+  --steps=40000 \
+  --batch_size=32 \
   --distributed_training=true \
   --num_gpus=2
 ```
