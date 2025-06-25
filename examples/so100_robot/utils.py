@@ -3,7 +3,7 @@ import rerun as rr
 import numpy as np
 import torch
 
-def display_data(observation, arm_action, base_action):
+def display_data(observation, arm_action):
     """Display all data in Rerun."""
     # Log observations
     for obs, val in observation.items():
@@ -20,14 +20,6 @@ def display_data(observation, arm_action, base_action):
 
     # Log arm actions
     for act, val in arm_action.items():
-        if isinstance(val, float):
-            rr.log(f"action_{act}", rr.Scalars(val))
-        elif isinstance(val, np.ndarray):
-            for i, v in enumerate(val):
-                rr.log(f"action_{act}_{i}", rr.Scalars(v))
-
-    # Log base actions
-    for act, val in base_action.items():
         if isinstance(val, float):
             rr.log(f"action_{act}", rr.Scalars(val))
         elif isinstance(val, np.ndarray):

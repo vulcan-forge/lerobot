@@ -7,13 +7,11 @@ import time
 from pprint import pformat
 import numpy as np
 
-from examples.sourccey.sourccey_v2beta.utils import display_data
+from examples.so100_robot.utils import display_data
 from lerobot.common.policies.act.modeling_act import ACTPolicy
 from lerobot.common.policies.pretrained import PreTrainedPolicy
 from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig
 from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.utils.control_utils import predict_action
 from lerobot.common.utils.utils import get_safe_torch_device, init_logging, log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
@@ -105,9 +103,7 @@ def evaluate_loop(
 
         # Display data in Rerun (same as record.py)
         if should_display_data:
-            arm_action = {k: v for k, v in action.items() if k.startswith(("left_arm", "right_arm"))}
-            #base_action = {k: v for k, v in action.items() if k.startswith(("base", "gripper"))}
-            display_data(observation, arm_action, {})
+            display_data(observation, action)
 
         # Maintain timing (same as record.py)
         dt_s = time.perf_counter() - start_loop_t

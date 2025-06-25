@@ -6,19 +6,15 @@ import rerun as rr
 import os
 from pathlib import Path
 
-from examples.sourccey.sourccey_v2beta.utils import display_data
+from examples.so100_robot.utils import display_data
 from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.utils import build_dataset_frame, hw_to_dataset_features
-from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig, So100ServerClientConfig
-from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient, So100ServerClient
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
+from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig, SO100RobotClientConfig
+from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient, SO100RobotClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.so100_leader.config_so100_leader import SO100LeaderConfig
 from lerobot.common.teleoperators.so100_leader.so100_leader import SO100Leader
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
 from lerobot.common.utils.utils import init_logging, log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.common.utils.control_utils import init_keyboard_listener, is_headless
@@ -79,10 +75,9 @@ def record_loop(
             break
 
         observation = robot.get_observation()
-        arm_action = leader_arm.get_action()
+        action = leader_arm.get_action()
         keyboard_keys = keyboard.get_action()
 
-        action = arm_action
         action_sent = robot.send_action(action)
 
         # Create frame and add to dataset only if dataset is provided
@@ -94,7 +89,7 @@ def record_loop(
 
         # Display data in Rerun (same as record.py)
         if should_display_data:
-            display_data(observation, arm_action, {})
+            display_data(observation, action)
 
         # Maintain timing
         dt_s = time.perf_counter() - start_loop_t

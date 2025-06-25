@@ -5,14 +5,12 @@ import rerun as rr
 import time
 
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.robots.so100_robot.config_so100_robot import So100ServerClientConfig
-from lerobot.common.robots.so100_robot.so100_robot_client import So100ServerClient
-from lerobot.common.robots.sourccey.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
+from lerobot.common.robots.so100_robot.config_so100_robot import SO100RobotClientConfig, SO100RobotClientConfig
+from lerobot.common.robots.so100_robot.so100_robot_client import SO100RobotClient, SO100RobotClient
 from lerobot.common.utils.robot_utils import busy_wait
 from lerobot.common.utils.utils import init_logging
 from lerobot.common.utils.visualization_utils import _init_rerun
-from examples.sourccey.sourccey_v2beta.utils import display_data
+from examples.so100_robot.utils import display_data
 
 @dataclass
 class ReplayConfig:
@@ -33,11 +31,11 @@ def replay(cfg: ReplayConfig):
         _init_rerun(session_name=cfg.rerun_session_name)
 
     # Initialize robot
-    robot_config = So100ServerClientConfig(
+    robot_config = SO100RobotClientConfig(
         remote_ip=cfg.robot_ip,
         id=cfg.robot_id
     )
-    robot = So100ServerClient(robot_config)
+    robot = SO100RobotClient(robot_config)
 
     # Load dataset
     dataset = LeRobotDataset(cfg.dataset_path, episodes=[cfg.episode])
@@ -68,7 +66,7 @@ def replay(cfg: ReplayConfig):
             if cfg.display_data:
                 # Get current observation for display (if available)
                 observation = robot.get_observation()
-                display_data(observation, action, {})
+                display_data(observation, action)
 
             robot.send_action(action)
 
