@@ -3,12 +3,14 @@
 Camera Detection Script for LeRobot
 
 This script helps you find and test cameras connected to your system.
-It supports both OpenCV cameras (webcams, built-in cameras) and Intel RealSense cameras.
+It supports OpenCV cameras (webcams, built-in cameras), Intel RealSense cameras,
+and Raspberry Pi cameras.
 
 Usage:
     python start/test_camera.py                    # Find all cameras
     python start/test_camera.py --type opencv      # Find only OpenCV cameras
     python start/test_camera.py --type realsense   # Find only RealSense cameras
+    python start/test_camera.py --type raspberry   # Find only Raspberry Pi cameras
     python start/test_camera.py --test             # Test camera connections
     python start/test_camera.py --capture          # Capture test images
 """
@@ -17,6 +19,7 @@ import argparse
 import logging
 import sys
 import time
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -51,6 +54,85 @@ try:
 except ImportError:
     logger.warning("RealSense support not available (pyrealsense2 not installed)")
     REALSENSE_AVAILABLE = False
+
+# Try to import PiCamera
+try:
+    from picamera import PiCamera
+    from picamera.array import PiRGBArray
+    PICAMERA_AVAILABLE = True
+except ImportError:
+    logger.warning("PiCamera support not available (picamera not installed)")
+    PICAMERA_AVAILABLE = False
+
+
+def check_raspberry_pi_camera() -> bool:
+    """
+    Check if Raspberry Pi camera is available using system commands.
+    """
+    try:
+        # Check if camera is enabled in config
+        result = subprocess.run(['vcgencmd', 'get_camera'],
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            output = result.stdout.strip()
+            if 'detected=1' in output:
+                return True
+
+        # Alternative check using v4l2-ctl
+        result = subprocess.run(['v4l2-ctl', '--list-devices'],
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and 'mmal' in result.stdout:
+            return True
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        pass
+
+    return False
+
+
+def find_raspberry_pi_cameras() -> List[Dict[str, Any]]:
+    """
+    Find Raspberry Pi cameras.
+    """
+    cameras = []
+
+    if not PICAMERA_AVAILABLE:
+        logger.warning("PiCamera library not available")
+        return cameras
+
+    logger.info("Searching for Raspberry Pi cameras...")
+
+    try:
+        # Check if we're on a Raspberry Pi
+        if not check_raspberry_pi_camera():
+            logger.debug("Raspberry Pi camera not detected in system")
+            return cameras
+
+        # Try to initialize PiCamera
+        camera = PiCamera()
+
+        # Get camera properties
+        camera_info = {
+            "name": "Raspberry Pi Camera Module",
+            "type": "RaspberryPi",
+            "id": "picamera",
+            "resolution": f"{camera.resolution[0]}x{camera.resolution[1]}",
+            "framerate": camera.framerate,
+            "default_stream_profile": {
+                "width": camera.resolution[0],
+                "height": camera.resolution[1],
+                "fps": camera.framerate,
+                "format": "RGB"
+            }
+        }
+
+        cameras.append(camera_info)
+        camera.close()
+
+    except Exception as e:
+        logger.debug(f"Error detecting Raspberry Pi camera: {e}")
+
+    return cameras
 
 
 def find_opencv_cameras_basic() -> List[Dict[str, Any]]:
@@ -152,7 +234,7 @@ def find_all_cameras(camera_type: Optional[str] = None) -> List[Dict[str, Any]]:
     Find all available cameras, optionally filtered by type.
 
     Args:
-        camera_type: Optional filter ("opencv" or "realsense")
+        camera_type: Optional filter ("opencv", "realsense", or "raspberry")
 
     Returns:
         List of camera information dictionaries
@@ -172,6 +254,11 @@ def find_all_cameras(camera_type: Optional[str] = None) -> List[Dict[str, Any]]:
         all_cameras.extend(realsense_cameras)
         logger.info(f"Found {len(realsense_cameras)} RealSense cameras")
 
+    if camera_type is None or camera_type.lower() == "raspberry":
+        raspberry_cameras = find_raspberry_pi_cameras()
+        all_cameras.extend(raspberry_cameras)
+        logger.info(f"Found {len(raspberry_cameras)} Raspberry Pi cameras")
+
     return all_cameras
 
 
@@ -183,7 +270,7 @@ def print_camera_info(cameras: List[Dict[str, Any]]) -> None:
         print("\n❌ No cameras detected!")
         return
 
-    print(f"\n�� Found {len(cameras)} camera(s):")
+    print(f"\n Found {len(cameras)} camera(s):")
     print("=" * 60)
 
     for i, cam_info in enumerate(cameras):
@@ -202,6 +289,12 @@ def print_camera_info(cameras: List[Dict[str, Any]]) -> None:
             usb_type = cam_info.get('usb_type_descriptor', 'Unknown')
             print(f"   Firmware: {firmware}")
             print(f"   USB Type: {usb_type}")
+
+        elif cam_info.get('type') == 'RaspberryPi':
+            resolution = cam_info.get('resolution', 'Unknown')
+            framerate = cam_info.get('framerate', 'Unknown')
+            print(f"   Resolution: {resolution}")
+            print(f"   Framerate: {framerate}")
 
         # Print stream profile
         profile = cam_info.get('default_stream_profile', {})
@@ -249,6 +342,17 @@ def test_camera_connection(camera_info: Dict[str, Any]) -> bool:
             camera.connect(warmup=False)
             frame = camera.read()
             camera.disconnect()
+            return frame is not None
+
+        elif cam_type == 'RaspberryPi':
+            if not PICAMERA_AVAILABLE:
+                return False
+
+            camera = PiCamera()
+            raw_capture = PiRGBArray(camera)
+            camera.capture(raw_capture, format="rgb")
+            frame = raw_capture.array
+            camera.close()
             return frame is not None
 
         return False
@@ -314,6 +418,23 @@ def capture_test_image(camera_info: Dict[str, Any], output_dir: Path) -> bool:
                 logger.info(f"Saved test image: {filename}")
                 return True
 
+        elif cam_type == 'RaspberryPi':
+            if not PICAMERA_AVAILABLE:
+                return False
+
+            camera = PiCamera()
+            raw_capture = PiRGBArray(camera)
+            camera.capture(raw_capture, format="rgb")
+            frame = raw_capture.array
+            camera.close()
+
+            if frame is not None:
+                img = Image.fromarray(frame)
+                filename = f"test_raspberry_pi.png"
+                img.save(output_dir / filename)
+                logger.info(f"Saved test image: {filename}")
+                return True
+
         return False
 
     except Exception as e:
@@ -330,6 +451,7 @@ Examples:
   python start/test_camera.py                    # Find all cameras
   python start/test_camera.py --type opencv      # Find only OpenCV cameras
   python start/test_camera.py --type realsense   # Find only RealSense cameras
+  python start/test_camera.py --type raspberry   # Find only Raspberry Pi cameras
   python start/test_camera.py --test             # Test camera connections
   python start/test_camera.py --capture          # Capture test images
         """
@@ -337,7 +459,7 @@ Examples:
 
     parser.add_argument(
         "--type",
-        choices=["opencv", "realsense"],
+        choices=["opencv", "realsense", "raspberry"],
         help="Filter cameras by type"
     )
 
@@ -379,6 +501,10 @@ Examples:
     print_camera_info(cameras)
 
     if not cameras:
+        print("\n💡 Troubleshooting tips:")
+        print("   • For Raspberry Pi cameras: Make sure camera is enabled in raspi-config")
+        print("   • For USB cameras: Check if they're properly connected")
+        print("   • Run with --verbose for more detailed information")
         return
 
     # Test connections if requested
