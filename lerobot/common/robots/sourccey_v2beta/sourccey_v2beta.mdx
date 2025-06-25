@@ -16,7 +16,7 @@ uv run -m lerobot.calibrate \
 To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
 
 ```
-uv run -m lerobot.common.robots.sourccey.sourccey_v2beta.sourccey_v2beta_host
+uv run -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host
 ```
 
 Then on your computer run the below source command then the teleoperate command
@@ -26,19 +26,19 @@ source .venv/bin/activate
 ```
 
 ```
-python -m examples.sourccey.sourccey_v2beta.teleoperate --display_data=true
+python -m examples.sourccey_v2beta.teleoperate --display_data=true
 ```
 
 ```
-python -m examples.sourccey.sourccey_v2beta.record --display_data=true
+python -m examples.sourccey_v2beta.record --display_data=true
 ```
 
 ```
-python -m examples.sourccey.sourccey_v2beta.replay --display_data=true
+python -m examples.sourccey_v2beta.replay --display_data=true
 ```
 
 ```
-python -m examples.sourccey.sourccey_v2beta.evaluate --display_data=true
+python -m examples.sourccey_v2beta.evaluate --display_data=true
 ```
 
 --- ACT Training
@@ -154,28 +154,28 @@ python -m lerobot.record \
  --display_data=true
 
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/so100-001-test  \
-  --policy.type=act \
-  --output_dir=outputs/train/act_so100-001-test \
-  --job_name=act_so100-001-test \
-  --policy.device=cuda \
-  --wandb.enable=false \
-  --steps=100000 \
-  --save_freq=10000 \
-  --batch_size=32 \
-  --distributed_training=true \
-  --num_gpus=2
+ --dataset.repo_id=local/so100-001-test \
+ --policy.type=act \
+ --output_dir=outputs/train/act_so100-001-test \
+ --job_name=act_so100-001-test \
+ --policy.device=cuda \
+ --wandb.enable=false \
+ --steps=100000 \
+ --save_freq=10000 \
+ --batch_size=32 \
+ --distributed_training=true \
+ --num_gpus=2
 
 python -m lerobot.record \
-    --robot.type=so100_follower \
-    --robot.port=/dev/ttyUSB0 \
-    --robot.id=so100_follower \
-    --robot.cameras="{laptop: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}}" \
-    --dataset.repo_id=local/eval_so100-001-test \
-    --dataset.num_episodes=1 \
-    --dataset.single_task="Grab the tap and put it in the cup" \
-    --dataset.push_to_hub=false \
-    --policy.path=outputs/train/act_so100-001-test/checkpoints/040000/pretrained_model \
-    --display_data=true
+ --robot.type=so100_follower \
+ --robot.port=/dev/ttyUSB0 \
+ --robot.id=so100_follower \
+ --robot.cameras="{laptop: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}}" \
+ --dataset.repo_id=local/eval_so100-001-test \
+ --dataset.num_episodes=1 \
+ --dataset.single_task="Grab the tap and put it in the cup" \
+ --dataset.push_to_hub=false \
+ --policy.path=outputs/train/act_so100-001-test/checkpoints/040000/pretrained_model \
+ --display_data=true
 
 ## -- Server SO100
