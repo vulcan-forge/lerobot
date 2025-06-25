@@ -151,3 +151,16 @@ python -m lerobot.record \
  --dataset.num_episodes=1 \
  --dataset.single_task="Grab the tap and put it in the cup" \
  --display_data=true
+
+python -m lerobot.record \
+ --robot.type=so100_follower \
+ --robot.port=COM29 \
+ --robot.id=so100_follower \
+ --robot.cameras="{main: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}}" \
+ --dataset.repo_id=local/eval_so100-001-test \
+ --dataset.num_episodes=1 \
+ --dataset.single_task="Grab the tap and put it in the cup" \
+ --dataset.push_to_hub=false \
+ --policy.path=outputs/train/act_so100_robot_001_tape_a/checkpoints/020000/pretrained_model
+
+--policy.path=outputs/train/act_so100-001-test/checkpoints/040000/pretrained_model
