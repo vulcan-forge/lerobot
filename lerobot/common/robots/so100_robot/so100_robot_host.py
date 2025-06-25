@@ -76,6 +76,8 @@ def main():
                 if msg:
                     print(msg)
                 data = dict(json.loads(msg))
+                if data:
+                    print(data)
                 _action_sent = robot.send_action(data)
                 last_cmd_time = time.time()
                 watchdog_active = False
