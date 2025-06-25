@@ -421,16 +421,9 @@ class MotorSetupManager:
                     # Try to get multiturn position from Goal_Position_2
                     try:
                         multiturn_pos = self.bus.read("Goal_Position_2", motor_name, normalize=False)
-                        # Validate the multiturn position - it should be within reasonable bounds
-                        if multiturn_pos < 0 or multiturn_pos > max_position * 2:  # Allow some buffer
-                            # If multiturn position is invalid, use goal position as reference
-                            current_pos_display = f"{goal_pos} (goal)"
-                            multiturn_pos = goal_pos
-                        else:
-                            current_pos_display = f"{multiturn_pos} (multiturn)"
+                        current_pos_display = f"{multiturn_pos} (multiturn)"
                     except Exception as e:
                         current_pos_display = f"{present_pos} (single turn)"
-                        multiturn_pos = present_pos
                     
                     # Show prompt
                     user_input = input(f"\nCurrent position: {current_pos_display}, Goal: {goal_pos}\nEnter position (0-{max_position}) or command: ").strip()
@@ -444,10 +437,6 @@ class MotorSetupManager:
                         try:
                             goal_pos_2 = self.bus.read("Goal_Position_2", motor_name, normalize=False)
                             logger.info(f"Goal Position 2 (multiturn): {goal_pos_2}")
-                            if 0 <= goal_pos_2 <= max_position * 2:
-                                logger.info(f"Valid multiturn position: {goal_pos_2}")
-                            else:
-                                logger.warning(f"Invalid multiturn position: {goal_pos_2} (outside expected range)")
                         except Exception as e:
                             logger.warning(f"Could not read multiturn position: {e}")
                         continue
@@ -486,7 +475,7 @@ class MotorSetupManager:
                         self.bus.write("Goal_Position", motor_name, position, normalize=False)
                         
                         # Wait a moment and show movement
-                        time.sleep(1)  # Increased wait time for better tracking
+                        time.sleep(1)  # Wait for motor to respond
                         new_goal = self.bus.read("Goal_Position", motor_name, normalize=False)
                         if new_goal == position:
                             logger.info("Position command accepted successfully")
