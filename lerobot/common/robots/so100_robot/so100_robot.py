@@ -210,7 +210,7 @@ class SO100Robot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        arm_goal_pos = {k: v for k, v in action.items()}
+        arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
 
         # Check for NaN values and skip sending actions if any are found
         if any(np.isnan(v) for v in arm_goal_pos.values()):
@@ -226,7 +226,7 @@ class SO100Robot(Robot):
             arm_goal_pos = arm_safe_goal_pos
 
         # Send goal position to the actuators
-        arm_goal_pos_raw = {k: v for k, v in arm_goal_pos.items()}
+        arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in arm_goal_pos.items()}
         self.bus.sync_write("Goal_Position", arm_goal_pos_raw)
 
         return {**arm_goal_pos}
