@@ -54,7 +54,7 @@ def main():
     robot_config = SO100RobotConfig(id="so100_robot")
     robot = SO100Robot(robot_config)
 
-    logging.info("Connecting Sourccey V2 Beta")
+    logging.info("Connecting SO100 Robot")
     robot.connect()
 
     logging.info("Starting HostAgent")

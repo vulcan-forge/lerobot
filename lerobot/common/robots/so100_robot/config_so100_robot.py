@@ -30,7 +30,7 @@ def so100_server_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("so100_robot")
 @dataclass
 class SO100RobotConfig(RobotConfig):
-    port = "/dev/ttyACM0"  # port to connect to the bus
+    port = "/dev/ttyUSB0"  # port to connect to the bus
 
     disable_torque_on_disconnect: bool = True
 
