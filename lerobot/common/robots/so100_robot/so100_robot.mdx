@@ -50,7 +50,6 @@ python lerobot/scripts/train.py \
   --output_dir=outputs/train/act_so100_robot_001_tape_a \
   --job_name=act_so100_robot_001_tape_a \
   --policy.device=cuda \
-  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=100000
 ```
@@ -62,7 +61,6 @@ torchrun --nproc_per_node=2 lerobot/scripts/train.py \
   --output_dir=outputs/train/act_so100_robot_001_tape_a \
   --job_name=act_so100_robot_001_tape_a  \
   --policy.device=cuda \
-  --policy.use_amp=true \
   --wandb.enable=false \
   --steps=40000 \
   --batch_size=32 \
