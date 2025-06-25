@@ -50,11 +50,11 @@ class SO100RobotHost:
 
 
 def main():
-    logging.info("Configuring So100 Robot")
+    logging.info("Configuring SO100Robot")
     robot_config = SO100RobotConfig(id="so100_robot")
     robot = SO100Robot(robot_config)
 
-    logging.info("Connecting SO100 Robot")
+    logging.info("Connecting SO100Robot")
     robot.connect()
 
     logging.info("Starting HostAgent")
@@ -121,11 +121,11 @@ def main():
     except KeyboardInterrupt:
         print("Keyboard interrupt received. Exiting...")
     finally:
-        print("Shutting down SourcceyV2Beta Host.")
+        print("Shutting down SO100Robot Host.")
         robot.disconnect()
         host.disconnect()
 
-    logging.info("Finished SourcceyV2Beta cleanly")
+    logging.info("Finished SO100Robot cleanly")
 
 
 if __name__ == "__main__":

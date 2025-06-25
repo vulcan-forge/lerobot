@@ -210,7 +210,7 @@ class SO100Robot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
+        arm_goal_pos = {k: v for k, v in action.items()}
 
         # Check for NaN values and skip sending actions if any are found
         if any(np.isnan(v) for v in arm_goal_pos.values()):
