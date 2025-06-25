@@ -235,7 +235,6 @@ class SO100Robot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        self.stop_base()
         self.bus.disconnect(self.config.disable_torque_on_disconnect)
         for cam in self.cameras.values():
             cam.disconnect()

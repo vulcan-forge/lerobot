@@ -88,7 +88,6 @@ def main():
                     f"Command not received for more than {host.watchdog_timeout_ms} milliseconds. Stopping the base."
                 )
                 watchdog_active = True
-                robot.stop_base()
 
             last_observation = robot.get_observation()
 
