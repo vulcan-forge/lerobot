@@ -36,7 +36,7 @@ class EvaluateConfig:
     robot_id: str = "so100_robot"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "outputs/train/act_so100_robot_001_tape_a/checkpoints/040000/pretrained_model"
+    policy_name: str = "outputs/train/act_so100_robot_001_tape_a/checkpoints/020000/pretrained_model"
     # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration

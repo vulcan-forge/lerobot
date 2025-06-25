@@ -72,12 +72,12 @@ class SO100RobotClient(Robot):
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
             (
-                "arm_shoulder_pan.pos",
-                "arm_shoulder_lift.pos",
-                "arm_elbow_flex.pos",
-                "arm_wrist_flex.pos",
-                "arm_wrist_roll.pos",
-                "arm_gripper.pos",
+                "shoulder_pan.pos",
+                "shoulder_lift.pos",
+                "elbow_flex.pos",
+                "wrist_flex.pos",
+                "wrist_roll.pos",
+                "gripper.pos",
             ),
             float,
         )
