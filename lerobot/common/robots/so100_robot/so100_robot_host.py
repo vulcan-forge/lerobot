@@ -73,11 +73,7 @@ def main():
             loop_start_time = time.time()
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
-                if msg:
-                    print(msg)
                 data = dict(json.loads(msg))
-                if data:
-                    print(data)
                 _action_sent = robot.send_action(data)
                 last_cmd_time = time.time()
                 watchdog_active = False
