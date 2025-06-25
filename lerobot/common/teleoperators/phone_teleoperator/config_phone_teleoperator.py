@@ -35,8 +35,9 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     
     # IK solver settings
     target_link_name: str = "Fixed_Jaw"
-    rest_pose: tuple[float, ...] = (0.0, 2.733588, 2.411134, 0.322072, -1.570779, 0.849988)  # radians - initial position from IK solution
-    
+    # rest_pose: tuple[float, ...] = (0.0, 2.733588, 2.411134, 0.322072, -1.570779, 0.849988)  # radians - initial position from IK solution
+    rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # radians - initial robot positions
+
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
     sensitivity_normal: float = 0.5

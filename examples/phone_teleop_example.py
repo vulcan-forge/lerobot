@@ -134,14 +134,9 @@ def main():
                 
                 # Send action to robot
                 actual_action = robot.send_action(action)
-                
-                # Log timing (optional)
-                loop_time = time.perf_counter() - start_time
-                if loop_time > 0.1:  # Log if loop takes more than 100ms
-                    print(f"Loop time: {loop_time*1000:.1f}ms")
-                
+                                
                 # Control frequency (adjust as needed)
-                time.sleep(max(0, 1/30 - loop_time))  # Target ~30 Hz
+                time.sleep(max(0, 1/30))  # Target ~30 Hz
                 
             except KeyboardInterrupt:
                 print("\nStopping teleoperation...")
