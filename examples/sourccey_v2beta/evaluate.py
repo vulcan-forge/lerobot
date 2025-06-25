@@ -37,7 +37,7 @@ class EvaluateConfig:
     robot_id: str = "sourccey_v2beta"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_a/checkpoints/040000/pretrained_model"
+    policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_c/checkpoints/020000/pretrained_model"
     # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
