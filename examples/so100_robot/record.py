@@ -28,7 +28,7 @@ class RecordConfig:
     # Number of cycles per episode
     nb_cycles: int = 9000
     # Dataset repository ID (will append timestamp if not provided)
-    repo_id: str = "local/so100_robot_001_tape_a"
+    repo_id: str = "local/so100_robot_001_tape_b"
     # Recording FPS
     fps: int = 30
     # Warm up and reset time
