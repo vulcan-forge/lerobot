@@ -120,27 +120,31 @@ class SO100Robot(Robot):
 
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
+        self.bus.disable_torque()
+        for motor in self.bus.motors:
+            self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        motors = self.arm_motors # + self.base_motors
+        input(f"Move {self} to the middle of its range of motion and press ENTER....")
+        homing_offsets = self.bus.set_half_turn_homings()
 
-        self.bus.disable_torque(self.arm_motors)
-        for name in self.arm_motors:
-            self.bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
-
-        input("Move robot to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.bus.set_half_turn_homings(self.arm_motors)
-
-        unknown_range_motors = [motor for motor in motors]
+        full_turn_motor = "wrist_roll"
+        unknown_range_motors = [motor for motor in self.bus.motors if motor != full_turn_motor]
+        print(
+            f"Move all joints except '{full_turn_motor}' sequentially through their "
+            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
+        )
         range_mins, range_maxes = self.bus.record_ranges_of_motion(unknown_range_motors)
+        range_mins[full_turn_motor] = 0
+        range_maxes[full_turn_motor] = 4095
 
         self.calibration = {}
-        for name, motor in self.bus.motors.items():
-            self.calibration[name] = MotorCalibration(
-                id=motor.id,
+        for motor, m in self.bus.motors.items():
+            self.calibration[motor] = MotorCalibration(
+                id=m.id,
                 drive_mode=0,
-                homing_offset=homing_offsets[name],
-                range_min=range_mins[name],
-                range_max=range_maxes[name],
+                homing_offset=homing_offsets[motor],
+                range_min=range_mins[motor],
+                range_max=range_maxes[motor],
             )
 
         self.bus.write_calibration(self.calibration)
@@ -176,7 +180,6 @@ class SO100Robot(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
-
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
         flat_states = {**arm_state}
@@ -210,26 +213,25 @@ class SO100Robot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
+
+        goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
 
         # Check for NaN values and skip sending actions if any are found
-        if any(np.isnan(v) for v in arm_goal_pos.values()):
+        if any(np.isnan(v) for v in goal_pos.values()):
             logger.warning("NaN values detected in arm goal positions. Skipping action execution.")
-            return {**arm_goal_pos} #, **base_goal_vel}
+            return {**goal_pos}
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            present_pos = self.bus.sync_read("Present_Position", self.arm_motors)
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in arm_goal_pos.items()}
-            arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
-            arm_goal_pos = arm_safe_goal_pos
+            present_pos = self.bus.sync_read("Present_Position")
+            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
+            goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
 
-        # Send goal position to the actuators
-        arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in arm_goal_pos.items()}
-        self.bus.sync_write("Goal_Position", arm_goal_pos_raw)
+        # Send goal position to the arm
+        self.bus.sync_write("Goal_Position", goal_pos)
+        return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
-        return {**arm_goal_pos}
 
     def disconnect(self):
         if not self.is_connected:

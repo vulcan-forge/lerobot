@@ -105,6 +105,15 @@ def predict_action(
     robot_type: str | None = None,
 ):
     observation = copy(observation)
+
+    # Debug: Print observation keys and shapes
+    print(f"DEBUG: Observation keys: {list(observation.keys())}")
+    for key, value in observation.items():
+        if isinstance(value, np.ndarray):
+            print(f"DEBUG: {key} shape: {value.shape}, dtype: {value.dtype}, range: [{value.min():.3f}, {value.max():.3f}]")
+        else:
+            print(f"DEBUG: {key} = {value}")
+
     with (
         torch.inference_mode(),
         torch.autocast(device_type=device.type) if device.type == "cuda" and use_amp else nullcontext(),
@@ -122,9 +131,23 @@ def predict_action(
         observation["task"] = task if task else ""
         observation["robot_type"] = robot_type if robot_type else ""
 
+        # Debug: Print processed observation
+        print(f"DEBUG: Processed observation keys: {list(observation.keys())}")
+        for key, value in observation.items():
+            if isinstance(value, torch.Tensor):
+                print(f"DEBUG: {key} tensor shape: {value.shape}, dtype: {value.dtype}, range: [{value.min():.3f}, {value.max():.3f}]")
+            else:
+                print(f"DEBUG: {key} = {value}")
+
         # Compute the next action with the policy
         # based on the current observation
         action = policy.select_action(observation)
+
+        # Debug: Print action details
+        print(f"DEBUG: Raw action shape: {action.shape}, dtype: {action.dtype}")
+        print(f"DEBUG: Action range: [{action.min():.3f}, {action.max():.3f}]")
+        print(f"DEBUG: Action mean: {action.mean():.3f}, std: {action.std():.3f}")
+        print(f"DEBUG: Action values: {action}")
 
         # Remove batch dimension
         action = action.squeeze(0)
