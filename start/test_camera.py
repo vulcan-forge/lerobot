@@ -4,7 +4,7 @@ Camera Detection Script for LeRobot
 
 This script helps you find and test cameras connected to your system.
 It supports OpenCV cameras (webcams, built-in cameras), Intel RealSense cameras,
-and Raspberry Pi cameras.
+and Raspberry Pi cameras (using picamera2).
 
 Usage:
     python start/test_camera.py                    # Find all cameras
@@ -20,6 +20,7 @@ import logging
 import sys
 import time
 import subprocess
+import platform
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -55,49 +56,94 @@ except ImportError:
     logger.warning("RealSense support not available (pyrealsense2 not installed)")
     REALSENSE_AVAILABLE = False
 
-# Try to import PiCamera
+# Try to import PiCamera2 (modern Raspberry Pi camera library)
+PICAMERA2_AVAILABLE = False
 try:
-    from picamera import PiCamera
-    from picamera.array import PiRGBArray
-    PICAMERA_AVAILABLE = True
-except ImportError:
-    logger.warning("PiCamera support not available (picamera not installed)")
-    PICAMERA_AVAILABLE = False
+    from picamera2 import Picamera2
+    from picamera2.encoders import JpegEncoder
+    from picamera2.outputs import FileOutput
+    PICAMERA2_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"PiCamera2 support not available: {e}")
+    logger.info("To install PiCamera2: sudo apt-get install python3-picamera2")
+    logger.info("Or: pip install picamera2")
+
+
+def is_raspberry_pi() -> bool:
+    """
+    Check if we're running on a Raspberry Pi.
+    """
+    try:
+        # Check CPU info for Raspberry Pi
+        with open('/proc/cpuinfo', 'r') as f:
+            cpu_info = f.read()
+            if 'Raspberry Pi' in cpu_info or 'BCM2708' in cpu_info or 'BCM2835' in cpu_info or 'BCM2711' in cpu_info:
+                return True
+
+        # Check for Raspberry Pi model in /proc/device-tree
+        if Path('/proc/device-tree/model').exists():
+            with open('/proc/device-tree/model', 'r') as f:
+                model = f.read().strip()
+                if 'Raspberry Pi' in model:
+                    return True
+
+        # Check for Raspberry Pi specific files
+        if Path('/boot/config.txt').exists():
+            return True
+
+    except Exception:
+        pass
+
+    return False
 
 
 def check_raspberry_pi_camera() -> bool:
     """
     Check if Raspberry Pi camera is available using system commands.
     """
+    if not is_raspberry_pi():
+        logger.debug("Not running on Raspberry Pi")
+        return False
+
     try:
         # Check if camera is enabled in config
         result = subprocess.run(['vcgencmd', 'get_camera'],
                               capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             output = result.stdout.strip()
+            logger.debug(f"vcgencmd output: {output}")
             if 'detected=1' in output:
                 return True
 
         # Alternative check using v4l2-ctl
         result = subprocess.run(['v4l2-ctl', '--list-devices'],
                               capture_output=True, text=True, timeout=5)
-        if result.returncode == 0 and 'mmal' in result.stdout:
+        if result.returncode == 0:
+            output = result.stdout
+            logger.debug(f"v4l2-ctl output: {output}")
+            if 'mmal' in output or 'bcm2835-v4l2' in output or 'unicam' in output:
+                return True
+
+        # Check for camera modules in /dev
+        camera_devices = list(Path('/dev').glob('video*'))
+        if camera_devices:
+            logger.debug(f"Found video devices: {[str(d) for d in camera_devices]}")
             return True
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
-        pass
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError) as e:
+        logger.debug(f"Error checking camera: {e}")
 
     return False
 
 
 def find_raspberry_pi_cameras() -> List[Dict[str, Any]]:
     """
-    Find Raspberry Pi cameras.
+    Find Raspberry Pi cameras using PiCamera2.
     """
     cameras = []
 
-    if not PICAMERA_AVAILABLE:
-        logger.warning("PiCamera library not available")
+    if not PICAMERA2_AVAILABLE:
+        logger.warning("PiCamera2 library not available")
         return cameras
 
     logger.info("Searching for Raspberry Pi cameras...")
@@ -108,20 +154,35 @@ def find_raspberry_pi_cameras() -> List[Dict[str, Any]]:
             logger.debug("Raspberry Pi camera not detected in system")
             return cameras
 
-        # Try to initialize PiCamera
-        camera = PiCamera()
+        # Try to initialize PiCamera2
+        camera = Picamera2()
 
-        # Get camera properties
+        # Get camera info
+        camera_info = camera.camera_properties
+        logger.debug(f"Camera properties: {camera_info}")
+
+        # Get available camera configurations
+        configs = camera.sensor_modes
+        logger.debug(f"Available sensor modes: {len(configs)}")
+
+        # Use the first available configuration for default settings
+        if configs:
+            default_config = configs[0]
+            width = default_config.get('size', [1920, 1080])[0]
+            height = default_config.get('size', [1920, 1080])[1]
+            fps = default_config.get('fps', 30)
+        else:
+            width, height, fps = 1920, 1080, 30
+
         camera_info = {
             "name": "Raspberry Pi Camera Module",
             "type": "RaspberryPi",
-            "id": "picamera",
-            "resolution": f"{camera.resolution[0]}x{camera.resolution[1]}",
-            "framerate": camera.framerate,
+            "id": "picamera2",
+            "sensor_modes": len(configs),
             "default_stream_profile": {
-                "width": camera.resolution[0],
-                "height": camera.resolution[1],
-                "fps": camera.framerate,
+                "width": width,
+                "height": height,
+                "fps": fps,
                 "format": "RGB"
             }
         }
@@ -291,10 +352,8 @@ def print_camera_info(cameras: List[Dict[str, Any]]) -> None:
             print(f"   USB Type: {usb_type}")
 
         elif cam_info.get('type') == 'RaspberryPi':
-            resolution = cam_info.get('resolution', 'Unknown')
-            framerate = cam_info.get('framerate', 'Unknown')
-            print(f"   Resolution: {resolution}")
-            print(f"   Framerate: {framerate}")
+            sensor_modes = cam_info.get('sensor_modes', 'Unknown')
+            print(f"   Sensor Modes: {sensor_modes}")
 
         # Print stream profile
         profile = cam_info.get('default_stream_profile', {})
@@ -345,13 +404,14 @@ def test_camera_connection(camera_info: Dict[str, Any]) -> bool:
             return frame is not None
 
         elif cam_type == 'RaspberryPi':
-            if not PICAMERA_AVAILABLE:
+            if not PICAMERA2_AVAILABLE:
                 return False
 
-            camera = PiCamera()
-            raw_capture = PiRGBArray(camera)
-            camera.capture(raw_capture, format="rgb")
-            frame = raw_capture.array
+            camera = Picamera2()
+            camera.configure(camera.create_preview_configuration())
+            camera.start()
+            frame = camera.capture_array()
+            camera.stop()
             camera.close()
             return frame is not None
 
@@ -419,13 +479,14 @@ def capture_test_image(camera_info: Dict[str, Any], output_dir: Path) -> bool:
                 return True
 
         elif cam_type == 'RaspberryPi':
-            if not PICAMERA_AVAILABLE:
+            if not PICAMERA2_AVAILABLE:
                 return False
 
-            camera = PiCamera()
-            raw_capture = PiRGBArray(camera)
-            camera.capture(raw_capture, format="rgb")
-            frame = raw_capture.array
+            camera = Picamera2()
+            camera.configure(camera.create_preview_configuration())
+            camera.start()
+            frame = camera.capture_array()
+            camera.stop()
             camera.close()
 
             if frame is not None:
@@ -503,6 +564,7 @@ Examples:
     if not cameras:
         print("\n💡 Troubleshooting tips:")
         print("   • For Raspberry Pi cameras: Make sure camera is enabled in raspi-config")
+        print("   • Install PiCamera2: sudo apt-get install python3-picamera2")
         print("   • For USB cameras: Check if they're properly connected")
         print("   • Run with --verbose for more detailed information")
         return
