@@ -45,21 +45,21 @@ python -m examples.so100_robot.evaluate --display_data=true
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/so100_robot_001_tape_a \
+  --dataset.repo_id=local/so100_robot_001_tape_b \
   --policy.type=act \
-  --output_dir=outputs/train/act_so100_robot_001_tape_a \
-  --job_name=act_so100_robot_001_tape_a \
+  --output_dir=outputs/train/act_so100_robot_001_tape_b \
+  --job_name=act_so100_robot_001_tape_b \
   --policy.device=cuda \
   --wandb.enable=false \
-  --steps=100000
+  --steps=20000
 ```
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
-  --dataset.repo_id=local/so100_robot_001_tape_a  \
+  --dataset.repo_id=local/so100_robot_001_tape_b  \
   --policy.type=act \
-  --output_dir=outputs/train/act_so100_robot_001_tape_a \
-  --job_name=act_so100_robot_001_tape_a  \
+  --output_dir=outputs/train/act_so100_robot_001_tape_b \
+  --job_name=act_so100_robot_001_tape_b  \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=40000 \
