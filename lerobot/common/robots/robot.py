@@ -18,7 +18,7 @@ from typing import Any, Type
 
 import draccus
 
-from lerobot.common.constants import HF_LEROBOT_CALIBRATION, HF_LEROBOT_CONFIGURATION, ROBOTS
+from lerobot.common.constants import HF_LEROBOT_CALIBRATION, ROBOTS
 from lerobot.common.motors import MotorCalibration
 
 from .config import RobotConfig
@@ -53,15 +53,6 @@ class Robot(abc.ABC):
         self.calibration: dict[str, MotorCalibration] = {}
         if self.calibration_fpath.is_file():
             self._load_calibration()
-
-        # self.configuration_dir = (
-        #     config.configuration_dir if config.configuration_dir else HF_LEROBOT_CONFIGURATION / ROBOTS / self.name
-        # )
-        # self.configuration_dir.mkdir(parents=True, exist_ok=True)
-        # self.configuration_fpath = self.configuration_dir / f"{self.id}.json"
-        # self.configuration: dict[str, Any] = {}
-        # if self.configuration_fpath.is_file():
-        #     self._load_configuration()
 
     def __str__(self) -> str:
         return f"{self.id} {self.__class__.__name__}"
