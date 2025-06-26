@@ -157,9 +157,10 @@ class SourcceyV2Beta(Robot):
 
         self.calibration = {}
         for name, motor in self.bus.motors.items():
+            drive_mode = 1 if name == "right_arm_gripper" else 0
             self.calibration[name] = MotorCalibration(
                 id=motor.id,
-                drive_mode=0,
+                drive_mode=drive_mode,
                 homing_offset=homing_offsets[name],
                 range_min=range_mins[name],
                 range_max=range_maxes[name],
