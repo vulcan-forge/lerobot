@@ -64,69 +64,67 @@ def test_feetech_motor_sync_read():
             except Exception as e:
                 print(f"  ✗ {motor_name} (ID {motor.id}): Failed - {e}")
 
-        # Test sync read with longer delays between attempts
-        print("\nTesting sync read of Present_Position on all motors (with delays)...")
+        # Test sync read on ALL motors at once
+        print("\n=== TESTING SYNC READ ON ALL 12 MOTORS AT ONCE ===")
         success_count = 0
         total_attempts = 10
 
         for i in range(total_attempts):
             try:
+                print(f"\nAttempt {i+1}/{total_attempts}: Reading all motors simultaneously...")
                 positions = bus.sync_read("Present_Position", normalize=False)
                 success_count += 1
-                print(f"  Read {i+1}: Success - {len(positions)} motors responded")
-                if i == 0:  # Only show positions for first successful read
+                print(f"  ✓ SUCCESS: {len(positions)} motors responded")
+
+                # Show positions for first successful read and every 5th attempt
+                if i == 0 or (i + 1) % 5 == 0:
+                    print("  Motor positions:")
                     for motor_name, position in positions.items():
                         print(f"    {motor_name}: {position}")
-                time.sleep(0.2)  # Longer delay between reads
+
+                time.sleep(0.2)  # Delay between reads
             except Exception as e:
-                print(f"  Read {i+1}: Failed - {e}")
-                time.sleep(0.5)  # Even longer delay after failure
+                print(f"  ✗ FAILED: {e}")
+                time.sleep(0.5)  # Longer delay after failure
 
-        print(f"\nSync read success rate: {success_count}/{total_attempts} ({success_count/total_attempts*100:.1f}%)")
+        print(f"\n=== SYNC READ RESULTS ===")
+        print(f"Success rate: {success_count}/{total_attempts} ({success_count/total_attempts*100:.1f}%)")
 
-        # Test with different timing strategies
-        print("\nTesting different timing strategies...")
+        if success_count > 0:
+            print("✓ Sync read on all motors at once is working!")
+        else:
+            print("✗ Sync read on all motors at once failed consistently")
 
-        # Strategy 1: Read with longer delays
-        print("Strategy 1: Reading with 0.3s delays...")
+        # Test with different parameters
+        print("\n=== TESTING WITH DIFFERENT PARAMETERS ===")
+
+        # Test with increased retry count
+        print("Testing with 8 retries...")
         try:
-            time.sleep(0.3)
-            positions = bus.sync_read("Present_Position", normalize=False)
-            print(f"  ✓ Success after 0.3s delay")
-        except Exception as e:
-            print(f"  ✗ Failed after 0.3s delay: {e}")
-
-        # Strategy 2: Read left and right arms separately
-        print("Strategy 2: Reading arms separately...")
-        try:
-            left_arm_motors = ["left_arm_shoulder_pan", "left_arm_shoulder_lift", "left_arm_elbow_flex", "left_arm_wrist_flex", "left_arm_wrist_roll", "left_arm_gripper"]
-            right_arm_motors = ["right_arm_shoulder_pan", "right_arm_shoulder_lift", "right_arm_elbow_flex", "right_arm_wrist_flex", "right_arm_wrist_roll", "right_arm_gripper"]
-
-            left_positions = bus.sync_read("Present_Position", left_arm_motors)
-            time.sleep(0.01)  # Small delay for CH340
-            right_positions = bus.sync_read("Present_Position", right_arm_motors)
-
-            all_positions = {**left_positions, **right_positions}
-            print(f"  ✓ Success reading arms separately - {len(all_positions)} motors")
-        except Exception as e:
-            print(f"  ✗ Failed reading arms separately: {e}")
-
-        # Strategy 3: Test with different retry counts
-        print("Strategy 3: Testing with increased retry count...")
-        try:
-            # Temporarily increase retry count
             positions = bus.sync_read("Present_Position", normalize=False, num_retry=8)
-            print(f"  ✓ Success with 8 retries")
+            print(f"  ✓ Success with 8 retries: {len(positions)} motors")
         except Exception as e:
             print(f"  ✗ Failed with 8 retries: {e}")
 
-        # Read motors in smaller groups with delays
-        group1 = list(motors.keys())[:6]
-        group2 = list(motors.keys())[6:12]
+        # Test with longer delay before read
+        print("Testing with 0.3s delay before read...")
+        try:
+            time.sleep(0.3)
+            positions = bus.sync_read("Present_Position", normalize=False)
+            print(f"  ✓ Success after 0.3s delay: {len(positions)} motors")
+        except Exception as e:
+            print(f"  ✗ Failed after 0.3s delay: {e}")
 
-        positions1 = bus.sync_read("Present_Position", group1)
-        time.sleep(0.05)  # 50ms delay
-        positions2 = bus.sync_read("Present_Position", group2)
+        # Test reading different registers
+        print("Testing different registers...")
+        registers_to_test = ["Present_Position", "Present_Velocity", "Present_Load"]
+
+        for register in registers_to_test:
+            try:
+                values = bus.sync_read(register, normalize=False)
+                print(f"  ✓ {register}: {len(values)} motors responded")
+            except Exception as e:
+                print(f"  ✗ {register}: Failed - {e}")
 
     except Exception as e:
         print(f"✗ Connection failed: {e}")
