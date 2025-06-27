@@ -45,7 +45,7 @@ def test_feetech_motor_sync_read():
 
         # Test sync read of Present_Position
         print("\nTesting sync read of Present_Position...")
-        for i in range(5):
+        for i in range(12):
             try:
                 positions = bus.sync_read("Present_Position", ["test_motor"], normalize=False)
                 position = positions["test_motor"]
