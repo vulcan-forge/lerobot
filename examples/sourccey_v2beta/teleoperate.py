@@ -65,6 +65,9 @@ def teleoperate(cfg: TeleoperateConfig):
     telep_keyboard.connect()
 
     # Check connection status
+    print(f"Robot: {robot.is_connected}")
+    print(f"Leader Arm: {teleop_arm.is_connected}")
+    print(f"Keyboard: {telep_keyboard.is_connected}")
     if not all([robot.is_connected, teleop_arm.is_connected, telep_keyboard.is_connected]):
         print("Failed to connect to one or more devices:")
         print(f"  Robot: {robot.is_connected}")
