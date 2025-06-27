@@ -36,7 +36,7 @@ def test_feetech_motor_sync_read():
     }
 
     # Create the motors bus
-    port = "/dev/ttyUSB0"
+    port = "/dev/ttyACM0"
     bus = FeetechMotorsBus(port=port, motors=motors)
 
     print(f"Testing Feetech motor sync read on {port}")
