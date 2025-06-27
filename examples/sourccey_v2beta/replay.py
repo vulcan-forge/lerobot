@@ -17,8 +17,9 @@ class ReplayConfig:
     dataset_path: str = "local/sourccey_v2beta_towel_010_a"
     episode: int = 0
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
-    robot_id: str = "sourccey_v2beta"
+    robot_config_id: str | None = "sourccey_v2beta_client"
+    robot_ip: str | None = None # "192.168.1.191" # (First robot) # "192.168.1.169" # (Second robot)
+    robot_id: str | None = None # "sourccey_v2beta"
     # Display configuration
     display_data: bool = False
     rerun_session_name: str = "sourccey_v2beta_replay"
@@ -30,10 +31,16 @@ def replay(cfg: ReplayConfig):
         _init_rerun(session_name=cfg.rerun_session_name)
 
     # Initialize robot
-    robot_config = SourcceyV2BetaClientConfig(
-        remote_ip=cfg.robot_ip,
-        id=cfg.robot_id
-    )
+    if cfg.robot_config_id is not None:
+        robot_config = SourcceyV2BetaClientConfig(robot_config_id=cfg.robot_config_id)
+        print(f"Using robot configuration: {cfg.robot_config_id}")
+    else:
+        robot_config = SourcceyV2BetaClientConfig(
+            remote_ip=cfg.robot_ip,
+            id=cfg.robot_id
+        )
+        print(f"Using command line configuration - IP: {cfg.robot_ip}, ID: {cfg.robot_id}")
+
     robot = SourcceyV2BetaClient(robot_config)
 
     # Load dataset
@@ -41,8 +48,6 @@ def replay(cfg: ReplayConfig):
 
     # Connect to robot
     robot.connect()
-
-    # Check connection status
     if not robot.is_connected:
         print("Failed to connect to robot")
         return

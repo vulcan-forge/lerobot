@@ -13,8 +13,8 @@ from lerobot.common.datasets.utils import build_dataset_frame, hw_to_dataset_fea
 from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_leader.sourccey_v2beta_leader import SourcceyV2BetaLeader
+from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
+from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.sourccey_v2beta_teleop import SourcceyV2BetaTeleop
 from lerobot.common.utils.utils import init_logging, log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.common.utils.control_utils import init_keyboard_listener, is_headless
@@ -23,33 +23,31 @@ from lerobot.common.utils.robot_utils import busy_wait
 
 @dataclass
 class RecordConfig:
-    # Number of episodes to record
-    num_episodes: int = 1
-    # Number of cycles per episode
-    nb_cycles: int = 9000
-    # Dataset repository ID (will append timestamp if not provided)
     repo_id: str = "local/sourccey_v2beta_001_tape_c"
-    # Recording FPS
+    num_episodes: int = 1
+    nb_cycles: int = 9000
     fps: int = 30
+
     # Warm up and reset time
     reset_time_s: int | float = 10
     warmup_time_s: int | float = 5
-    # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
+
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
-    robot_id: str = "sourccey_v2beta"
-    # Leader arm configuration
-    leader_arm_port: str = "/dev/ttyUSB0" # "/dev/ttyUSB0" # "COM29"
-    leader_arm_id: str = "sourccey_v2beta_teleop"
+    robot_config_id: str | None = "sourccey_v2beta_client"
+    robot_ip: str | None = None # "192.168.1.191" # (First robot) # "192.168.1.169" # (Second robot)
+    robot_id: str | None = None # "sourccey_v2beta"
+    # Teleop configuration
+    teleop_config_id: str | None = "sourccey_v2beta_teleop"
+    teleop_port: str | None = None # "/dev/ttyUSB0"
+    teleop_id: str | None = None # "sourccey_v2beta_teleop"
     # Keyboard configuration
-    keyboard_id: str = "my_laptop_keyboard"
-    # Rerun session
+    keyboard_id: str | None = "keyboard"
+    # Rerun session name
     display_data: bool = False
     rerun_session_name: str = "sourccey_v2beta_teleoperation"
     # Use vocal synthesis to read events
     play_sounds: bool = True
-
 
 def record_loop(
     robot,
@@ -104,30 +102,42 @@ def record(cfg: RecordConfig):
         _init_rerun(session_name=cfg.rerun_session_name)
 
     # Initialize robot and teleop devices
-    robot_config = SourcceyV2BetaClientConfig(
-        remote_ip=cfg.robot_ip,
-        id=cfg.robot_id
-    )
-    leader_arm_config = SourcceyV2BetaLeaderConfig(
-        port=cfg.leader_arm_port,
-        id=cfg.leader_arm_id
-    )
+    if cfg.robot_config_id is not None:
+        robot_config = SourcceyV2BetaClientConfig(robot_config_id=cfg.robot_config_id)
+        print(f"Using robot configuration: {cfg.robot_config_id}")
+    else:
+        robot_config = SourcceyV2BetaClientConfig(
+            remote_ip=cfg.robot_ip,
+            id=cfg.robot_id
+        )
+        print(f"Using command line configuration - IP: {cfg.robot_ip}, ID: {cfg.robot_id}")
+
+    if cfg.teleop_config_id is not None:
+        teleop_arm_config = SourcceyV2BetaTeleopConfig(teleop_config_id=cfg.teleop_config_id)
+        print(f"Using teleop configuration: {cfg.teleop_config_id}")
+    else:
+        teleop_arm_config = SourcceyV2BetaTeleopConfig(
+            port=cfg.teleop_port,
+            id=cfg.teleop_id
+        )
+        print(f"Using command line configuration - Port: {cfg.teleop_port}, ID: {cfg.teleop_id}")
+
     keyboard_config = KeyboardTeleopConfig(id=cfg.keyboard_id)
 
     robot = SourcceyV2BetaClient(robot_config)
-    leader_arm = SourcceyV2BetaLeader(leader_arm_config)
+    teleop_arm = SourcceyV2BetaTeleop(teleop_arm_config)
     keyboard = KeyboardTeleop(keyboard_config)
 
     # Connect to all devices
     robot.connect()
-    leader_arm.connect()
+    teleop_arm.connect()
     keyboard.connect()
 
     # Check connection status
-    if not all([robot.is_connected, leader_arm.is_connected, keyboard.is_connected]):
+    if not all([robot.is_connected, teleop_arm.is_connected, keyboard.is_connected]):
         print("Failed to connect to one or more devices:")
         print(f"  Robot: {robot.is_connected}")
-        print(f"  Leader Arm: {leader_arm.is_connected}")
+        print(f"  Leader Arm: {teleop_arm.is_connected}")
         print(f"  Keyboard: {keyboard.is_connected}")
         return
 
@@ -187,7 +197,7 @@ def record(cfg: RecordConfig):
             log_say(f"Warming up for {cfg.warmup_time_s} seconds...", cfg.play_sounds)
             record_loop(
                 robot=robot,
-                leader_arm=leader_arm,
+                teleop_arm=teleop_arm,
                 keyboard=keyboard,
                 events=events,
                 fps=cfg.fps,
@@ -209,7 +219,7 @@ def record(cfg: RecordConfig):
 
             record_loop(
                 robot=robot,
-                leader_arm=leader_arm,
+                teleop_arm=teleop_arm,
                 keyboard=keyboard,
                 events=events,
                 fps=cfg.fps,
@@ -229,7 +239,7 @@ def record(cfg: RecordConfig):
                 log_say("Episode discarded, reset the environment", cfg.play_sounds)
                 record_loop(
                     robot=robot,
-                    leader_arm=leader_arm,
+                    teleop_arm=teleop_arm,
                     keyboard=keyboard,
                     events=events,
                     fps=cfg.fps,
@@ -250,7 +260,7 @@ def record(cfg: RecordConfig):
                 log_say("Reset the environment", cfg.play_sounds)
                 record_loop(
                     robot=robot,
-                    leader_arm=leader_arm,
+                    teleop_arm=teleop_arm,
                     keyboard=keyboard,
                     events=events,
                     fps=cfg.fps,
@@ -268,7 +278,7 @@ def record(cfg: RecordConfig):
         # Cleanup connections
         print("Disconnecting devices...")
         robot.disconnect()
-        leader_arm.disconnect()
+        teleop_arm.disconnect()
         keyboard.disconnect()
 
         # Cleanup keyboard listener

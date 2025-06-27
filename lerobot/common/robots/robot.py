@@ -54,15 +54,6 @@ class Robot(abc.ABC):
         if self.calibration_fpath.is_file():
             self._load_calibration()
 
-        # self.configuration_dir = (
-        #     config.configuration_dir if config.configuration_dir else HF_LEROBOT_CONFIGURATION / ROBOTS / self.name
-        # )
-        # self.configuration_dir.mkdir(parents=True, exist_ok=True)
-        # self.configuration_fpath = self.configuration_dir / f"{self.id}.json"
-        # self.configuration: dict[str, Any] = {}
-        # if self.configuration_fpath.is_file():
-        #     self._load_configuration()
-
     def __str__(self) -> str:
         return f"{self.id} {self.__class__.__name__}"
 
@@ -151,22 +142,6 @@ class Robot(abc.ABC):
         fpath = self.calibration_fpath if fpath is None else fpath
         with open(fpath, "w") as f, draccus.config_type("json"):
             draccus.dump(self.calibration, f, indent=4)
-
-    def _load_configuration(self, fpath: Path | None = None) -> None:
-        """
-        Helper to load configuration data from the specified file.
-        """
-        fpath = self.configuration_fpath if fpath is None else fpath
-        with open(fpath) as f, draccus.config_type("json"):
-            self.configuration = draccus.load(dict[str, Any], f)
-
-    def _save_configuration(self, fpath: Path | None = None) -> None:
-        """
-        Helper to save configuration data to the specified file.
-        """
-        fpath = self.configuration_fpath if fpath is None else fpath
-        with open(fpath, "w") as f, draccus.config_type("json"):
-            draccus.dump(self.configuration, f, indent=4)
 
     @abc.abstractmethod
     def configure(self) -> None:
