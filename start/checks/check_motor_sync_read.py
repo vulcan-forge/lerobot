@@ -100,11 +100,11 @@ def test_feetech_motor_sync_read():
         print("Strategy 2: Reading arms separately...")
         try:
             left_arm_motors = ["left_arm_shoulder_pan", "left_arm_shoulder_lift", "left_arm_elbow_flex", "left_arm_wrist_flex", "left_arm_wrist_roll", "left_arm_gripper"]
-            right_arm_motors = ["right_arm_shoulder_pan", "right_arm_shoulder_lift", "right_arm_elbow_flex", "right_arm_wrist_roll", "right_arm_gripper"] #, ] # ""] # "right_arm_wrist_flex"]
+            right_arm_motors = ["right_arm_shoulder_pan", "right_arm_shoulder_lift", "right_arm_elbow_flex", "right_arm_wrist_roll", "right_arm_gripper"]
 
-            left_positions = bus.sync_read("Present_Position", left_arm_motors, normalize=False)
-            time.sleep(0.1)
-            right_positions = bus.sync_read("Present_Position", right_arm_motors, normalize=False)
+            left_positions = bus.sync_read("Present_Position", left_arm_motors)
+            time.sleep(0.01)  # Small delay for CH340
+            right_positions = bus.sync_read("Present_Position", right_arm_motors)
 
             all_positions = {**left_positions, **right_positions}
             print(f"  ✓ Success reading arms separately - {len(all_positions)} motors")
