@@ -30,15 +30,15 @@ class PolicyType(Enum):
 class EvaluateConfig:
     # Evaluation parameters
     nb_cycles: int = 9000
-    # Control frequency (should match recording FPS)
     fps: int = 30
+
     # Robot configuration
-    robot_ip: str = "192.168.1.191"
-    robot_id: str = "sourccey_v2beta"
+    robot_config_id: str | None = "sourccey_v2beta_client"
+    robot_ip: str | None = None # "192.168.1.191" # (First robot) # "192.168.1.169" # (Second robot)
+    robot_id: str | None = None # "sourccey_v2beta"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
     policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_c/checkpoints/020000/pretrained_model"
-    # Task description for the dataset
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
     display_data: bool = False
@@ -77,19 +77,13 @@ def evaluate_loop(
 
     # Build dataset features for policy input (same as record.py)
     obs_features = hw_to_dataset_features(robot.observation_features, "observation", False)
-
-    # Get device
     device = get_safe_torch_device(policy.config.device)
 
     while timestamp < control_time_s:
         start_loop_t = time.perf_counter()
 
         observation = robot.get_observation()
-
-        # Build observation frame for policy (same as record.py)
         observation_frame = build_dataset_frame(obs_features, observation, prefix="observation")
-
-        # Get action from policy (same as record.py)
         action_values = predict_action(
             observation_frame,
             policy,
@@ -98,17 +92,13 @@ def evaluate_loop(
             task=task_description,
             robot_type=robot.robot_type,
         )
-
         action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
-
-        # Send action to robot (same as record.py)
         robot.send_action(action)
 
-        # Display data in Rerun (same as record.py)
         if should_display_data:
             display_data(observation, action)
 
-        # Maintain timing (same as record.py)
+        # Maintain timing
         dt_s = time.perf_counter() - start_loop_t
         busy_wait(1 / fps - dt_s)
 
@@ -121,10 +111,16 @@ def evaluate(cfg: EvaluateConfig):
         _init_rerun(session_name=cfg.rerun_session_name)
 
     # Initialize robot
-    robot_config = SourcceyV2BetaClientConfig(
-        remote_ip=cfg.robot_ip,
-        id=cfg.robot_id
-    )
+    if cfg.robot_config_id is not None:
+        robot_config = SourcceyV2BetaClientConfig(robot_config_id=cfg.robot_config_id)
+        print(f"Using robot configuration: {cfg.robot_config_id}")
+    else:
+        robot_config = SourcceyV2BetaClientConfig(
+            remote_ip=cfg.robot_ip,
+            id=cfg.robot_id
+        )
+        print(f"Using command line configuration - IP: {cfg.robot_ip}, ID: {cfg.robot_id}")
+
     robot = SourcceyV2BetaClient(robot_config)
 
     # Load policy based on type
@@ -133,8 +129,6 @@ def evaluate(cfg: EvaluateConfig):
 
     # Connect to robot
     robot.connect()
-
-    # Check connection status
     if not robot.is_connected:
         print("Failed to connect to robot")
         return

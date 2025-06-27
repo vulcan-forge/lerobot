@@ -25,20 +25,20 @@ from lerobot.common.motors.feetech import (
 )
 
 from ...teleoperator import Teleoperator
-from .config_sourccey_v2beta_leader import SourcceyV2BetaLeaderConfig
+from .config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
 
 logger = logging.getLogger(__name__)
 
 
-class SourcceyV2BetaLeader(Teleoperator):
+class SourcceyV2BetaTeleop(Teleoperator):
     """
-    [Sourccey V2 Beta Leader Arm] designed by Vulcan
+    [Sourccey V2 Beta Teleoperator] designed by Vulcan
     """
 
-    config_class = SourcceyV2BetaLeaderConfig
-    name = "sourccey_v2beta_leader"
+    config_class = SourcceyV2BetaTeleopConfig
+    name = "sourccey_v2beta_teleop"
 
-    def __init__(self, config: SourcceyV2BetaLeaderConfig):
+    def __init__(self, config: SourcceyV2BetaTeleopConfig):
         super().__init__(config)
         self.config = config
         self.bus = FeetechMotorsBus(

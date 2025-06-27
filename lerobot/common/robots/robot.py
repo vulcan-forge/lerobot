@@ -143,22 +143,6 @@ class Robot(abc.ABC):
         with open(fpath, "w") as f, draccus.config_type("json"):
             draccus.dump(self.calibration, f, indent=4)
 
-    def _load_configuration(self, fpath: Path | None = None) -> None:
-        """
-        Helper to load configuration data from the specified file.
-        """
-        fpath = self.configuration_fpath if fpath is None else fpath
-        with open(fpath) as f, draccus.config_type("json"):
-            self.configuration = draccus.load(dict[str, Any], f)
-
-    def _save_configuration(self, fpath: Path | None = None) -> None:
-        """
-        Helper to save configuration data to the specified file.
-        """
-        fpath = self.configuration_fpath if fpath is None else fpath
-        with open(fpath, "w") as f, draccus.config_type("json"):
-            draccus.dump(self.configuration, f, indent=4)
-
     @abc.abstractmethod
     def configure(self) -> None:
         """
