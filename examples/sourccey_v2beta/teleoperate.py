@@ -57,22 +57,20 @@ def teleoperate(cfg: TeleoperateConfig):
 
     robot = SourcceyV2BetaClient(robot_config)
     teleop_arm = SourcceyV2BetaTeleop(teleop_arm_config)
-    telep_keyboard = KeyboardTeleop(teleop_keyboard_config)
+    # telep_keyboard = KeyboardTeleop(teleop_keyboard_config)
 
     # Connect to all devices
     robot.connect()
     teleop_arm.connect()
-    telep_keyboard.connect()
+    # telep_keyboard.connect()
 
     # Check connection status
     print(f"Robot: {robot.is_connected}")
     print(f"Leader Arm: {teleop_arm.is_connected}")
-    print(f"Keyboard: {telep_keyboard.is_connected}")
-    if not all([robot.is_connected, teleop_arm.is_connected, telep_keyboard.is_connected]):
+    if not all([robot.is_connected, teleop_arm.is_connected]):
         print("Failed to connect to one or more devices:")
         print(f"  Robot: {robot.is_connected}")
         print(f"  Leader Arm: {teleop_arm.is_connected}")
-        print(f"  Keyboard: {telep_keyboard.is_connected}")
         return
 
     print()
