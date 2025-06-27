@@ -22,17 +22,17 @@ def test_feetech_motor_sync_read():
     # Define the motor configuration - EXACTLY as used in teleoperation
     motors = {
         "left_arm_shoulder_pan": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_elbow_flex": Motor(3, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
-        "right_arm_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
+        # "left_arm_shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "left_arm_elbow_flex": Motor(3, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "left_arm_wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "left_arm_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+        # "right_arm_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "right_arm_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
+        # "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
     }
 
     # Create the motors bus
@@ -40,7 +40,7 @@ def test_feetech_motor_sync_read():
     bus = FeetechMotorsBus(port=port, motors=motors)
 
     print(f"Testing Feetech motor sync read on {port}")
-    print(f"Testing all 12 motors (IDs 1-12)")
+    print(f"Testing all {len(motors)} motors (IDs 1-{len(motors)})")
     print(f"Motor Model: sts3215")
     print("-" * 50)
 
