@@ -45,14 +45,18 @@ python examples/sourccey_v2beta/evaluate.py --display_data=true
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/sourccey_v2beta_001_tape_c \
+  --dataset.repo_id=local/sourccey_v2beta-001__tape-a__set000 \
   --policy.type=act \
-  --output_dir=outputs/train/act_sourccey_v2beta_001_tape_c \
-  --job_name=act_sourccey_v2beta_001_tape_c \
+  --output_dir=outputs/train/act__sourccey_v2beta-001__tape-a__set000 \
+  --job_name=act__sourccey_v2beta-001__tape-a__set000 \
   --policy.device=cuda \
   --wandb.enable=false \
   --steps=20000
 ```
+
+
+
+
 
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \

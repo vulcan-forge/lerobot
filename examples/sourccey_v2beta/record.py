@@ -23,7 +23,7 @@ from lerobot.common.utils.robot_utils import busy_wait
 
 @dataclass
 class RecordConfig:
-    repo_id: str = "local/sourccey_v2beta_001_tape_c"
+    repo_id: str = "local/sourccey_v2beta-001__tape-a__set000"
     num_episodes: int = 1
     nb_cycles: int = 9000
     fps: int = 30

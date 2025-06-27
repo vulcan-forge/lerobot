@@ -38,7 +38,7 @@ class EvaluateConfig:
     robot_id: str | None = None # "sourccey_v2beta"
     # Policy configuration
     policy_type: PolicyType = PolicyType.ACT
-    policy_name: str = "outputs/train/act_sourccey_v2beta_001_tape_c/checkpoints/020000/pretrained_model"
+    policy_name: str = "outputs/train/act__sourccey_v2beta-001__tape-a__set000/checkpoints/020000/pretrained_model"
     task_description: str = "Grab the tape and put it in the cup"
     # Display configuration
     display_data: bool = False
