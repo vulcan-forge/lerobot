@@ -28,7 +28,7 @@ def test_feetech_motor_sync_read():
         "left_arm_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
         "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
         "right_arm_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-        # "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
         # "right_arm_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
         # "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
         # "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
@@ -100,7 +100,7 @@ def test_feetech_motor_sync_read():
         print("Strategy 2: Reading arms separately...")
         try:
             left_arm_motors = ["left_arm_shoulder_pan", "left_arm_shoulder_lift", "left_arm_elbow_flex", "left_arm_wrist_flex", "left_arm_wrist_roll", "left_arm_gripper"]
-            right_arm_motors = ["right_arm_shoulder_pan"] # "right_arm_shoulder_lift", "right_arm_elbow_flex",
+            right_arm_motors = ["right_arm_shoulder_pan", "right_arm_shoulder_lift"] # "right_arm_elbow_flex",
                             #    "right_arm_wrist_flex", "right_arm_wrist_roll", "right_arm_gripper"]
 
             left_positions = bus.sync_read("Present_Position", left_arm_motors, normalize=False)
