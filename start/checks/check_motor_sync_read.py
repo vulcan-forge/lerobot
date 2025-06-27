@@ -120,6 +120,14 @@ def test_feetech_motor_sync_read():
         except Exception as e:
             print(f"  ✗ Failed with 8 retries: {e}")
 
+        # Read motors in smaller groups with delays
+        group1 = list(motors.keys())[:6]
+        group2 = list(motors.keys())[6:12]
+
+        positions1 = bus.sync_read("Present_Position", group1)
+        time.sleep(0.05)  # 50ms delay
+        positions2 = bus.sync_read("Present_Position", group2)
+
     except Exception as e:
         print(f"✗ Connection failed: {e}")
         return False
