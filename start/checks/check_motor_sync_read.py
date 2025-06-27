@@ -30,7 +30,7 @@ def test_feetech_motor_sync_read():
         "right_arm_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
         "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
         "right_arm_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
-        # "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
         # "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
         # "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
     }
