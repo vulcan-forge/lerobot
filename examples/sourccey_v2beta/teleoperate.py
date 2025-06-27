@@ -85,7 +85,7 @@ def teleoperate(cfg: TeleoperateConfig):
         while True:
             observation = robot.get_observation()
             arm_action = teleop_arm.get_action()
-            keyboard_keys = telep_keyboard.get_action()
+            # keyboard_keys = telep_keyboard.get_action()
 
             # Display all data in Rerun
             if cfg.display_data:
@@ -101,7 +101,7 @@ def teleoperate(cfg: TeleoperateConfig):
         rr.rerun_shutdown()
         robot.disconnect()
         teleop_arm.disconnect()
-        telep_keyboard.disconnect()
+        # telep_keyboard.disconnect()
         print("Teleoperation ended")
 
 
