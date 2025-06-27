@@ -20,17 +20,16 @@ def test_feetech_motor_sync_read():
 
     # Define the motor configuration
     motors = {
-        "test_motor": Motor(1, "scs0009", MotorNormMode.RANGE_M100_100)
+        "test_motor": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100)
     }
 
     # Create the motors bus
     port = "/dev/ttyUSB0"
-    bus = FeetechMotorsBus(port=port, motors=motors, protocol_version=2)
+    bus = FeetechMotorsBus(port=port, motors=motors)
 
     print(f"Testing Feetech motor sync read on {port}")
     print(f"Motor ID: 1")
-    print(f"Motor Model: scs0009")
-    print(f"Protocol Version: 2")
+    print(f"Motor Model: sts3215")
     print("-" * 50)
 
     try:
