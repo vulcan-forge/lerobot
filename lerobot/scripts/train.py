@@ -342,6 +342,9 @@ def train(cfg: TrainPipelineConfig):
 
     logging.info("End of training")
 
+    if cfg.policy.push_to_hub:
+        policy.push_model_to_hub(cfg)
+
 
 if __name__ == "__main__":
     init_logging()
