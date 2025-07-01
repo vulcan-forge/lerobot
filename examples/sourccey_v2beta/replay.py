@@ -11,7 +11,7 @@ EPISODE_IDX = 0
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
 robot = SourcceyV2BetaClient(robot_config)
 
-dataset = LeRobotDataset("lerobot/sourccey_v2beta", episodes=[EPISODE_IDX])
+dataset = LeRobotDataset("local/sourccey_v2beta-001__tape-a__set000", episodes=[EPISODE_IDX])
 actions = dataset.hf_dataset.select_columns("action")
 
 robot.connect()
