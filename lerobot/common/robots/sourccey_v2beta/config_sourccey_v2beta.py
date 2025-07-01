@@ -40,9 +40,6 @@ def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
 class SourcceyV2BetaConfig(RobotConfig):
-    robot_config_id: str = "sourccey_v2beta"
-
-    # Default Values that are overridden by the robot_config_id
     port: str = "/dev/ttyACM0"
 
     disable_torque_on_disconnect: bool = True

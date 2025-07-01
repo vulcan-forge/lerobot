@@ -22,8 +22,6 @@ import time
 import cv2
 import zmq
 
-from lerobot.common.constants import OBS_IMAGES
-
 from .config_sourccey_v2beta import SourcceyV2BetaConfig, SourcceyV2BetaHostConfig
 from .sourccey_v2beta import SourcceyV2Beta
 
@@ -51,7 +49,7 @@ class SourcceyV2BetaHost:
 
 def main():
     logging.info("Configuring Sourccey V2 Beta")
-    robot_config = SourcceyV2BetaConfig(id="sourccey_v2beta", robot_config_id="sourccey_v2beta")
+    robot_config = SourcceyV2BetaConfig()
     robot = SourcceyV2Beta(robot_config)
 
     logging.info("Connecting Sourccey V2 Beta")
@@ -78,7 +76,8 @@ def main():
                 last_cmd_time = time.time()
                 watchdog_active = False
             except zmq.Again:
-                pass
+                if not watchdog_active:
+                    logging.warning("No command available")
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
 
@@ -95,12 +94,12 @@ def main():
             # Encode ndarrays to base64 strings
             for cam_key, _ in robot.cameras.items():
                 ret, buffer = cv2.imencode(
-                    ".jpg", last_observation[f"{OBS_IMAGES}.{cam_key}"], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+                    ".jpg", last_observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
                 )
                 if ret:
-                    last_observation[f"{OBS_IMAGES}.{cam_key}"] = base64.b64encode(buffer).decode("utf-8")
+                    last_observation[cam_key] = base64.b64encode(buffer).decode("utf-8")
                 else:
-                    last_observation[f"{OBS_IMAGES}.{cam_key}"] = ""
+                    last_observation[cam_key] = ""
 
             # Send the observation to the remote agent
             try:

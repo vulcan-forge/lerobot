@@ -214,6 +214,9 @@ class SourcceyV2BetaClient(Robot):
             if frame is not None:
                 current_frames[cam_name] = frame
 
+        print()
+        print(current_frames)
+        print()
         return current_frames, obs_dict
 
     def _get_data(self) -> Tuple[Dict[str, np.ndarray], Dict[str, Any], Dict[str, Any]]:
