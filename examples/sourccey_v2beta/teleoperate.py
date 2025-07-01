@@ -1,109 +1,48 @@
-from dataclasses import dataclass
-import draccus
-import rerun as rr
-from examples.sourccey_v2beta.utils import display_data
+import time
+
 from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
-from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.common.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.sourccey_v2beta_teleop import SourcceyV2BetaTeleop
+from lerobot.common.utils.robot_utils import busy_wait
+from lerobot.common.utils.visualization_utils import _init_rerun, log_rerun_data
 
-@dataclass
-class TeleoperateConfig:
-    # Limit the maximum frames per second
-    fps: int = 60
-    # Robot configuration
-    robot_config_id: str | None = "sourccey_v2beta_client"
-    robot_ip: str | None = None # "192.168.1.191" # (First robot) # "192.168.1.169" # (Second robot)
-    robot_id: str | None = None # "sourccey_v2beta"
-    # Teleop configuration
-    teleop_config_id: str | None = "sourccey_v2beta_teleop"
-    teleop_port: str | None = None # "/dev/ttyUSB0"
-    teleop_id: str | None = None # "sourccey_v2beta_teleop"
-    # Keyboard configuration
-    keyboard_id: str | None = "keyboard"
-    # Rerun session name
-    display_data: bool = False
-    rerun_session_name: str = "sourccey_v2beta_teleoperation"
+FPS = 30
 
-@draccus.wrap()
-def teleoperate(cfg: TeleoperateConfig):
-    if cfg.display_data:
-        _init_rerun(session_name=cfg.rerun_session_name)
+# Create the robot and teleoperator configurations
+robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
+teleop_arm_config = SourcceyV2BetaTeleopConfig(port="COM13", id="sourccey_v2beta_teleop")
+keyboard_config = KeyboardTeleopConfig(id="my_laptop_keyboard")
 
-    # Initialize robot and teleop devices
-    if cfg.robot_config_id is not None:
-        robot_config = SourcceyV2BetaClientConfig(robot_config_id=cfg.robot_config_id)
-        print(f"Using robot configuration: {cfg.robot_config_id}")
-    else:
-        robot_config = SourcceyV2BetaClientConfig(
-            remote_ip=cfg.robot_ip,
-            id=cfg.robot_id
-        )
-        print(f"Using command line configuration - IP: {cfg.robot_ip}, ID: {cfg.robot_id}")
+robot = SourcceyV2BetaClient(robot_config)
+leader_arm = SourcceyV2BetaTeleop(teleop_arm_config)
+keyboard = KeyboardTeleop(keyboard_config)
 
-    if cfg.teleop_config_id is not None:
-        teleop_arm_config = SourcceyV2BetaTeleopConfig(teleop_config_id=cfg.teleop_config_id)
-        print(f"Using teleop configuration: {cfg.teleop_config_id}")
-    else:
-        teleop_arm_config = SourcceyV2BetaTeleopConfig(
-            port=cfg.teleop_port,
-            id=cfg.teleop_id
-        )
-        print(f"Using command line configuration - Port: {cfg.teleop_port}, ID: {cfg.teleop_id}")
+# To connect you already should have this script running on LeKiwi: `python -m lerobot.common.robots.lekiwi.lekiwi_host --robot.id=my_awesome_kiwi`
+robot.connect()
+leader_arm.connect()
+keyboard.connect()
 
-    teleop_keyboard_config = KeyboardTeleopConfig(id=cfg.keyboard_id)
+_init_rerun(session_name="lekiwi_teleop")
 
-    robot = SourcceyV2BetaClient(robot_config)
-    teleop_arm = SourcceyV2BetaTeleop(teleop_arm_config)
-    # telep_keyboard = KeyboardTeleop(teleop_keyboard_config)
+if not robot.is_connected or not leader_arm.is_connected or not keyboard.is_connected:
+    raise ValueError("Robot, leader arm of keyboard is not connected!")
 
-    # Connect to all devices
-    robot.connect()
-    teleop_arm.connect()
-    # telep_keyboard.connect()
+while True:
+    t0 = time.perf_counter()
 
-    # Check connection status
-    print(f"Robot: {robot.is_connected}")
-    print(f"Leader Arm: {teleop_arm.is_connected}")
-    if not all([robot.is_connected, teleop_arm.is_connected]):
-        print("Failed to connect to one or more devices:")
-        print(f"  Robot: {robot.is_connected}")
-        print(f"  Leader Arm: {teleop_arm.is_connected}")
-        return
+    observation = robot.get_observation()
 
-    print()
-    print("Sourccey V2 Beta Teleoperation initialized")
-    print(f"Robot IP: {robot_config.remote_ip}")
-    print(f"Robot ID: {robot_config.id}")
-    print(f"Leader Arm Port: {cfg.teleop_port}")
-    print(f"Display Data: {cfg.display_data}")
-    print("Press Ctrl+C to stop teleoperation")
+    arm_action = leader_arm.get_action()
 
-    try:
-        while True:
-            observation = robot.get_observation()
-            arm_action = teleop_arm.get_action()
-            # keyboard_keys = telep_keyboard.get_action()
+    keyboard_keys = keyboard.get_action()
+    base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-            # Display all data in Rerun
-            if cfg.display_data:
-                display_data(observation, arm_action)
+    log_rerun_data(observation, {**arm_action, **base_action})
 
-            action = arm_action
-            robot.send_action(action)
+    action = {**arm_action, **base_action} if len(base_action) > 0 else arm_action
 
-    except KeyboardInterrupt:
-        print("\nTeleoperation stopped by user")
-    finally:
-        print("Cleaning up...")
-        rr.rerun_shutdown()
-        robot.disconnect()
-        teleop_arm.disconnect()
-        # telep_keyboard.disconnect()
-        print("Teleoperation ended")
+    robot.send_action(action)
 
-
-if __name__ == "__main__":
-    teleoperate()
+    busy_wait(max(1.0 / FPS - (time.perf_counter() - t0), 0.0))
