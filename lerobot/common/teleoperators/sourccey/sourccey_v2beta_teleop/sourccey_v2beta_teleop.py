@@ -109,7 +109,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
         for motor in self.right_arm_bus.motors:
             self.right_arm_bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        input(f"Move left arm Teleoperator to the middle of its range of motion and press ENTER....")
+        input(f"Move left arm teleoperator to the middle of its range of motion and press ENTER....")
         left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
 
         left_arm_full_turn_motor = ["left_arm_wrist_roll"]
@@ -124,7 +124,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
             left_arm_range_mins[name] = 0
             left_arm_range_maxes[name] = 4095
 
-        input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
+        input("Move right arm teleoperator to the middle of its range of motion and press ENTER....")
         right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
 
         right_arm_full_turn_motor = ["right_arm_wrist_roll"]

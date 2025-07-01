@@ -8,7 +8,7 @@ from lerobot.common.utils.utils import log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 1
+NUM_EPISODES = 10
 FPS = 30
 EPISODE_TIME_SEC = 60
 TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
