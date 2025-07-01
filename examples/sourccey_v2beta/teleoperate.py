@@ -19,12 +19,12 @@ robot = SourcceyV2BetaClient(robot_config)
 leader_arm = SourcceyV2BetaTeleop(teleop_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
-# To connect you already should have this script running on LeKiwi: `python -m lerobot.common.robots.lekiwi.lekiwi_host --robot.id=my_awesome_kiwi`
+# To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
 leader_arm.connect()
 keyboard.connect()
 
-_init_rerun(session_name="lekiwi_teleop")
+_init_rerun(session_name="sourccey_v2beta_teleop")
 
 if not robot.is_connected or not leader_arm.is_connected or not keyboard.is_connected:
     raise ValueError("Robot, leader arm of keyboard is not connected!")
@@ -39,9 +39,6 @@ while True:
     keyboard_keys = keyboard.get_action()
     base_action = robot._from_keyboard_to_base_action(keyboard_keys)
 
-    print()
-    print(observation)
-    print()
     log_rerun_data(observation, {**arm_action, **base_action})
 
     action = {**arm_action, **base_action} if len(base_action) > 0 else arm_action
