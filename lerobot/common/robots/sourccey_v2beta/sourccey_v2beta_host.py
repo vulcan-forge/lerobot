@@ -92,7 +92,6 @@ def main():
             last_observation = robot.get_observation()
 
             # Encode ndarrays to base64 strings
-            print(robot.cameras.items())
             for cam_key, _ in robot.cameras.items():
                 ret, buffer = cv2.imencode(
                     ".jpg", last_observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
