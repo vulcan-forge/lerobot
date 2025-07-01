@@ -63,7 +63,7 @@ class SourcceyV2Beta(Robot):
                 "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
                 "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
             },
-            calibration=self.calibration,
+            calibration={k: v for k, v in self.calibration.items() if k.startswith("left_arm")},
         )
         self.right_arm_bus = FeetechMotorsBus(
             port=config.right_arm_port,
@@ -75,7 +75,7 @@ class SourcceyV2Beta(Robot):
                 "right_arm_wrist_roll": Motor(11, "sts3215", norm_mode_body),
                 "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
             },
-            calibration=self.calibration,
+            calibration={k: v for k, v in self.calibration.items() if k.startswith("right_arm")},
         )
         self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
         self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
