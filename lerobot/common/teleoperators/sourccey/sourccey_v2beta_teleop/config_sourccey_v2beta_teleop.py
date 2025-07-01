@@ -26,4 +26,5 @@ from ...config import TeleoperatorConfig
 @dataclass
 class SourcceyV2BetaTeleopConfig(TeleoperatorConfig):
     # Port to connect to the arm
-    port: str
+    left_arm_port: str
+    right_arm_port: str
