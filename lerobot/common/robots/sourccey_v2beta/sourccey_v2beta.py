@@ -136,7 +136,7 @@ class SourcceyV2Beta(Robot):
 
     @property
     def is_calibrated(self) -> bool:
-        return self.bus.is_calibrated
+        return self.left_arm_bus.is_calibrated and self.right_arm_bus.is_calibrated
 
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
