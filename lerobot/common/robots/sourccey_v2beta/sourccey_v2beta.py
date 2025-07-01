@@ -178,9 +178,9 @@ class SourcceyV2Beta(Robot):
             right_arm_range_mins[name] = 0
             right_arm_range_maxes[name] = 4095
 
-        self.calibration = {}
+        self.left_arm_calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
-            self.calibration[name] = MotorCalibration(
+            self.left_arm_calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=0,
                 homing_offset=left_arm_homing_offsets[name],
@@ -188,9 +188,10 @@ class SourcceyV2Beta(Robot):
                 range_max=left_arm_range_maxes[name],
             )
 
+        self.right_arm_calibration = {}
         for name, motor in self.right_arm_bus.motors.items():
             drive_mode = 1 if name == "right_arm_gripper" else 0
-            self.calibration[name] = MotorCalibration(
+            self.right_arm_calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=drive_mode,
                 homing_offset=right_arm_homing_offsets[name],
@@ -198,8 +199,10 @@ class SourcceyV2Beta(Robot):
                 range_max=right_arm_range_maxes[name],
             )
 
-        self.left_arm_bus.write_calibration(self.calibration)
-        self.right_arm_bus.write_calibration(self.calibration)
+        self.left_arm_bus.write_calibration(self.left_arm_calibration)
+        self.right_arm_bus.write_calibration(self.right_arm_calibration)
+
+        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
