@@ -149,32 +149,43 @@ class SourcceyV2Beta(Robot):
             self.right_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
 
         input("Move left arm of the robot to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
-        input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+        left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
 
-        full_turn_motor = ["right_arm_wrist_roll", "left_arm_wrist_roll"]
-        left_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in full_turn_motor]
-        right_unknown_range_motors = [motor for motor in self.right_arm_motors if motor not in full_turn_motor]
+        left_arm_full_turn_motor = ["left_arm_wrist_roll"]
+        left_arm_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in left_arm_full_turn_motor]
 
         print(
-            f"Move all arm joints except '{full_turn_motor}' sequentially through their "
+            f"Move all arm joints except '{left_arm_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
-        range_mins, range_maxes = self.left_arm_bus.record_ranges_of_motion(left_unknown_range_motors)
-        range_mins, range_maxes = self.right_arm_bus.record_ranges_of_motion(right_unknown_range_motors)
-        for name in full_turn_motor:
-            range_mins[name] = 0
-            range_maxes[name] = 4095
+        left_arm_range_mins, left_arm_range_maxes = self.left_arm_bus.record_ranges_of_motion(left_arm_unknown_range_motors)
+        for name in left_arm_full_turn_motor:
+            left_arm_range_mins[name] = 0
+            left_arm_range_maxes[name] = 4095
+
+        input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
+        right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+
+        right_arm_full_turn_motor = ["right_arm_wrist_roll"]
+        right_arm_unknown_range_motors = [motor for motor in self.right_arm_motors if motor not in right_arm_full_turn_motor]
+
+        print(
+            f"Move all arm joints except '{right_arm_full_turn_motor}' sequentially through their "
+            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
+        )
+        right_arm_range_mins, right_arm_range_maxes = self.right_arm_bus.record_ranges_of_motion(right_arm_unknown_range_motors)
+        for name in right_arm_full_turn_motor:
+            right_arm_range_mins[name] = 0
+            right_arm_range_maxes[name] = 4095
 
         self.calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
             self.calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=0,
-                homing_offset=homing_offsets[name],
-                range_min=range_mins[name],
-                range_max=range_maxes[name],
+                homing_offset=left_arm_homing_offsets[name],
+                range_min=left_arm_range_mins[name],
+                range_max=left_arm_range_maxes[name],
             )
 
         for name, motor in self.right_arm_bus.motors.items():
@@ -182,9 +193,9 @@ class SourcceyV2Beta(Robot):
             self.calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=drive_mode,
-                homing_offset=homing_offsets[name],
-                range_min=range_mins[name],
-                range_max=range_maxes[name],
+                homing_offset=right_arm_homing_offsets[name],
+                range_min=right_arm_range_mins[name],
+                range_max=right_arm_range_maxes[name],
             )
 
         self.left_arm_bus.write_calibration(self.calibration)
