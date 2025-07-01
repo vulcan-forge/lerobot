@@ -57,12 +57,12 @@ class SourcceyV2Beta(Robot):
             port=self.config.port,
             motors={
                 # arm
-                "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
-                "left_arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body, gear_ratio=3.0),
-                "left_arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
-                "left_arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
-                "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
-                "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+                # "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
+                # "left_arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body, gear_ratio=3.0),
+                # "left_arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
+                # "left_arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
+                # "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
+                # "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
                 "right_arm_shoulder_pan": Motor(7, "sts3215", norm_mode_body),
                 "right_arm_shoulder_lift": Motor(8, "sts3215", norm_mode_body, gear_ratio=3.0),
                 "right_arm_elbow_flex": Motor(9, "sts3215", norm_mode_body),
@@ -79,12 +79,12 @@ class SourcceyV2Beta(Robot):
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
             (
-                "left_arm_shoulder_pan.pos",
-                "left_arm_shoulder_lift.pos",
-                "left_arm_elbow_flex.pos",
-                "left_arm_wrist_flex.pos",
-                "left_arm_wrist_roll.pos",
-                "left_arm_gripper.pos",
+                # "left_arm_shoulder_pan.pos",
+                # "left_arm_shoulder_lift.pos",
+                # "left_arm_elbow_flex.pos",
+                # "left_arm_wrist_flex.pos",
+                # "left_arm_wrist_roll.pos",
+                # "left_arm_gripper.pos",
                 "right_arm_shoulder_pan.pos",
                 "right_arm_shoulder_lift.pos",
                 "right_arm_elbow_flex.pos",
