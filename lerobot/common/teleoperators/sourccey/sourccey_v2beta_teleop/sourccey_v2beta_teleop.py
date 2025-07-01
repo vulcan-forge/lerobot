@@ -51,7 +51,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
                 "left_arm_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
                 "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
             },
-            calibration=self.calibration,
+            calibration={k: v for k, v in self.calibration.items() if k.startswith("left_arm")},
         )
         self.right_arm_bus = FeetechMotorsBus(
             port=self.config.right_arm_port,
@@ -63,6 +63,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
                 "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
                 "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
             },
+            calibration={k: v for k, v in self.calibration.items() if k.startswith("right_arm")},
         )
         self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
         self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
@@ -187,13 +188,13 @@ class SourcceyV2BetaTeleop(Teleoperator):
 
     def get_action(self) -> dict[str, float]:
         start = time.perf_counter()
-        action = self.left_arm_bus.sync_read("Present_Position")
-        action = {f"{motor}.pos": val for motor, val in action.items()}
-        action = self.right_arm_bus.sync_read("Present_Position")
-        action = {f"{motor}.pos": val for motor, val in action.items()}
+        left_arm_action = self.left_arm_bus.sync_read("Present_Position")
+        left_arm_action = {f"{motor}.pos": val for motor, val in left_arm_action.items()}
+        right_arm_action = self.right_arm_bus.sync_read("Present_Position")
+        right_arm_action = {f"{motor}.pos": val for motor, val in right_arm_action.items()}
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read action: {dt_ms:.1f}ms")
-        return action
+        return {**left_arm_action, **right_arm_action}
 
     def send_feedback(self, feedback: dict[str, float]) -> None:
         # TODO(rcadene, aliberts): Implement force feedback
