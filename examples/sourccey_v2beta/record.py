@@ -3,6 +3,7 @@ from lerobot.common.datasets.utils import hw_to_dataset_features
 from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
 from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
 from lerobot.common.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
+from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
 from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.sourccey_v2beta_teleop import SourcceyV2BetaTeleop
 from lerobot.common.utils.control_utils import init_keyboard_listener
 from lerobot.common.utils.utils import log_say
@@ -13,11 +14,11 @@ NUM_EPISODES = 3
 FPS = 30
 EPISODE_TIME_SEC = 30
 RESET_TIME_SEC = 10
-TASK_DESCRIPTION = "My task description"
+TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
-leader_arm_config = SourcceyV2BetaClientConfig(port="COM13", id="sourccey_v2beta_teleop")
+leader_arm_config = SourcceyV2BetaTeleopConfig(port="COM13", id="sourccey_v2beta_teleop")
 keyboard_config = KeyboardTeleopConfig()
 
 robot = SourcceyV2BetaClient(robot_config)
@@ -31,7 +32,7 @@ dataset_features = {**action_features, **obs_features}
 
 # Create the dataset
 dataset = LeRobotDataset.create(
-    repo_id="lerobot/sourccey_v2beta",
+    repo_id="local/sourccey_v2beta-001__tape-x__set000",
     fps=FPS,
     features=dataset_features,
     robot_type=robot.name,
@@ -39,13 +40,12 @@ dataset = LeRobotDataset.create(
     image_writer_threads=4,
 )
 
-# To connect you already should have this script running on LeKiwi: `python -m lerobot.common.robots.lekiwi.lekiwi_host --robot.id=my_awesome_kiwi`
+# To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
 leader_arm.connect()
 keyboard.connect()
-robot.connect()
 
-_init_rerun(session_name="lekiwi_record")
+_init_rerun(session_name="sourccey_v2beta_record")
 
 listener, events = init_keyboard_listener()
 
@@ -94,7 +94,7 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
     recorded_episodes += 1
 
 # Upload to hub and clean up
-dataset.push_to_hub()
+# dataset.push_to_hub()
 
 robot.disconnect()
 leader_arm.disconnect()

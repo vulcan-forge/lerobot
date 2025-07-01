@@ -8,16 +8,16 @@ from lerobot.common.utils.utils import log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 2
+NUM_EPISODES = 1
 FPS = 30
 EPISODE_TIME_SEC = 60
-TASK_DESCRIPTION = "My task description"
+TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
 robot = SourcceyV2BetaClient(robot_config)
 
-policy = ACTPolicy.from_pretrained("lerobot/sourccey_v2beta")
+policy = ACTPolicy.from_pretrained("outputs/train/act__sourccey_v2beta-001__tape-y__set000/checkpoints/020000/pretrained_model")
 
 # Configure the dataset features
 action_features = hw_to_dataset_features(robot.action_features, "action")
@@ -26,7 +26,7 @@ dataset_features = {**action_features, **obs_features}
 
 # Create the dataset
 dataset = LeRobotDataset.create(
-    repo_id="lerobot/sourccey_v2beta",
+    repo_id="local/eval__sourccey_v2beta-001__tape-y__set000",
     fps=FPS,
     features=dataset_features,
     robot_type=robot.name,
@@ -34,7 +34,7 @@ dataset = LeRobotDataset.create(
     image_writer_threads=4,
 )
 
-# To connect you already should have this script running on LeKiwi: `python -m lerobot.common.robots.lekiwi.lekiwi_host --robot.id=my_awesome_kiwi`
+# To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
 
 _init_rerun(session_name="recording")
@@ -85,7 +85,7 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
     recorded_episodes += 1
 
 # Upload to hub and clean up
-dataset.push_to_hub()
+# dataset.push_to_hub()
 
 robot.disconnect()
 listener.stop()
