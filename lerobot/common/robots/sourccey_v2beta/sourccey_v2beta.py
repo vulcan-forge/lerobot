@@ -199,18 +199,26 @@ class SourcceyV2Beta(Robot):
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
         arm_pos = self.bus.sync_read("Present_Position", self.arm_motors)
+        # base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
+
+        base_vel = {}
+        # base_vel = self._wheel_raw_to_body(
+        #     base_wheel_vel["base_left_wheel"],
+        #     base_wheel_vel["base_back_wheel"],
+        #     base_wheel_vel["base_right_wheel"],
+        # )
+
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
-        flat_states = {**arm_state}
+        obs_dict = {**arm_state, **base_vel}
 
-        obs_dict = {f"{OBS_STATE}": flat_states}
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read state: {dt_ms:.1f}ms")
 
         # Capture images from cameras
         for cam_key, cam in self.cameras.items():
             start = time.perf_counter()
-            obs_dict[f"{OBS_IMAGES}.{cam_key}"] = cam.async_read()
+            obs_dict[cam_key] = cam.async_read()
             dt_ms = (time.perf_counter() - start) * 1e3
             logger.debug(f"{self} read {cam_key}: {dt_ms:.1f}ms")
 
@@ -235,9 +243,10 @@ class SourcceyV2Beta(Robot):
         arm_goal_pos = {k: v for k, v in action.items() if k.endswith(".pos")}
         base_goal_vel = {k: v for k, v in action.items() if k.endswith(".vel")}
 
-        base_wheel_goal_vel = self._body_to_wheel_raw(
-            base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
-        )
+        base_wheel_goal_vel = {}
+        # base_wheel_goal_vel = self._body_to_wheel_raw(
+        #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
+        # )
         # Check for NaN values and skip sending actions if any are found
         if any(np.isnan(v) for v in arm_goal_pos.values()):
             logger.warning("NaN values detected in arm goal positions. Skipping action execution.")
