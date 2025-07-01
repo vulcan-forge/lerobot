@@ -98,6 +98,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
 
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
+
         self.left_arm_bus.disable_torque()
         self.right_arm_bus.disable_torque()
         for motor in self.left_arm_bus.motors:
@@ -105,47 +106,62 @@ class SourcceyV2BetaTeleop(Teleoperator):
         for motor in self.right_arm_bus.motors:
             self.right_arm_bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        input(f"Move Left Arm Teleoperator to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.left_arm_bus.set_half_turn_homings()
-        input(f"Move Right Arm Teleoperator to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.right_arm_bus.set_half_turn_homings()
+        input(f"Move left arm Teleoperator to the middle of its range of motion and press ENTER....")
+        left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings()
 
-        full_turn_motor = "wrist_roll"
-        unknown_left_arm_range_motors = [motor for motor in self.left_arm_bus.motors if motor != full_turn_motor]
-        unknown_right_arm_range_motors = [motor for motor in self.right_arm_bus.motors if motor != full_turn_motor]
+        left_arm_full_turn_motor = ["left_arm_wrist_roll"]
+        left_arm_unknown_range_motors = [motor for motor in self.left_arm_bus.motors if motor != left_arm_full_turn_motor]
+
         print(
-            f"Move all joints except '{full_turn_motor}' sequentially through their "
+            f"Move all joints except '{left_arm_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
-        left_arm_range_mins, left_arm_range_maxes = self.left_arm_bus.record_ranges_of_motion(unknown_left_arm_range_motors)
-        right_arm_range_mins, right_arm_range_maxes = self.right_arm_bus.record_ranges_of_motion(unknown_right_arm_range_motors)
-        left_arm_range_mins[full_turn_motor] = 0
-        left_arm_range_maxes[full_turn_motor] = 4095
-        right_arm_range_mins[full_turn_motor] = 0
-        right_arm_range_maxes[full_turn_motor] = 4095
+        left_arm_range_mins, left_arm_range_maxes = self.left_arm_bus.record_ranges_of_motion(left_arm_unknown_range_motors)
+        for name in left_arm_full_turn_motor:
+            left_arm_range_mins[name] = 0
+            left_arm_range_maxes[name] = 4095
 
-        self.calibration = {}
-        for motor, m in self.left_arm_bus.motors.items():
-            self.calibration[motor] = MotorCalibration(
-                id=m.id,
+        input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
+        right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+
+        right_arm_full_turn_motor = ["right_arm_wrist_roll"]
+        right_arm_unknown_range_motors = [motor for motor in self.right_arm_motors if motor not in right_arm_full_turn_motor]
+
+        print(
+            f"Move all arm joints except '{right_arm_full_turn_motor}' sequentially through their "
+            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
+        )
+        right_arm_range_mins, right_arm_range_maxes = self.right_arm_bus.record_ranges_of_motion(right_arm_unknown_range_motors)
+        for name in right_arm_full_turn_motor:
+            right_arm_range_mins[name] = 0
+            right_arm_range_maxes[name] = 4095
+
+        self.left_arm_calibration = {}
+        for name, motor in self.left_arm_bus.motors.items():
+            self.left_arm_calibration[name] = MotorCalibration(
+                id=motor.id,
                 drive_mode=0,
-                homing_offset=homing_offsets[motor],
-                range_min=left_arm_range_mins[motor],
-                range_max=left_arm_range_maxes[motor],
-            )
-        for motor, m in self.right_arm_bus.motors.items():
-            self.calibration[motor] = MotorCalibration(
-                id=m.id,
-                drive_mode=0,
-                homing_offset=homing_offsets[motor],
-                range_min=right_arm_range_mins[motor],
-                range_max=right_arm_range_maxes[motor],
+                homing_offset=left_arm_homing_offsets[name],
+                range_min=left_arm_range_mins[name],
+                range_max=left_arm_range_maxes[name],
             )
 
-        self.left_arm_bus.write_calibration(self.calibration)
-        self.right_arm_bus.write_calibration(self.calibration)
+        self.right_arm_calibration = {}
+        for name, motor in self.right_arm_bus.motors.items():
+            self.right_arm_calibration[name] = MotorCalibration(
+                id=motor.id,
+                drive_mode=0,
+                homing_offset=right_arm_homing_offsets[name],
+                range_min=right_arm_range_mins[name],
+                range_max=right_arm_range_maxes[name],
+            )
+
+        self.left_arm_bus.write_calibration(self.left_arm_calibration)
+        self.right_arm_bus.write_calibration(self.right_arm_calibration)
+
+        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
         self._save_calibration()
-        print(f"Calibration saved to {self.calibration_fpath}")
+        print("Calibration saved to", self.calibration_fpath)
 
     def configure(self) -> None:
         self.left_arm_bus.disable_torque()
