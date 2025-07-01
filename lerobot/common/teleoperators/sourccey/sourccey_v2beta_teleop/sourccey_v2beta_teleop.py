@@ -64,6 +64,8 @@ class SourcceyV2BetaTeleop(Teleoperator):
                 "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
             },
         )
+        self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
+        self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
 
     @property
     def action_features(self) -> dict[str, type]:
@@ -107,7 +109,7 @@ class SourcceyV2BetaTeleop(Teleoperator):
             self.right_arm_bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
         input(f"Move left arm Teleoperator to the middle of its range of motion and press ENTER....")
-        left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings()
+        left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
 
         left_arm_full_turn_motor = ["left_arm_wrist_roll"]
         left_arm_unknown_range_motors = [motor for motor in self.left_arm_bus.motors if motor != left_arm_full_turn_motor]
