@@ -10,15 +10,15 @@ from lerobot.common.utils.utils import log_say
 from lerobot.common.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 3
+NUM_EPISODES = 10
 FPS = 30
 EPISODE_TIME_SEC = 30
-RESET_TIME_SEC = 10
+RESET_TIME_SEC = 5
 TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
 robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
-teleop_arm_config = SourcceyV2BetaTeleopConfig(left_arm_port="COM28", right_arm_port="COM29", id="sourccey_v2beta_teleop")
+teleop_arm_config = SourcceyV2BetaTeleopConfig(left_arm_port="/dev/ttyUSB0", right_arm_port="/dev/ttyUSB1", id="sourccey_v2beta_teleop")
 keyboard_config = KeyboardTeleopConfig()
 
 robot = SourcceyV2BetaClient(robot_config)
