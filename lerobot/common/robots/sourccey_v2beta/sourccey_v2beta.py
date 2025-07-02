@@ -69,7 +69,7 @@ class SourcceyV2Beta(Robot):
             port=config.right_arm_port,
             motors={
                 "right_arm_shoulder_pan": Motor(7, "sts3215", norm_mode_body),
-                "right_arm_shoulder_lift": Motor(8, "sts3215", norm_mode_body, gear_ratio=3.0),
+                "right_arm_shoulder_lift": Motor(8, "sts3215", norm_mode_body), # gear_ratio=3.0),
                 "right_arm_elbow_flex": Motor(9, "sts3215", norm_mode_body),
                 "right_arm_wrist_flex": Motor(10, "sts3215", norm_mode_body),
                 "right_arm_wrist_roll": Motor(11, "sts3215", norm_mode_body),
