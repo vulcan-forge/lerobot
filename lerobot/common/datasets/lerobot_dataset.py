@@ -38,6 +38,7 @@ from lerobot.common.datasets.utils import (
     DEFAULT_IMAGE_PATH,
     INFO_PATH,
     TASKS_PATH,
+    _validate_feature_names,
     append_jsonlines,
     backward_compatible_episodes_stats,
     check_delta_timestamps,
@@ -48,7 +49,6 @@ from lerobot.common.datasets.utils import (
     embed_images,
     get_delta_indices,
     get_episode_data_index,
-    get_features_from_robot,
     get_hf_features_from_features,
     get_safe_version,
     hf_transform_to_torch,
@@ -73,7 +73,6 @@ from lerobot.common.datasets.video_utils import (
     get_safe_default_codec,
     get_video_info,
 )
-from lerobot.common.robot_devices.robots.utils import Robot
 
 CODEBASE_VERSION = "v2.1"
 
@@ -94,7 +93,11 @@ class LeRobotDatasetMetadata:
             if force_cache_sync:
                 raise FileNotFoundError
             self.load_metadata()
-        except (FileNotFoundError, NotADirectoryError):
+        except FileNotFoundError:
+            # 6/22/2025, only attempt to pull from repo if explicitly asking for it
+            # This is to avoid pulling from repo if the dataset is not found locally
+            pass
+        except NotADirectoryError:
             if is_valid_version(self.revision):
                 self.revision = get_safe_version(self.repo_id, self.revision)
 
@@ -228,31 +231,6 @@ class LeRobotDatasetMetadata:
         """
         return self.task_to_task_index.get(task, None)
 
-    # def get_subtask_info_for_frame(self, frame_idx, task_idx, sub_tasks):
-    #     """
-    #     Given a frame index and a list of sub_tasks, return all relevant subtask info for that frame.
-    #     """
-
-    #     empty_subtask = {
-    #         "subtask_instruction": None,
-    #         "subtask_progress": None,
-    #     }
-
-    #     if sub_tasks is None or len(sub_tasks) <= task_idx:
-    #         return empty_subtask
-
-    #     subtask = sub_tasks[task_idx]
-    #     for sub in subtask:
-    #         if sub["start"] <= frame_idx <= sub["end"]:
-    #             length = max(1, sub["end"] - sub["start"])
-    #             progress = (frame_idx - sub["start"]) / length
-    #             return {
-    #                 "subtask_instruction": sub["instruction"],
-    #                 "subtask_progress": progress,
-    #             }
-    #     # If no subtask found for this frame
-    #     return empty_subtask
-
     def add_task(self, task: str):
         """
         Given a task in natural language, add it to the dictionary of tasks.
@@ -296,19 +274,6 @@ class LeRobotDatasetMetadata:
             "episode_index": episode_index,
             "tasks": episode_tasks,
             "length": episode_length,
-            # "performance_score": 1.0,
-            # "sub_tasks": [
-            #     # [{
-            #     #     "start": 0,
-            #     #     "end": 74,
-            #     #     "instruction": "walk to the fridge",
-            #     #     "performance_score": 1.0,        # 0.0 (fail) to 1.0 (perfect), can be fractional
-            #     #     "status": "success",         # "success", "error", "incomplete", etc.
-            #     #     "error_type": None,          # e.g., "collision", "timeout", or None if no error
-            #     #     "error_message": None        # Optional: human-readable description, or None
-            #     # }]
-            # ],
-
         }
         self.episodes[episode_index] = episode_dict
         write_episode(episode_dict, self.root)
@@ -343,10 +308,9 @@ class LeRobotDatasetMetadata:
         cls,
         repo_id: str,
         fps: int,
-        root: str | Path | None = None,
-        robot: Robot | None = None,
+        features: dict,
         robot_type: str | None = None,
-        features: dict | None = None,
+        root: str | Path | None = None,
         use_videos: bool = True,
     ) -> "LeRobotDatasetMetadata":
         """Creates metadata for a LeRobotDataset."""
@@ -354,56 +318,20 @@ class LeRobotDatasetMetadata:
         obj.repo_id = repo_id
         obj.root = Path(root) if root is not None else HF_LEROBOT_HOME / repo_id
 
-        obj.root.mkdir(parents=True, exist_ok=False)
+        obj.root.mkdir(parents=True, exist_ok=True)
 
-        if robot is not None:
-            features = get_features_from_robot(robot, use_videos)
-            robot_type = robot.robot_type
-            if not all(cam.fps == fps for cam in robot.cameras.values()):
-                logging.warning(
-                    f"Some cameras in your {robot.robot_type} robot don't have an fps matching the fps of your dataset."
-                    "In this case, frames from lower fps cameras will be repeated to fill in the blanks."
-                )
-        elif features is None:
-            raise ValueError(
-                "Dataset features must either come from a Robot or explicitly passed upon creation."
-            )
-        else:
-            # TODO(aliberts, rcadene): implement sanity check for features
-            features = {**features, **DEFAULT_FEATURES}
-
-            # check if none of the features contains a "/" in their names,
-            # as this would break the dict flattening in the stats computation, which uses '/' as separator
-            for key in features:
-                if "/" in key:
-                    raise ValueError(f"Feature names should not contain '/'. Found '/' in feature '{key}'.")
-
-            features = {**features, **DEFAULT_FEATURES}
+        # TODO(aliberts, rcadene): implement sanity check for features
+        features = {**features, **DEFAULT_FEATURES}
+        _validate_feature_names(features)
 
         obj.tasks, obj.task_to_task_index = {}, {}
         obj.episodes_stats, obj.stats, obj.episodes = {}, {}, {}
-        obj.info = create_empty_dataset_info(CODEBASE_VERSION, fps, robot_type, features, use_videos)
+        obj.info = create_empty_dataset_info(CODEBASE_VERSION, fps, features, use_videos, robot_type)
         if len(obj.video_keys) > 0 and not use_videos:
             raise ValueError()
         write_json(obj.info, obj.root / INFO_PATH)
         obj.revision = None
         return obj
-
-    def edit_subtasks(self, episode_index: int, new_subtasks: list[dict]):
-        """
-        Edit the sub_tasks for a given episode.
-        Args:
-            episode_index (int): The index of the episode to edit.
-            new_subtasks (list[dict]): The new list of subtask dicts to set.
-        """
-        if episode_index not in self.episodes:
-            raise ValueError(f"Episode {episode_index} does not exist.")
-
-        # Update in-memory
-        self.episodes[episode_index]["sub_tasks"] = new_subtasks
-
-        # Save to disk
-        write_episode(self.episodes[episode_index], self.root)
 
 
 class LeRobotDataset(torch.utils.data.Dataset):
@@ -801,11 +729,6 @@ class LeRobotDataset(torch.utils.data.Dataset):
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
 
-        # Add subtask info
-        # frame_idx = item["frame_index"].item()
-        # subtask_info = self.meta.get_subtask_info_for_frame(frame_idx, task_idx, item.get("sub_tasks", []))
-        # item.update(subtask_info)
-
         return item
 
     def __repr__(self):
@@ -843,7 +766,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         else:
             self.image_writer.save_image(image=image, fpath=fpath)
 
-    def add_frame(self, frame: dict) -> None:
+    def add_frame(self, frame: dict, task: str, timestamp: float | None = None) -> None:
         """
         This function only adds the frame to the episode_buffer. Apart from images — which are written in a
         temporary directory — nothing is written to disk. To save those frames, the 'save_episode()' method
@@ -861,17 +784,14 @@ class LeRobotDataset(torch.utils.data.Dataset):
 
         # Automatically add frame_index and timestamp to episode buffer
         frame_index = self.episode_buffer["size"]
-        timestamp = frame.pop("timestamp") if "timestamp" in frame else frame_index / self.fps
+        if timestamp is None:
+            timestamp = frame_index / self.fps
         self.episode_buffer["frame_index"].append(frame_index)
         self.episode_buffer["timestamp"].append(timestamp)
+        self.episode_buffer["task"].append(task)
 
         # Add frame features to episode_buffer
         for key in frame:
-            if key == "task":
-                # Note: we associate the task in natural language to its task index during `save_episode`
-                self.episode_buffer["task"].append(frame["task"])
-                continue
-
             if key not in self.features:
                 raise ValueError(
                     f"An element of the frame is not in the features. '{key}' not in '{self.features.keys()}'."
@@ -1047,10 +967,9 @@ class LeRobotDataset(torch.utils.data.Dataset):
         cls,
         repo_id: str,
         fps: int,
+        features: dict,
         root: str | Path | None = None,
-        robot: Robot | None = None,
         robot_type: str | None = None,
-        features: dict | None = None,
         use_videos: bool = True,
         tolerance_s: float = 1e-4,
         image_writer_processes: int = 0,
@@ -1062,10 +981,9 @@ class LeRobotDataset(torch.utils.data.Dataset):
         obj.meta = LeRobotDatasetMetadata.create(
             repo_id=repo_id,
             fps=fps,
-            root=root,
-            robot=robot,
             robot_type=robot_type,
             features=features,
+            root=root,
             use_videos=use_videos,
         )
         obj.repo_id = obj.meta.repo_id
