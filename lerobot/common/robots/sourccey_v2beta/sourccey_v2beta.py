@@ -310,14 +310,16 @@ class SourcceyV2Beta(Robot):
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
-            left_arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
+            left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+            left_arm_goal_present_pos = {key: (g_pos, left_arm_present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
+            left_arm_adjusted_goal_present_pos = self.apply_minimum_action(left_arm_goal_present_pos)
+            left_arm_safe_goal_pos = ensure_safe_goal_position(left_arm_adjusted_goal_present_pos, self.config.max_relative_target)
             left_arm_goal_pos = left_arm_safe_goal_pos
 
-            present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in right_arm_goal_pos.items()}
-            right_arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
+            right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
+            right_arm_goal_present_pos = {key: (g_pos, right_arm_present_pos[key]) for key, g_pos in right_arm_goal_pos.items()}
+            right_arm_adjusted_goal_present_pos = self.apply_minimum_action(right_arm_goal_present_pos)
+            right_arm_safe_goal_pos = ensure_safe_goal_position(right_arm_adjusted_goal_present_pos, self.config.max_relative_target)
             right_arm_goal_pos = right_arm_safe_goal_pos
 
         # Send goal position to the actuators
@@ -328,6 +330,60 @@ class SourcceyV2Beta(Robot):
         # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
         return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
+
+    def apply_minimum_action(self, goal_present_pos: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
+        """Apply a minimum action to the robot's geared down motors.
+
+        This function ensures that geared-down motors receive a minimum movement threshold
+        to overcome friction and backlash. If the desired movement is below the threshold,
+        it's amplified to the minimum threshold while preserving direction.
+
+        Args:
+            goal_present_pos (dict[str, tuple[float, float]]): Dictionary mapping motor names to
+                tuples of (goal_position, present_position).
+
+        Returns:
+            dict[str, tuple[float, float]]: Dictionary mapping motor names to tuples of
+                (adjusted_goal_position, present_position) for all motors.
+        """
+        # Define geared down motors and their minimum action thresholds
+        geared_down_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
+        min_action_threshold = 0.5  # Minimum movement threshold in normalized units
+
+        adjusted_goal_present_pos = {}
+
+        for key, (goal_pos, present_pos) in goal_present_pos.items():
+            # Extract motor name without the ".pos" suffix
+            motor_name = key.replace(".pos", "")
+
+            if motor_name in geared_down_motors:
+                # Calculate the desired movement
+                desired_movement = goal_pos - present_pos
+                movement_magnitude = abs(desired_movement)
+
+                # If movement is below threshold, apply minimum action
+                if movement_magnitude > 0 and movement_magnitude < min_action_threshold:
+                    # Preserve direction but apply minimum threshold
+                    direction = 1 if desired_movement > 0 else -1
+                    adjusted_movement = direction * min_action_threshold
+                    adjusted_goal_pos = present_pos + adjusted_movement
+                    adjusted_goal_present_pos[key] = (adjusted_goal_pos, present_pos)
+                else:
+                    # No adjustment needed
+                    adjusted_goal_present_pos[key] = (goal_pos, present_pos)
+            else:
+                # Not a geared down motor, no adjustment needed
+                adjusted_goal_present_pos[key] = (goal_pos, present_pos)
+
+        print()
+        print("goal_present_pos:")
+        print(goal_present_pos)
+        print()
+        print("adjusted_goal_present_pos:")
+        print(adjusted_goal_present_pos)
+        print()
+
+        return adjusted_goal_present_pos
 
     def disconnect(self):
         if not self.is_connected:
