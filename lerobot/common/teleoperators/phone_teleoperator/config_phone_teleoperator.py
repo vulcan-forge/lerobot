@@ -15,12 +15,11 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
-from ..config import TeleoperatorConfig
-# Register config as ChoiceRegistry subclass so it can be instantiated via cfg.teleop.type="phone_teleoperator"
-@TeleoperatorConfig.register_subclass("phone_teleoperator")
+from lerobot.common.teleoperators.config import TeleoperatorConfig
+
+
 @dataclass
 class PhoneTeleoperatorConfig(TeleoperatorConfig):
     """Configuration for phone teleoperation."""
@@ -30,7 +29,7 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     grpc_port: int = 8765  # Default port to match phone app
     grpc_timeout: float = 100.0
     
-    # Robot model paths. If not provided, we attempt to auto-resolve them from the `daxie` package.
+    # Robot model paths  
     urdf_path: str = ""
     mesh_path: str = ""
     
@@ -57,25 +56,4 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     gripper_max_pos: float = 0.875  # Gripper open position (100% slider)
 
     # Safety settings
-    max_relative_target: Optional[float] = None
-
-    # ---------------------------------------------------------------------
-    # Post-init logic: ensure URDF and mesh paths are set, attempting to find
-    # them automatically if the user did not supply any.
-    # ---------------------------------------------------------------------
-    def __post_init__(self):
-        # If either path is missing, try to resolve them again (lazy), giving
-        # precedence to any user-supplied values.
-        if not self.urdf_path or not self.mesh_path:
-            try:
-                from daxie import get_so100_path
-
-                resolved_urdf, resolved_mesh = get_so100_path()
-                if not self.urdf_path:
-                    self.urdf_path = str(resolved_urdf)
-                if not self.mesh_path:
-                    self.mesh_path = str(resolved_mesh)
-            except Exception:
-                # Leave as is; PhoneTeleoperator.connect() will raise a clear
-                # error if paths remain invalid.
-                pass 
+    max_relative_target: Optional[float] = None 

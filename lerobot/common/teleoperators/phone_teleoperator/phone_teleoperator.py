@@ -21,12 +21,12 @@ from typing import Any, Optional
 
 import numpy as np
 import torch
+from scipy.spatial.transform import Rotation as R
 
 try:
     import pyroki as pk
     import viser
     import yourdfpy
-    from scipy.spatial.transform import Rotation as R
     from viser.extras import ViserUrdf
 except ImportError as e:
     raise ImportError(
@@ -44,10 +44,11 @@ logger = logging.getLogger(__name__)
 
 class PhoneTeleoperator(Teleoperator):
     """
-    Phone-based teleoperator that uses the proven VirtualManipulator implementation.
+    Phone-based teleoperator that receives pose data from mobile phone via gRPC
+    and converts it to robot control commands using inverse kinematics.
     
     This teleoperator integrates with the VirtualManipulator system from the daxie package
-    to provide phone-based robot control with proper movement patterns and button handling.
+    to provide phone-based robot control.
     """
 
     config_class = PhoneTeleoperatorConfig
@@ -56,9 +57,6 @@ class PhoneTeleoperator(Teleoperator):
     def __init__(self, config: PhoneTeleoperatorConfig, **kwargs):
         super().__init__(config, **kwargs)
         self.config = config
-        
-        # Debug logging can be enabled when needed
-        logger.info("PhoneTeleoperator initialization started")
         
         # Initialize robot model for IK
         self.urdf = None
@@ -69,8 +67,11 @@ class PhoneTeleoperator(Teleoperator):
         # Phone connection state
         self._is_connected = False
         self._phone_connected = False
-        self.start_teleop = False  # ALWAYS start as False - wait for phone signal
+        self.start_teleop = False
         self.prev_is_resetting = False
+        
+        # Reset position holding - store the position when reset starts
+        self.reset_hold_position = None
         
         # Pose tracking
         self.current_t_R = np.array(self.config.initial_position)
@@ -93,8 +94,6 @@ class PhoneTeleoperator(Teleoperator):
         
         # Flag to show initial motor positions on first get_action call
         self.initial_positions_shown = False
-        
-        logger.info("PhoneTeleoperator initialization completed")
 
     @cached_property
     def action_features(self) -> dict[str, type]:
@@ -113,6 +112,7 @@ class PhoneTeleoperator(Teleoperator):
     @cached_property
     def feedback_features(self) -> dict[str, type]:
         """Features for the feedback actions sent to this teleoperator."""
+        # Phone teleoperator doesn't typically need feedback
         return {}
 
     @property
@@ -146,6 +146,7 @@ class PhoneTeleoperator(Teleoperator):
             self._start_grpc_server()
             
             self._is_connected = True
+            
             logger.info(f"{self} connected successfully")
             
         except Exception as e:
@@ -157,7 +158,7 @@ class PhoneTeleoperator(Teleoperator):
         pass
 
     def configure(self) -> None:
-        """Configure the phone teleoperator."""
+        """Configure the phone teleoperator (no-op for phone teleoperator)."""
         pass
 
     def _init_visualization(self) -> None:
@@ -215,57 +216,34 @@ class PhoneTeleoperator(Teleoperator):
                 logger.error("Make sure the daxie package is installed or accessible")
                 raise ImportError(f"Failed to import daxie.src.server.pos_grpc_server: {e}")
 
-    def _open_phone_connection(self, init_qpos: np.ndarray) -> tuple[np.ndarray, np.ndarray, bool]:
+    def _open_phone_connection(self, curr_qpos_rad: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Wait for phone to connect and set initial mapping."""
-        try:
-            init_rot_robot = R.from_quat(self.current_q_R, scalar_first=True)
-        except TypeError:
-            init_rot_robot = R.from_quat(self.current_q_R)
-            
+        # Use the initial target pose, not the current robot joint positions
+        # The current joint positions are used elsewhere, but the target pose is what we map to
+        init_rot_robot = R.from_quat(self.current_q_R, scalar_first=True)
         self.current_t_R = np.array(self.config.initial_position)
         self.current_q_R = np.array(self.config.initial_wxyz)
 
-        # CRITICAL FIX: Reset teleop state to ensure we wait for phone connection
-        self.start_teleop = False
-
-        logger.info("📱 Phone connected! Please press the START button on your phone to begin teleoperation...")
+        logger.info("Getting initial phone data for mapping setup...")
         logger.info(f"gRPC server listening on port {self.config.grpc_port}")
         
-        data = None
-        attempt_count = 0
-        last_log_time = time.time()
-        
-        while not self.start_teleop:
-            attempt_count += 1
-            try:
-                data = self.pose_service.get_latest_pose(block=True, timeout=self.config.grpc_timeout)
-                if data is not None and "switch" in data:
-                    self.start_teleop = data["switch"]
-                    
-                    # Only log every 3 seconds to avoid spam
-                    current_time = time.time()
-                    if current_time - last_log_time > 3.0:
-                        logger.info(f"📱 Waiting for START button press... (received {attempt_count} pose updates)")
-                        last_log_time = current_time
-                        
-            except Exception as e:
-                logger.debug(f"Exception during connection: {type(e).__name__}: {e}")
-                continue
+        # Get phone data once to set up mapping - don't wait for start signal
+        data = self.pose_service.get_latest_pose(block=True, timeout=self.config.grpc_timeout)
+        if data is not None:
+            self.start_teleop = data["switch"]
+        else:
+            # Use default data if no phone connected yet
+            data = {
+                "position": [0.0, 0.0, 0.0],
+                "rotation": [1.0, 0.0, 0.0, 0.0],  # w,x,y,z
+                "gripper_value": 0.0,
+                "switch": False
+            }
+            self.start_teleop = False
 
-        # Ensure we have valid data before proceeding
-        if data is None:
-            logger.error("DEBUG: data is None after exiting connection loop")
-            raise RuntimeError("Failed to get valid data from phone connection")
+        pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
         
-        logger.debug(f"DEBUG: Connection successful, processing data: {data}")
-        pos, quat, gripper_value = data["position"], data["rotation"], data.get("gripper_value", 50.0)
-        # Convert gripper_value (0-100) to boolean (True if > 50, False otherwise)
-        gripper = gripper_value > 50.0
-        logger.debug(f"DEBUG: Extracted initial pose - pos={pos}, quat={quat}, gripper={gripper}")
-        try:
-            initial_rot_phone = R.from_quat(quat, scalar_first=True)
-        except TypeError:
-            initial_rot_phone = R.from_quat(quat)
+        initial_rot_phone = R.from_quat(quat, scalar_first=True)
         initial_pos_phone = np.array(pos)
 
         self.initial_phone_quat = quat.copy()
@@ -274,21 +252,16 @@ class PhoneTeleoperator(Teleoperator):
         quat_RP = init_rot_robot * initial_rot_phone.inv()
         translation_RP = self.current_t_R - quat_RP.apply(initial_pos_phone)
         
-        logger.info("Phone connected and teleop started!")
-        return quat_RP, translation_RP, gripper
+        logger.info("Phone connection established successfully!")
+        return quat_RP, translation_RP
 
     def _reset_mapping(self, phone_pos: np.ndarray, phone_quat: np.ndarray) -> None:
         """Reset mapping parameters when precision mode toggles."""
         self.initial_phone_pos = phone_pos.copy()
         self.initial_phone_quat = phone_quat.copy()
 
-        try:
-            rot_init = R.from_quat(self.initial_phone_quat, scalar_first=True)
-            rot_curr = R.from_quat(self.current_q_R, scalar_first=True)
-        except TypeError:
-            rot_init = R.from_quat(self.initial_phone_quat)
-            rot_curr = R.from_quat(self.current_q_R)
-            
+        rot_init = R.from_quat(self.initial_phone_quat, scalar_first=True)
+        rot_curr = R.from_quat(self.current_q_R, scalar_first=True)
         self.quat_RP = rot_curr * rot_init.inv()
         self.translation_RP = self.current_t_R - self.quat_RP.apply(self.initial_phone_pos)
 
@@ -296,6 +269,7 @@ class PhoneTeleoperator(Teleoperator):
         self, phone_pos: np.ndarray, phone_quat: np.ndarray, precision_mode: bool
     ) -> tuple[np.ndarray, np.ndarray]:
         """Map phone translation and rotation to robot's coordinate frame."""
+        
         phone_pos = np.array(phone_pos, float)
         phone_quat = np.array(phone_quat, float)
 
@@ -313,13 +287,8 @@ class PhoneTeleoperator(Teleoperator):
         scaled_pos = self.initial_phone_pos + delta
 
         # Rotate
-        try:
-            init_rot = R.from_quat(self.initial_phone_quat, scalar_first=True)
-            curr_rot = R.from_quat(phone_quat, scalar_first=True)
-        except TypeError:
-            init_rot = R.from_quat(self.initial_phone_quat)
-            curr_rot = R.from_quat(phone_quat)
-            
+        init_rot = R.from_quat(self.initial_phone_quat, scalar_first=True)
+        curr_rot = R.from_quat(phone_quat, scalar_first=True)
         relative_rot = init_rot.inv() * curr_rot
         rotvec = relative_rot.as_rotvec() * self.config.rotation_sensitivity
         scaled_rot = R.from_rotvec(rotvec)
@@ -329,11 +298,9 @@ class PhoneTeleoperator(Teleoperator):
         quat_robot = self.quat_RP * quat_scaled
         pos_robot = self.quat_RP.apply(scaled_pos) + self.translation_RP
 
-        try:
-            self.current_q_R = quat_robot.as_quat(scalar_first=True)
-        except TypeError:
-            self.current_q_R = quat_robot.as_quat()
+        self.current_q_R = quat_robot.as_quat(scalar_first=True)
         self.current_t_R = pos_robot
+        
         return pos_robot, self.current_q_R
 
     def get_action(self, observation: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -344,7 +311,7 @@ class PhoneTeleoperator(Teleoperator):
             observation: Current robot observation containing joint positions
         
         This method processes phone pose data, solves inverse kinematics,
-        and returns the target joint positions using the proven VirtualManipulator approach.
+        and returns the target joint positions.
         """
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected")
@@ -363,33 +330,33 @@ class PhoneTeleoperator(Teleoperator):
         # If no observation or extraction failed, use rest pose
         if current_joint_pos_deg is None:
             current_joint_pos_deg = np.rad2deg(self.config.rest_pose)
+            logger.debug("Using rest pose as current position")
 
         # Show initial motor positions immediately on first call (before phone connection)
         if not self.initial_positions_shown:
             self._display_motor_positions_formatted(current_joint_pos_deg, "INITIAL ROBOT POSITION")
             self.initial_positions_shown = True
 
-        # Initialize variables to ensure they're always defined
-        data = None
-        pos = quat = gripper = None
-        
         try:
             # Handle phone connection
             if not self._phone_connected:
+                # Pass current position to connection setup (converted to radians)
                 curr_qpos_rad = np.deg2rad(current_joint_pos_deg)
-                self.quat_RP, self.translation_RP, _ = self._open_phone_connection(curr_qpos_rad)
+                self.quat_RP, self.translation_RP = self._open_phone_connection(curr_qpos_rad)
                 self._phone_connected = True
 
-            # Check if teleop is active
             if not self.start_teleop:
+                current_joint_pos_deg = np.rad2deg(self.config.rest_pose)
                 self._phone_connected = False
-                # Return current position when not teleoperating (keeps robot in place)
+                # Reset timer when teleop stops
+                self.teleop_start_time = None
+                self.motor_positions_read = False
+                # Return current position when not teleoperating
                 return self._format_action_dict(current_joint_pos_deg)
             
             # Start timer when teleop becomes active
             if self.teleop_start_time is None:
                 self.teleop_start_time = time.time()
-                logger.info("✅ Teleoperation started!")
             
             # Check if 5 seconds have passed and we haven't read positions yet
             if not self.motor_positions_read and time.time() - self.teleop_start_time >= 5.0:
@@ -397,80 +364,46 @@ class PhoneTeleoperator(Teleoperator):
                 self.motor_positions_read = True
 
             # Get latest pose from gRPC
-            try:
-                data = self.pose_service.get_latest_pose(block=False)
-            except Exception as e:
-                # Phone connection lost - reset state
-                logger.warning(f"Phone connection lost: {e}. Reconnecting...")
-                self._phone_connected = False
-                self.start_teleop = False
-                self.teleop_start_time = None
-                self.motor_positions_read = False
-                return self._format_action_dict(current_joint_pos_deg)
+            data = self.pose_service.get_latest_pose(block=False)
 
-            # Check if we have valid data before proceeding
-            if data is None:
-                # Phone disconnected - reset connection state
-                logger.warning("Phone disconnected. Reconnecting...")
-                self._phone_connected = False
-                self.start_teleop = False
-                self.teleop_start_time = None
-                self.motor_positions_read = False
-                return self._format_action_dict(current_joint_pos_deg)
-
-            logger.debug(f"DEBUG: Processing valid data with keys: {list(data.keys()) if isinstance(data, dict) else 'NOT A DICT'}")
-
-            # Now we know data is valid, proceed with processing
-            # Update the previous state BEFORE checking for reset
-            current_is_resetting = data.get("is_resetting", False)
-            logger.debug(f"DEBUG: current_is_resetting={current_is_resetting}, prev_is_resetting={self.prev_is_resetting}")
+            # Update reset state tracking
+            current_is_resetting = data["is_resetting"]
+            
+            # Check for reset transition (prev=False, current=True) - reset just started
+            if self.prev_is_resetting == False and current_is_resetting == True:
+                self.reset_hold_position = current_joint_pos_deg.copy()
             
             if current_is_resetting:
-                # Update prev_is_resetting before returning
                 self.prev_is_resetting = current_is_resetting
-                logger.debug("DEBUG: In reset mode, returning current position")
-                return self._format_action_dict(current_joint_pos_deg)
-            
-            # Check for reset transition (prev=True, current=False)
+                # Return the captured hold position instead of current drifting position
+                if self.reset_hold_position is not None:
+                    return self._format_action_dict(self.reset_hold_position)
+                else:
+                    # Fallback if no hold position captured yet
+                    return self._format_action_dict(current_joint_pos_deg)
+
+            # Check for reset transition (prev=True, current=False) - reset just ended
             if self.prev_is_resetting == True and current_is_resetting == False:
-                # Call reset function with current phone pose
-                pos, quat = data.get("position"), data.get("rotation")
-                if pos is not None and quat is not None:
-                    logger.debug("DEBUG: Reset transition detected, calling _reset_mapping")
-                    self._reset_mapping(pos, quat)
-            
-            # Update the previous state
+                pos, quat = data["position"], data["rotation"]
+                self._reset_mapping(pos, quat)
+                self.reset_hold_position = None  # Clear the hold position
+
             self.prev_is_resetting = current_is_resetting
 
-            pos, quat, gripper_value = data.get("position"), data.get("rotation"), data.get("gripper_value", 50.0)
-            # Convert gripper_value (0-100) to boolean (True if > 50, False otherwise) 
-            gripper = gripper_value > 50.0
-            logger.debug(f"DEBUG: Extracted pose data - pos={pos}, quat={quat}, gripper_value={gripper_value}, gripper={gripper}")
-            
-            # Validate required data fields
-            if pos is None or quat is None:
-                logger.warning(f"DEBUG: Missing required data - pos={pos}, quat={quat}")
-                return self._format_action_dict(current_joint_pos_deg)
+            pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
 
             # Map phone pose to robot pose
-            precision_mode = data.get("precision", False)
-            logger.debug(f"DEBUG: Mapping phone to robot with precision_mode={precision_mode}")
-            t_robot, q_robot = self._map_phone_to_robot(pos, quat, precision_mode)
-            logger.debug(f"DEBUG: Mapped to robot pose - t_robot={t_robot}, q_robot={q_robot}")
+            t_robot, q_robot = self._map_phone_to_robot(pos, quat, data["precision"])
 
-            # Solve inverse kinematics
-            logger.debug("DEBUG: Solving inverse kinematics")
-            solution = self._solve_ik(t_robot, q_robot)
-            logger.debug(f"DEBUG: IK solution (radians): {solution}")
+            # Solve inverse kinematics (returns radians)
+            solution_rad = self._solve_ik(t_robot, q_robot)
 
             # Update visualization (expects radians)
             if self.config.enable_visualization and self.urdf_vis:
-                self.urdf_vis.update_cfg(solution)
-                logger.debug("DEBUG: Updated visualization")
+                self.urdf_vis.update_cfg(solution_rad)
 
             # Convert to degrees for robot (SO100 expects degrees)
-            solution_deg = np.rad2deg(solution)
-            logger.debug(f"DEBUG: Solution in degrees: {solution_deg}")
+            solution_deg = np.rad2deg(solution_rad)
 
             # Apply backward compatibility transformations for old calibration system
             # Based on PR #777 backward compatibility documentation
@@ -478,40 +411,29 @@ class PhoneTeleoperator(Teleoperator):
             # For SO100/SO101 backward compatibility:
             # shoulder_lift (index 1): direction reversal + 90° offset
             if len(solution_deg) > 1:
-                old_val = solution_deg[1]
                 solution_deg[1] = -(solution_deg[1] - 90)
-                logger.debug(f"DEBUG: shoulder_lift transform: {old_val} -> {solution_deg[1]}")
             
             # elbow_flex (index 2): 90° offset
             if len(solution_deg) > 2:
-                old_val = solution_deg[2]
                 solution_deg[2] -= 90
-                logger.debug(f"DEBUG: elbow_flex transform: {old_val} -> {solution_deg[2]}")
             
             # wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_deg) > 4:
-                old_val = solution_deg[4]
                 solution_deg[4] = -(solution_deg[4] + 90)
-                logger.debug(f"DEBUG: wrist_roll transform: {old_val} -> {solution_deg[4]}")
 
-            # Update gripper state - use the gripper_open boolean from phone
-            gripper_position = self.config.gripper_max_pos if gripper else self.config.gripper_min_pos
+            # Update gripper state - convert percentage (0-100) to gripper position
+            # gripper_value is 0-100, we need to map it to configured range
+            gripper_range = self.config.gripper_max_pos - self.config.gripper_min_pos
+            gripper_position = self.config.gripper_min_pos + (gripper_value / 100.0) * gripper_range
             solution_deg[-1] = gripper_position
-            logger.debug(f"DEBUG: Set gripper position: {gripper_position} (gripper_open={gripper})")
             
-            # Update teleop state - ensure data is valid before accessing
-            if "switch" in data:
-                old_teleop = self.start_teleop
-                self.start_teleop = data["switch"]
-                logger.debug(f"DEBUG: Updated teleop state: {old_teleop} -> {self.start_teleop}")
+            # Update teleop state
+            self.start_teleop = data["switch"]
 
-            logger.debug(f"DEBUG: Final solution: {solution_deg}")
             return self._format_action_dict(solution_deg)
 
         except Exception as e:
-            logger.error(f"DEBUG: Exception in get_action: {type(e).__name__}: {e}")
-            import traceback
-            logger.error(f"DEBUG: Traceback: {traceback.format_exc()}")
+            logger.error(f"Error getting action from {self}: {e}")
             # Return current position on error (safer than rest pose)
             return self._format_action_dict(current_joint_pos_deg)
 
@@ -602,10 +524,9 @@ class PhoneTeleoperator(Teleoperator):
         position_tuple = tuple(current_joint_pos_rad)
         
         formatted_values = ", ".join([f"{pos:.6f}" for pos in current_joint_pos_rad])
-        logger.info(f"{context}: {formatted_values}")
 
     def send_feedback(self, feedback: dict[str, Any]) -> None:
-        """Send feedback to phone teleoperator."""
+        """Send feedback to phone teleoperator (no-op for phone teleoperator)."""
         pass
 
     def disconnect(self) -> None:
