@@ -106,7 +106,7 @@ def test_multiturn_continuous_rotation():
         print("\n=== TESTING FULL ROTATION POSITIONS ===")
 
         # Test positions at 4096, 8192, 12288, etc. (full rotations)
-        full_rotation_positions = [4096, 8192, 12288, 16384, 20480, 24576, 28672]
+        full_rotation_positions = [0, 28672] #[0, 4096, 8192, 12288, 16384, 20480, 24576, 28672]
 
         for i, target_pos in enumerate(full_rotation_positions):
             physical_turns = target_pos / 4096 * gear_ratio
@@ -117,7 +117,7 @@ def test_multiturn_continuous_rotation():
             bus.write("Goal_Position", "test_multiturn_motor", target_pos, normalize=False)
 
             # Wait for movement (longer for full rotations)
-            time.sleep(5)
+            time.sleep(20)
 
             # Read actual position
             actual_pos = bus.read("Present_Position", "test_multiturn_motor", normalize=False)
@@ -134,14 +134,6 @@ def test_multiturn_continuous_rotation():
                 print("  ⚠ Movement may not have completed")
 
         print("\n=== FULL ROTATION TEST COMPLETED ===")
-
-        # Return to initial position
-        print(f"\nReturning to initial position {initial_pos}...")
-        bus.write("Goal_Position", "test_multiturn_motor", initial_pos, normalize=False)
-        time.sleep(5)
-
-        final_pos = bus.read("Present_Position", "test_multiturn_motor", normalize=False)
-        print(f"Final position: {final_pos} ({final_pos / 4096 * gear_ratio:.2f} physical turns)")
 
         return True
 
