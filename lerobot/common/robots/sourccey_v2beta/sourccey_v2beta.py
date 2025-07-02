@@ -253,21 +253,22 @@ class SourcceyV2Beta(Robot):
 
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
-        left_arm_pos = {
-            "left_arm_shoulder_pan": 0,
-            "left_arm_shoulder_lift": 0,
-            "left_arm_elbow_flex": 0,
-            "left_arm_wrist_flex": 0,
-            "left_arm_wrist_roll": 0,
-            "left_arm_gripper": 0,
-        }
+        # left_arm_pos = {
+        #     "left_arm_shoulder_pan": 0,
+        #     "left_arm_shoulder_lift": 0,
+        #     "left_arm_elbow_flex": 0,
+        #     "left_arm_wrist_flex": 0,
+        #     "left_arm_wrist_roll": 0,
+        #     "left_arm_gripper": 0,
+        # }
 
         # self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
         right_arm_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
-        arm_pos = {**left_arm_pos, **right_arm_pos}
+        # arm_pos = {**left_arm_pos, **right_arm_pos}
+        arm_pos = {**right_arm_pos}
         # base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
 
-        base_vel = {}
+        #base_vel = {}
         # base_vel = self._wheel_raw_to_body(
         #     base_wheel_vel["base_left_wheel"],
         #     base_wheel_vel["base_back_wheel"],
@@ -276,7 +277,7 @@ class SourcceyV2Beta(Robot):
 
         arm_state = {f"{k}.pos": v for k, v in arm_pos.items()}
 
-        obs_dict = {**arm_state, **base_vel}
+        obs_dict = {**arm_state } #, **base_vel}
 
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read state: {dt_ms:.1f}ms")
@@ -340,15 +341,7 @@ class SourcceyV2Beta(Robot):
         # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
         #return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
-        left_arm_goal_pos = {
-            "left_arm_shoulder_pan": 0,
-            "left_arm_shoulder_lift": 0,
-            "left_arm_elbow_flex": 0,
-            "left_arm_wrist_flex": 0,
-            "left_arm_wrist_roll": 0,
-            "left_arm_gripper": 0,
-        }
-        return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
+        return {**right_arm_goal_pos } #, **base_goal_vel}
 
     def disconnect(self):
         if not self.is_connected:
