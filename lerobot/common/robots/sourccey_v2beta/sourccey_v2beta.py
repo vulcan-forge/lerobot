@@ -53,18 +53,18 @@ class SourcceyV2Beta(Robot):
         super().__init__(config)
         self.config = config
         norm_mode_body = MotorNormMode.DEGREES if config.use_degrees else MotorNormMode.RANGE_M100_100
-        self.left_arm_bus = FeetechMotorsBus(
-            port=self.config.left_arm_port,
-            motors={
-                "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
-                "left_arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body, gear_ratio=3.0),
-                "left_arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
-                "left_arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
-                "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
-                "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
-            },
-            calibration={k: v for k, v in self.calibration.items() if k.startswith("left_arm")},
-        )
+        # self.left_arm_bus = FeetechMotorsBus(
+        #     port=self.config.left_arm_port,
+        #     motors={
+        #         "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
+        #         "left_arm_shoulder_lift": Motor(2, "sts3215", norm_mode_body, gear_ratio=3.0),
+        #         "left_arm_elbow_flex": Motor(3, "sts3215", norm_mode_body),
+        #         "left_arm_wrist_flex": Motor(4, "sts3215", norm_mode_body),
+        #         "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
+        #         "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+        #     },
+        #     calibration={k: v for k, v in self.calibration.items() if k.startswith("left_arm")},
+        # )
         self.right_arm_bus = FeetechMotorsBus(
             port=config.right_arm_port,
             motors={
@@ -77,7 +77,7 @@ class SourcceyV2Beta(Robot):
             },
             calibration={k: v for k, v in self.calibration.items() if k.startswith("right_arm")},
         )
-        self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
+        # self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
         self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
         self.cameras = make_cameras_from_configs(config.cameras)
 
@@ -117,13 +117,14 @@ class SourcceyV2Beta(Robot):
 
     @property
     def is_connected(self) -> bool:
-        return self.left_arm_bus.is_connected and self.right_arm_bus.is_connected and all(cam.is_connected for cam in self.cameras.values())
+        #self.left_arm_bus.is_connected and
+        return self.right_arm_bus.is_connected and all(cam.is_connected for cam in self.cameras.values())
 
     def connect(self, calibrate: bool = True) -> None:
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} already connected")
 
-        self.left_arm_bus.connect()
+        # self.left_arm_bus.connect()
         self.right_arm_bus.connect()
         if not self.is_calibrated and calibrate:
             self.calibrate()
@@ -136,32 +137,33 @@ class SourcceyV2Beta(Robot):
 
     @property
     def is_calibrated(self) -> bool:
-        return self.left_arm_bus.is_calibrated and self.right_arm_bus.is_calibrated
+        # return self.left_arm_bus.is_calibrated and
+        return self.right_arm_bus.is_calibrated
 
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
 
-        self.left_arm_bus.disable_torque(self.left_arm_motors)
+        # self.left_arm_bus.disable_torque(self.left_arm_motors)
         self.right_arm_bus.disable_torque(self.right_arm_motors)
-        for name in self.left_arm_motors:
-            self.left_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
+        # for name in self.left_arm_motors:
+        #     self.left_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
         for name in self.right_arm_motors:
             self.right_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
 
-        input("Move left arm of the robot to the middle of its range of motion and press ENTER....")
-        left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
+        # input("Move left arm of the robot to the middle of its range of motion and press ENTER....")
+        # left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
 
-        left_arm_full_turn_motor = ["left_arm_wrist_roll"]
-        left_arm_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in left_arm_full_turn_motor]
+        # left_arm_full_turn_motor = ["left_arm_wrist_roll"]
+        # left_arm_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in left_arm_full_turn_motor]
 
-        print(
-            f"Move all arm joints except '{left_arm_full_turn_motor}' sequentially through their "
-            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
-        )
-        left_arm_range_mins, left_arm_range_maxes = self.left_arm_bus.record_ranges_of_motion(left_arm_unknown_range_motors)
-        for name in left_arm_full_turn_motor:
-            left_arm_range_mins[name] = 0
-            left_arm_range_maxes[name] = 4095
+        # print(
+        #     f"Move all arm joints except '{left_arm_full_turn_motor}' sequentially through their "
+        #     "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
+        # )
+        # left_arm_range_mins, left_arm_range_maxes = self.left_arm_bus.record_ranges_of_motion(left_arm_unknown_range_motors)
+        # for name in left_arm_full_turn_motor:
+        #     left_arm_range_mins[name] = 0
+        #     left_arm_range_maxes[name] = 4095
 
         input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
         right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
@@ -178,15 +180,15 @@ class SourcceyV2Beta(Robot):
             right_arm_range_mins[name] = 0
             right_arm_range_maxes[name] = 4095
 
-        self.left_arm_calibration = {}
-        for name, motor in self.left_arm_bus.motors.items():
-            self.left_arm_calibration[name] = MotorCalibration(
-                id=motor.id,
-                drive_mode=0,
-                homing_offset=left_arm_homing_offsets[name],
-                range_min=left_arm_range_mins[name],
-                range_max=left_arm_range_maxes[name],
-            )
+        # self.left_arm_calibration = {}
+        # for name, motor in self.left_arm_bus.motors.items():
+        #     self.left_arm_calibration[name] = MotorCalibration(
+        #         id=motor.id,
+        #         drive_mode=0,
+        #         homing_offset=left_arm_homing_offsets[name],
+        #         range_min=left_arm_range_mins[name],
+        #         range_max=left_arm_range_maxes[name],
+        #     )
 
         self.right_arm_calibration = {}
         for name, motor in self.right_arm_bus.motors.items():
@@ -199,10 +201,11 @@ class SourcceyV2Beta(Robot):
                 range_max=right_arm_range_maxes[name],
             )
 
-        self.left_arm_bus.write_calibration(self.left_arm_calibration)
+        #self.left_arm_bus.write_calibration(self.left_arm_calibration)
         self.right_arm_bus.write_calibration(self.right_arm_calibration)
 
-        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
+        # self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
+        self.calibration = {**self.right_arm_calibration}
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
@@ -210,17 +213,17 @@ class SourcceyV2Beta(Robot):
         # Set-up arm actuators (position mode)
         # We assume that at connection time, arm is in a rest position,
         # and torque can be safely disabled to run calibration.
-        self.left_arm_bus.disable_torque()
+        # self.left_arm_bus.disable_torque()
         self.right_arm_bus.disable_torque()
-        self.left_arm_bus.configure_motors()
+        # self.left_arm_bus.configure_motors()
         self.right_arm_bus.configure_motors()
-        for name in self.left_arm_motors:
-            self.left_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
-            # Set P_Coefficient to lower value to avoid shakiness (Default is 32)
-            self.left_arm_bus.write("P_Coefficient", name, 16)
-            # Set I_Coefficient and D_Coefficient to default value 0 and 32
-            self.left_arm_bus.write("I_Coefficient", name, 0)
-            self.left_arm_bus.write("D_Coefficient", name, 32)
+        # for name in self.left_arm_motors:
+        #     self.left_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
+        #     # Set P_Coefficient to lower value to avoid shakiness (Default is 32)
+        #     self.left_arm_bus.write("P_Coefficient", name, 16)
+        #     # Set I_Coefficient and D_Coefficient to default value 0 and 32
+        #     self.left_arm_bus.write("I_Coefficient", name, 0)
+        #     self.left_arm_bus.write("D_Coefficient", name, 32)
 
         for name in self.right_arm_motors:
             self.right_arm_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
@@ -230,14 +233,14 @@ class SourcceyV2Beta(Robot):
             self.right_arm_bus.write("I_Coefficient", name, 0)
             self.right_arm_bus.write("D_Coefficient", name, 32)
 
-        self.left_arm_bus.enable_torque()
+        #self.left_arm_bus.enable_torque()
         self.right_arm_bus.enable_torque()
 
     def setup_motors(self) -> None:
-        for motor in chain(reversed(self.left_arm_motors)):
-            input(f"Connect the controller board to the '{motor}' motor only and press enter.")
-            self.left_arm_bus.setup_motor(motor)
-            print(f"'{motor}' motor id set to {self.left_arm_bus.motors[motor].id}")
+        # for motor in chain(reversed(self.left_arm_motors)):
+        #     input(f"Connect the controller board to the '{motor}' motor only and press enter.")
+        #     self.left_arm_bus.setup_motor(motor)
+        #     print(f"'{motor}' motor id set to {self.left_arm_bus.motors[motor].id}")
 
         for motor in chain(reversed(self.right_arm_motors)):
             input(f"Connect the controller board to the '{motor}' motor only and press enter.")
@@ -250,7 +253,16 @@ class SourcceyV2Beta(Robot):
 
         # Read actuators position for arm and vel for base
         start = time.perf_counter()
-        left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+        left_arm_pos = {
+            "left_arm_shoulder_pan": 0,
+            "left_arm_shoulder_lift": 0,
+            "left_arm_elbow_flex": 0,
+            "left_arm_wrist_flex": 0,
+            "left_arm_wrist_roll": 0,
+            "left_arm_gripper": 0,
+        }
+
+        # self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
         right_arm_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
         arm_pos = {**left_arm_pos, **right_arm_pos}
         # base_wheel_vel = self.bus.sync_read("Present_Velocity", self.base_motors)
@@ -294,7 +306,7 @@ class SourcceyV2Beta(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        left_arm_goal_pos = {k: v for k, v in action.items() if k.startswith("left_arm_") and k.endswith(".pos")}
+        #left_arm_goal_pos = {k: v for k, v in action.items() if k.startswith("left_arm_") and k.endswith(".pos")}
         right_arm_goal_pos = {k: v for k, v in action.items() if k.startswith("right_arm_") and k.endswith(".pos")}
         base_goal_vel = {k: v for k, v in action.items() if k.endswith(".vel")}
 
@@ -303,17 +315,17 @@ class SourcceyV2Beta(Robot):
         #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
         # )
         # Check for NaN values and skip sending actions if any are found
-        if any(np.isnan(v) for v in left_arm_goal_pos.values()) or any(np.isnan(v) for v in right_arm_goal_pos.values()):
-            logger.warning("NaN values detected in left arm goal positions. Skipping action execution.")
-            return {**left_arm_goal_pos, **right_arm_goal_pos, **base_wheel_goal_vel}
+        # if any(np.isnan(v) for v in left_arm_goal_pos.values()) or any(np.isnan(v) for v in right_arm_goal_pos.values()):
+        #     logger.warning("NaN values detected in left arm goal positions. Skipping action execution.")
+        #     return {**left_arm_goal_pos, **right_arm_goal_pos, **base_wheel_goal_vel}
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
-            left_arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
-            left_arm_goal_pos = left_arm_safe_goal_pos
+            # present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+            # goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
+            # left_arm_safe_goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
+            # left_arm_goal_pos = left_arm_safe_goal_pos
 
             present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
             goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in right_arm_goal_pos.items()}
@@ -321,19 +333,28 @@ class SourcceyV2Beta(Robot):
             right_arm_goal_pos = right_arm_safe_goal_pos
 
         # Send goal position to the actuators
-        left_arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in left_arm_goal_pos.items()}
-        self.left_arm_bus.sync_write("Goal_Position", left_arm_goal_pos_raw)
+        # left_arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in left_arm_goal_pos.items()}
+        # self.left_arm_bus.sync_write("Goal_Position", left_arm_goal_pos_raw)
         right_arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in right_arm_goal_pos.items()}
         self.right_arm_bus.sync_write("Goal_Position", right_arm_goal_pos_raw)
         # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
+        #return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
+        left_arm_goal_pos = {
+            "left_arm_shoulder_pan": 0,
+            "left_arm_shoulder_lift": 0,
+            "left_arm_elbow_flex": 0,
+            "left_arm_wrist_flex": 0,
+            "left_arm_wrist_roll": 0,
+            "left_arm_gripper": 0,
+        }
         return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
 
     def disconnect(self):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        self.left_arm_bus.disconnect(self.config.disable_torque_on_disconnect)
+        #self.left_arm_bus.disconnect(self.config.disable_torque_on_disconnect)
         self.right_arm_bus.disconnect(self.config.disable_torque_on_disconnect)
         for cam in self.cameras.values():
             cam.disconnect()
