@@ -217,7 +217,11 @@ def record_loop(
             )
             action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
         elif policy is None and isinstance(teleop, Teleoperator):
-            action = teleop.get_action()
+            # Phone teleoperator needs observation for reset functionality
+            if hasattr(teleop, 'config') and hasattr(teleop.config, 'type') and teleop.config.type == "phone":
+                action = teleop.get_action(observation)
+            else:
+                action = teleop.get_action()
         elif (
             policy is None and isinstance(teleop, list) and robot.name == "lekiwi_client"
         ):  # TODO(pepijn, steven): clean the record loop for use of multiple robots (possibly with pipeline)
