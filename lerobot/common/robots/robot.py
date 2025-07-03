@@ -18,7 +18,7 @@ from typing import Any, Type
 
 import draccus
 
-from lerobot.common.constants import HF_LEROBOT_CALIBRATION, ROBOTS
+from lerobot.common.constants import HF_LEROBOT_CALIBRATION, HF_LEROBOT_PROFILES, ROBOTS
 from lerobot.common.motors import MotorCalibration
 
 from .config import RobotConfig
@@ -53,6 +53,15 @@ class Robot(abc.ABC):
         self.calibration: dict[str, MotorCalibration] = {}
         if self.calibration_fpath.is_file():
             self._load_calibration()
+
+        self.profile_dir = (
+            config.profile_dir if config.profile_dir else HF_LEROBOT_PROFILES / ROBOTS / self.name
+        )
+        self.profile_dir.mkdir(parents=True, exist_ok=True)
+        self.profile_fpath = self.profile_dir / f"{self.id}.json"
+        self.profile: dict[str, Any] = {}
+        if self.profile_fpath.is_file():
+            self._load_profile()
 
     def __str__(self) -> str:
         return f"{self.id} {self.__class__.__name__}"
@@ -142,6 +151,22 @@ class Robot(abc.ABC):
         fpath = self.calibration_fpath if fpath is None else fpath
         with open(fpath, "w") as f, draccus.config_type("json"):
             draccus.dump(self.calibration, f, indent=4)
+
+    def _load_profile(self, fpath: Path | None = None) -> None:
+        """
+        Helper to load profile data from the specified file.
+        """
+        fpath = self.profile_fpath if fpath is None else fpath
+        with open(fpath) as f, draccus.config_type("json"):
+            self.profile = draccus.load(dict[str, Any], f)
+
+    def _save_profile(self, fpath: Path | None = None) -> None:
+        """
+        Helper to save profile data to the specified file.
+        """
+        fpath = self.profile_fpath if fpath is None else fpath
+        with open(fpath, "w") as f, draccus.config_type("json"):
+            draccus.dump(self.profile, f, indent=4)
 
     @abc.abstractmethod
     def configure(self) -> None:

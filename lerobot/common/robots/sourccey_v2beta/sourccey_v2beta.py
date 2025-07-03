@@ -80,7 +80,6 @@ class SourcceyV2Beta(Robot):
         self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
         self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
         self.cameras = make_cameras_from_configs(config.cameras)
-
     @property
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
@@ -243,6 +242,14 @@ class SourcceyV2Beta(Robot):
             input(f"Connect the controller board to the '{motor}' motor only and press enter.")
             self.right_arm_bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
+
+    def set_homings(self) -> None:
+        self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
+        self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+
+    def home_motors(self) -> None:
+        self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
+        self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:

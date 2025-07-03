@@ -294,6 +294,16 @@ class FeetechMotorsBus(MotorsBus):
 
         self.calibration = calibration_dict
 
+    def set_homings(self, homing_dict: dict[NameOrID, Value]) -> None:
+        for motor, homing in homing_dict.items():
+            self.write("Homing_Offset", motor, homing)
+
+    def get_homings(self) -> dict[NameOrID, Value]:
+        homings = {}
+        for motor in self.motors:
+            homings[motor] = self.read("Homing_Offset", motor)
+        return homings
+
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
         """
         On Feetech Motors:

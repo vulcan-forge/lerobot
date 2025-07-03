@@ -18,7 +18,6 @@ from lerobot.common.cameras.configs import CameraConfig, Cv2Rotation
 from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
 from lerobot.common.robots.config import RobotConfig
-from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 
 
 def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:

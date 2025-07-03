@@ -17,8 +17,6 @@
 import os
 from dataclasses import dataclass
 
-from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
-
 from ...config import TeleoperatorConfig
 
 
