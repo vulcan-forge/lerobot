@@ -65,6 +65,7 @@ from lerobot.common.teleoperators import (  # noqa: F401
     TeleoperatorConfig,
     koch_leader,
     make_teleoperator_from_config,
+    phone_teleoperator,
     so100_leader,
     so101_leader,
 )
@@ -270,6 +271,15 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
         _init_rerun(session_name="recording")
 
     robot = make_robot_from_config(cfg.robot)
+    
+    # Phone teleoperator requires robot to use degrees
+    if cfg.teleop is not None and cfg.teleop.type == "phone":
+        if hasattr(cfg.robot, 'use_degrees'):
+            cfg.robot.use_degrees = True
+            logging.info("Phone teleoperator detected: automatically setting robot.use_degrees=True")
+        else:
+            logging.warning("Phone teleoperator detected but robot config doesn't support use_degrees parameter")
+    
     teleop = make_teleoperator_from_config(cfg.teleop) if cfg.teleop is not None else None
 
     action_features = hw_to_dataset_features(robot.action_features, "action", cfg.dataset.video)
