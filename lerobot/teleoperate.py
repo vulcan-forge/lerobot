@@ -108,6 +108,14 @@ def teleoperate(cfg: TeleoperateConfig):
     if cfg.display_data:
         _init_rerun(session_name="teleoperation")
 
+    # Phone teleoperator requires robot to use degrees
+    if cfg.teleop.type == "phone":
+        if hasattr(cfg.robot, 'use_degrees'):
+            cfg.robot.use_degrees = True
+            logging.info("Phone teleoperator detected: automatically setting robot.use_degrees=True")
+        else:
+            logging.warning("Phone teleoperator detected but robot config doesn't support use_degrees parameter")
+
     teleop = make_teleoperator_from_config(cfg.teleop)
     robot = make_robot_from_config(cfg.robot)
 

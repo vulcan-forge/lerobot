@@ -22,6 +22,53 @@ from typing import Any, Optional
 import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
+import scipy
+
+# Check scipy version for scalar_first compatibility
+_scipy_version = tuple(map(int, scipy.__version__.split('.')[:2]))
+_supports_scalar_first = _scipy_version >= (1, 7)
+
+
+def _rotation_from_quat(quat: np.ndarray, scalar_first: bool = True) -> R:
+    """
+    Create a Rotation object from quaternion with backward compatibility.
+    
+    Args:
+        quat: Quaternion array
+        scalar_first: Whether the first element is the scalar component (w,x,y,z vs x,y,z,w)
+    
+    Returns:
+        Rotation object
+    """
+    if _supports_scalar_first:
+        return R.from_quat(quat, scalar_first=scalar_first)
+    else:
+        # For older scipy versions, convert quaternion format if needed
+        if scalar_first:
+            # Convert from (w,x,y,z) to (x,y,z,w) for older scipy
+            quat_converted = np.array([quat[1], quat[2], quat[3], quat[0]])
+        else:
+            quat_converted = quat
+        return R.from_quat(quat_converted)
+
+
+def _quat_as_scalar_first(rotation: R) -> np.ndarray:
+    """
+    Get quaternion in scalar-first format (w,x,y,z) with backward compatibility.
+    
+    Args:
+        rotation: Rotation object
+        
+    Returns:
+        Quaternion as (w,x,y,z)
+    """
+    if _supports_scalar_first:
+        return rotation.as_quat(scalar_first=True)
+    else:
+        # For older scipy versions, convert from (x,y,z,w) to (w,x,y,z)
+        quat = rotation.as_quat()  # Returns (x,y,z,w)
+        return np.array([quat[3], quat[0], quat[1], quat[2]])  # Convert to (w,x,y,z)
+
 
 try:
     import pyroki as pk
@@ -132,10 +179,48 @@ class PhoneTeleoperator(Teleoperator):
 
         try:
             # Initialize robot model
-            if not self.config.urdf_path or not self.config.mesh_path:
-                raise ValueError("URDF path and mesh path must be provided in config")
+            urdf_path = self.config.urdf_path
+            mesh_path = self.config.mesh_path
+            
+            # Auto-detect SO100 paths if not provided
+            if not urdf_path or not mesh_path:
+                try:
+                    # Add the daxie directory to sys.path if it's not already there
+                    import sys
+                    from pathlib import Path
+                    
+                    # Get the path to the daxie directory
+                    current_file = Path(__file__)
+                    possible_daxie_paths = [
+                        current_file.parent.parent.parent.parent.parent,  # lerobot/../daxie
+                        current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot/../daxie/daxie
+                        Path.cwd().parent,  # Current working directory parent
+                        Path.cwd().parent / "daxie",  # Current working directory parent/daxie
+                    ]
+                    
+                    daxie_found = False
+                    for daxie_path in possible_daxie_paths:
+                        if (daxie_path / "daxie" / "__init__.py").exists():
+                            daxie_str = str(daxie_path)
+                            if daxie_str not in sys.path:
+                                sys.path.insert(0, daxie_str)
+                            daxie_found = True
+                            break
+                    
+                    if daxie_found:
+                        from daxie import get_so100_path
+                        auto_urdf_path, auto_mesh_path = get_so100_path()
+                        urdf_path = urdf_path or auto_urdf_path
+                        mesh_path = mesh_path or auto_mesh_path
+                        logger.info(f"Auto-detected SO100 paths - URDF: {urdf_path}, Mesh: {mesh_path}")
+                    else:
+                        raise ImportError("Could not find daxie package for auto-detection")
+                except ImportError as e:
+                    logger.warning(f"Could not auto-detect SO100 paths: {e}")
+                    if not urdf_path or not mesh_path:
+                        raise ValueError("URDF path and mesh path must be provided in config or daxie package must be available for auto-detection")
                 
-            self.urdf = yourdfpy.URDF.load(self.config.urdf_path, mesh_dir=self.config.mesh_path)
+            self.urdf = yourdfpy.URDF.load(urdf_path, mesh_dir=mesh_path)
             self.robot = pk.Robot.from_urdf(self.urdf)
             
             # Initialize visualization if enabled
@@ -220,7 +305,7 @@ class PhoneTeleoperator(Teleoperator):
         """Wait for phone to connect and set initial mapping."""
         # Use the initial target pose, not the current robot joint positions
         # The current joint positions are used elsewhere, but the target pose is what we map to
-        init_rot_robot = R.from_quat(self.current_q_R, scalar_first=True)
+        init_rot_robot = _rotation_from_quat(self.current_q_R, scalar_first=True)
         self.current_t_R = np.array(self.config.initial_position)
         self.current_q_R = np.array(self.config.initial_wxyz)
 
@@ -243,7 +328,7 @@ class PhoneTeleoperator(Teleoperator):
 
         pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
         
-        initial_rot_phone = R.from_quat(quat, scalar_first=True)
+        initial_rot_phone = _rotation_from_quat(quat, scalar_first=True)
         initial_pos_phone = np.array(pos)
 
         self.initial_phone_quat = quat.copy()
@@ -260,8 +345,8 @@ class PhoneTeleoperator(Teleoperator):
         self.initial_phone_pos = phone_pos.copy()
         self.initial_phone_quat = phone_quat.copy()
 
-        rot_init = R.from_quat(self.initial_phone_quat, scalar_first=True)
-        rot_curr = R.from_quat(self.current_q_R, scalar_first=True)
+        rot_init = _rotation_from_quat(self.initial_phone_quat, scalar_first=True)
+        rot_curr = _rotation_from_quat(self.current_q_R, scalar_first=True)
         self.quat_RP = rot_curr * rot_init.inv()
         self.translation_RP = self.current_t_R - self.quat_RP.apply(self.initial_phone_pos)
 
@@ -287,8 +372,8 @@ class PhoneTeleoperator(Teleoperator):
         scaled_pos = self.initial_phone_pos + delta
 
         # Rotate
-        init_rot = R.from_quat(self.initial_phone_quat, scalar_first=True)
-        curr_rot = R.from_quat(phone_quat, scalar_first=True)
+        init_rot = _rotation_from_quat(self.initial_phone_quat, scalar_first=True)
+        curr_rot = _rotation_from_quat(phone_quat, scalar_first=True)
         relative_rot = init_rot.inv() * curr_rot
         rotvec = relative_rot.as_rotvec() * self.config.rotation_sensitivity
         scaled_rot = R.from_rotvec(rotvec)
@@ -298,7 +383,7 @@ class PhoneTeleoperator(Teleoperator):
         quat_robot = self.quat_RP * quat_scaled
         pos_robot = self.quat_RP.apply(scaled_pos) + self.translation_RP
 
-        self.current_q_R = quat_robot.as_quat(scalar_first=True)
+        self.current_q_R = _quat_as_scalar_first(quat_robot)
         self.current_t_R = pos_robot
         
         return pos_robot, self.current_q_R
@@ -329,7 +414,8 @@ class PhoneTeleoperator(Teleoperator):
         
         # If no observation or extraction failed, use rest pose
         if current_joint_pos_deg is None:
-            current_joint_pos_deg = np.rad2deg(self.config.rest_pose)
+            # Phone teleoperator always works in degrees (robot is auto-configured)
+            current_joint_pos_deg = list(np.rad2deg(self.config.rest_pose))
             logger.debug("Using rest pose as current position")
 
         # Show initial motor positions immediately on first call (before phone connection)
@@ -340,13 +426,15 @@ class PhoneTeleoperator(Teleoperator):
         try:
             # Handle phone connection
             if not self._phone_connected:
-                # Pass current position to connection setup (converted to radians)
+                # Pass current position to connection setup (IK solver always expects radians)
+                # Phone teleoperator always works in degrees (robot is auto-configured)
                 curr_qpos_rad = np.deg2rad(current_joint_pos_deg)
                 self.quat_RP, self.translation_RP = self._open_phone_connection(curr_qpos_rad)
                 self._phone_connected = True
 
             if not self.start_teleop:
-                current_joint_pos_deg = np.rad2deg(self.config.rest_pose)
+                # Phone teleoperator always works in degrees (robot is auto-configured)
+                current_joint_pos_deg = list(np.rad2deg(self.config.rest_pose))
                 self._phone_connected = False
                 # Reset timer when teleop stops
                 self.teleop_start_time = None
@@ -366,12 +454,27 @@ class PhoneTeleoperator(Teleoperator):
             # Get latest pose from gRPC
             data = self.pose_service.get_latest_pose(block=False)
 
-            # Update reset state tracking
-            current_is_resetting = data["is_resetting"]
+            # Debug: Log all relevant button states
+            switch_state = data.get("switch", False)
+            reset_mapping_pressed = data.get("reset_mapping", False)
+            is_resetting_state = data.get("is_resetting", False)
+            
+            if switch_state != self.start_teleop:
+                logger.info(f"Switch state changed: {self.start_teleop} -> {switch_state}")
+            
+            if reset_mapping_pressed:
+                logger.info("Reset mapping button pressed")
+                
+            if is_resetting_state:
+                logger.info("Is resetting state is True")
+
+            # Update reset state tracking - handle both is_resetting and reset_mapping
+            current_is_resetting = is_resetting_state or reset_mapping_pressed
             
             # Check for reset transition (prev=False, current=True) - reset just started
             if self.prev_is_resetting == False and current_is_resetting == True:
                 self.reset_hold_position = current_joint_pos_deg.copy()
+                logger.info("Reset button pressed - holding current position")
             
             if current_is_resetting:
                 self.prev_is_resetting = current_is_resetting
@@ -387,6 +490,7 @@ class PhoneTeleoperator(Teleoperator):
                 pos, quat = data["position"], data["rotation"]
                 self._reset_mapping(pos, quat)
                 self.reset_hold_position = None  # Clear the hold position
+                logger.info("Reset button released - mapping reset")
 
             self.prev_is_resetting = current_is_resetting
 
@@ -402,35 +506,35 @@ class PhoneTeleoperator(Teleoperator):
             if self.config.enable_visualization and self.urdf_vis:
                 self.urdf_vis.update_cfg(solution_rad)
 
-            # Convert to degrees for robot (SO100 expects degrees)
-            solution_deg = np.rad2deg(solution_rad)
+            # Convert to degrees (phone teleoperator always uses degrees, robot is auto-configured)
+            solution_final = np.rad2deg(solution_rad)
 
             # Apply backward compatibility transformations for old calibration system
             # Based on PR #777 backward compatibility documentation
             
-            # For SO100/SO101 backward compatibility:
+            # For SO100/SO101 backward compatibility (applied in degrees):
             # shoulder_lift (index 1): direction reversal + 90° offset
-            if len(solution_deg) > 1:
-                solution_deg[1] = -(solution_deg[1] - 90)
+            if len(solution_final) > 1:
+                solution_final[1] = -(solution_final[1] - 90)
             
             # elbow_flex (index 2): 90° offset
-            if len(solution_deg) > 2:
-                solution_deg[2] -= 90
+            if len(solution_final) > 2:
+                solution_final[2] -= 90
             
             # wrist_roll (index 4): direction reversal + 90° offset
-            if len(solution_deg) > 4:
-                solution_deg[4] = -(solution_deg[4] + 90)
+            if len(solution_final) > 4:
+                solution_final[4] = -(solution_final[4] + 90)
 
             # Update gripper state - convert percentage (0-100) to gripper position
             # gripper_value is 0-100, we need to map it to configured range
             gripper_range = self.config.gripper_max_pos - self.config.gripper_min_pos
             gripper_position = self.config.gripper_min_pos + (gripper_value / 100.0) * gripper_range
-            solution_deg[-1] = gripper_position
+            solution_final[-1] = gripper_position
             
             # Update teleop state
-            self.start_teleop = data["switch"]
+            self.start_teleop = switch_state
 
-            return self._format_action_dict(solution_deg)
+            return self._format_action_dict(solution_final)
 
         except Exception as e:
             logger.error(f"Error getting action from {self}: {e}")
@@ -505,20 +609,23 @@ class PhoneTeleoperator(Teleoperator):
         
         return {key: pos for key, pos in zip(action_keys, joint_positions)}
 
-    def _read_and_display_motor_positions(self, current_joint_pos_deg: list[float]) -> None:
+    def _read_and_display_motor_positions(self, current_joint_pos: list[float]) -> None:
         """Read and display current motor positions in rest_pose format (radians)."""
-        self._display_motor_positions_formatted(current_joint_pos_deg, "5-SECOND TELEOP READING")
+        self._display_motor_positions_formatted(current_joint_pos, "5-SECOND TELEOP READING")
         
-        # Also log to logger
-        current_joint_pos_rad = np.deg2rad(current_joint_pos_deg)
-        logger.info(f"Motor positions after 5 seconds - Degrees: {current_joint_pos_deg}")
+        # Also log to logger (phone teleoperator always works in degrees)
+        current_joint_pos_rad = np.deg2rad(current_joint_pos)
+        logger.info(f"Motor positions after 5 seconds - Degrees: {current_joint_pos}")
         logger.info(f"Motor positions after 5 seconds - Radians: {current_joint_pos_rad}")
+        
+        # rest_pose is always stored in radians for consistency with IK solver
         logger.info(f"rest_pose format: {tuple(current_joint_pos_rad)}")
 
-    def _display_motor_positions_formatted(self, current_joint_pos_deg: list[float], context: str) -> None:
+    def _display_motor_positions_formatted(self, current_joint_pos: list[float], context: str) -> None:
         """Display motor positions in rest_pose format with given context."""
-        # Convert degrees to radians for rest_pose format
-        current_joint_pos_rad = np.deg2rad(current_joint_pos_deg)
+        # Convert to radians for rest_pose format (rest_pose is always stored in radians)
+        # Phone teleoperator always works in degrees
+        current_joint_pos_rad = np.deg2rad(current_joint_pos)
         
         # Format as tuple like rest_pose in config
         position_tuple = tuple(current_joint_pos_rad)

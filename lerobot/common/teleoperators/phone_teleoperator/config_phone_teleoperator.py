@@ -20,23 +20,22 @@ from typing import Optional
 from lerobot.common.teleoperators.config import TeleoperatorConfig
 
 
+@TeleoperatorConfig.register_subclass("phone")
 @dataclass
 class PhoneTeleoperatorConfig(TeleoperatorConfig):
     """Configuration for phone teleoperation."""
-    _target_: str = "lerobot.common.teleoperators.phone_teleoperator.phone_teleoperator.PhoneTeleoperator"
     
     # gRPC server settings
     grpc_port: int = 8765  # Default port to match phone app
     grpc_timeout: float = 100.0
     
-    # Robot model paths  
+    # Robot model paths - can be set via command line or will be auto-detected for SO100
     urdf_path: str = ""
     mesh_path: str = ""
     
     # IK solver settings
     target_link_name: str = "Fixed_Jaw"
-    # rest_pose: tuple[float, ...] = (0.0, 2.733588, 2.411134, 0.322072, -1.570779, 0.849988)  # radians - initial position from IK solution
-    rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # radians - initial robot positions
+    rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # Always in radians - initial robot positions for IK solver
 
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
@@ -53,7 +52,7 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     
     # Gripper settings
     gripper_min_pos: float = 0.0    # Gripper closed position (0% slider)
-    gripper_max_pos: float = 0.875  # Gripper open position (100% slider)
-
+    gripper_max_pos: float = 50.0   # Gripper open position (100% slider) - matches SO100 default
+    
     # Safety settings
     max_relative_target: Optional[float] = None 

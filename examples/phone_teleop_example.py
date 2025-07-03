@@ -88,7 +88,6 @@ def main():
         urdf_path=urdf_path,
         mesh_path=mesh_path,
         target_link_name="Fixed_Jaw",
-        grpc_port=8765,  # Match your phone app's expected port
         sensitivity_normal=0.5,
         sensitivity_precision=0.2,
         rotation_sensitivity=1.0,
