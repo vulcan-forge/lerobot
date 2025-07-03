@@ -133,6 +133,8 @@ class SourcceyV2Beta(Robot):
         self.configure()
         logger.info(f"{self} connected.")
 
+        self.home_motors()
+
     @property
     def is_calibrated(self) -> bool:
         return self.left_arm_bus.is_calibrated and self.right_arm_bus.is_calibrated
@@ -290,6 +292,9 @@ class SourcceyV2Beta(Robot):
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         self.send_action(full_home_motor_positions)
+
+        logger.info(f"{self} homing motors for 10 seconds.")
+        time.sleep(10)
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
