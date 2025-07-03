@@ -454,19 +454,9 @@ class PhoneTeleoperator(Teleoperator):
             # Get latest pose from gRPC
             data = self.pose_service.get_latest_pose(block=False)
 
-            # Debug: Log all relevant button states
             switch_state = data.get("switch", False)
             reset_mapping_pressed = data.get("reset_mapping", False)
             is_resetting_state = data.get("is_resetting", False)
-            
-            if switch_state != self.start_teleop:
-                logger.info(f"Switch state changed: {self.start_teleop} -> {switch_state}")
-            
-            if reset_mapping_pressed:
-                logger.info("Reset mapping button pressed")
-                
-            if is_resetting_state:
-                logger.info("Is resetting state is True")
 
             # Update reset state tracking - handle both is_resetting and reset_mapping
             current_is_resetting = is_resetting_state or reset_mapping_pressed
@@ -474,7 +464,6 @@ class PhoneTeleoperator(Teleoperator):
             # Check for reset transition (prev=False, current=True) - reset just started
             if self.prev_is_resetting == False and current_is_resetting == True:
                 self.reset_hold_position = current_joint_pos_deg.copy()
-                logger.info("Reset button pressed - holding current position")
             
             if current_is_resetting:
                 self.prev_is_resetting = current_is_resetting
@@ -490,7 +479,6 @@ class PhoneTeleoperator(Teleoperator):
                 pos, quat = data["position"], data["rotation"]
                 self._reset_mapping(pos, quat)
                 self.reset_hold_position = None  # Clear the hold position
-                logger.info("Reset button released - mapping reset")
 
             self.prev_is_resetting = current_is_resetting
 

@@ -78,9 +78,9 @@ def teleop_loop(
     start = time.perf_counter()
     while True:
         loop_start = time.perf_counter()
-        action = teleop.get_action()
+        observation = robot.get_observation()
+        action = teleop.get_action(observation)
         if display_data:
-            observation = robot.get_observation()
             log_rerun_data(observation, action)
 
         robot.send_action(action)
