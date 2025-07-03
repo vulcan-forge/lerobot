@@ -195,6 +195,17 @@ MODEL_RESOLUTION = {
     "scs0009": 1024,
 }
 
+MODEL_MULTI_TURN_TABLE = {
+    "sts_series": 0,
+    "sms_series": 0,
+    "scs_series": 0,
+    "sts3215": 0,
+    "sts3235": 7,
+    "sts3250": 7,
+    "sm8512bl": 0,
+    "scs0009": 0,
+}
+
 MODEL_BAUDRATE_TABLE = {
     "sts_series": STS_SMS_SERIES_BAUDRATE_TABLE,
     "sms_series": STS_SMS_SERIES_BAUDRATE_TABLE,

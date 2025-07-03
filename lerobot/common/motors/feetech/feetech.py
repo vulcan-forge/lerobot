@@ -26,6 +26,7 @@ from .tables import (
     MODEL_BAUDRATE_TABLE,
     MODEL_CONTROL_TABLE,
     MODEL_ENCODING_TABLE,
+    MODEL_MULTI_TURN_TABLE,
     MODEL_NUMBER,
     MODEL_NUMBER_TABLE,
     MODEL_PROTOCOL,
@@ -111,6 +112,7 @@ class FeetechMotorsBus(MotorsBus):
     model_encoding_table = deepcopy(MODEL_ENCODING_TABLE)
     model_number_table = deepcopy(MODEL_NUMBER_TABLE)
     model_resolution_table = deepcopy(MODEL_RESOLUTION)
+    model_multi_turn_table = deepcopy(MODEL_MULTI_TURN_TABLE)
     normalized_data = deepcopy(NORMALIZED_DATA)
 
     def __init__(
@@ -303,7 +305,7 @@ class FeetechMotorsBus(MotorsBus):
             max_res = self.model_resolution_table[model] - 1
             mid = int(max_res / 2)
 
-            if self.motors[motor].gear_ratio != 1.0:
+            if self.model_multi_turn_table[model] == 0 and self.motors[motor].gear_ratio != 1.0:
                 target_motor_pos = mid * self.motors[motor].gear_ratio
                 wrapped_target = target_motor_pos % (max_res + 1)
                 half_turn_homings[motor] = int(pos - wrapped_target)

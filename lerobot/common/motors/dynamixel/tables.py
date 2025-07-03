@@ -134,6 +134,16 @@ MODEL_RESOLUTION = {
     "xc430-w150": 4096,
 }
 
+MODEL_MULTI_TURN_TABLE = {
+    "x_series": 0,
+    "xl330-m077": 0,
+    "xl330-m288": 0,
+    "xl430-w250": 0,
+    "xm430-w350": 0,
+    "xm540-w270": 0,
+    "xc430-w150": 0,
+}
+
 # {model: model_number}
 # https://emanual.robotis.com/docs/en/dxl/x/{MODEL}/#control-table-of-eeprom-area
 MODEL_NUMBER_TABLE = {

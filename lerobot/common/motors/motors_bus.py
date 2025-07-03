@@ -98,6 +98,7 @@ class Motor:
     model: str
     norm_mode: MotorNormMode
     gear_ratio: float = 1.0
+    multi_turn: int = 0
 
 
 class JointOutOfRangeError(Exception):
@@ -259,6 +260,7 @@ class MotorsBus(abc.ABC):
     model_encoding_table: dict[str, dict]
     model_number_table: dict[str, int]
     model_resolution_table: dict[str, int]
+    model_multi_turn_table: dict[str, int]
     normalized_data: list[str]
 
     def __init__(
@@ -799,6 +801,43 @@ class MotorsBus(abc.ABC):
 
         return mins, maxes
 
+    def _get_multi_turn_positions(self, ids_values: dict[int, int], model_resolution: dict[int, int], multi_turn: dict[int, int]) -> dict[int, int]:
+        """
+        Multi-turn position tracking logic.
+        """
+        multi_turn_ids_values = {}
+        for id_, val in ids_values.items():
+            multi_turn_ids_values[id_] = self._get_multi_turn_position(val, model_resolution[id_], multi_turn[id_])
+
+        return multi_turn_ids_values
+
+    def _get_multi_turn_position(self, value: int, model_resolution: int, multi_turn: int) -> int:
+        """
+        Multi-turn position tracking logic.
+        """
+        multi_turn_val = value + model_resolution * multi_turn
+        return multi_turn_val
+
+    def _set_multi_turns(self, ids_values: dict[int, int]):
+        """
+        Set the multi-turn value for each motor.
+        """
+        for id_, value in ids_values.items():
+            model = self._id_to_model(id_)
+            if self.model_multi_turn_table[model] > 0:
+                model_resolution = self.model_resolution_table[model]
+                self._set_multi_turn(id_, value, model_resolution)
+
+    def _set_multi_turn(self, id_: int, value: int, model_resolution: int):
+        """
+        Set the multi-turn value for the given motor.
+        """
+        motor = self._id_to_name(id_)
+        multi_turn_value = value // model_resolution
+
+        # We must save the multi-turn value in the motor object
+        self.motors[motor].multi_turn = multi_turn_value
+
     def _normalize(self, ids_values: dict[int, int]) -> dict[int, float]:
         if not self.calibration:
             raise RuntimeError(f"{self} has no calibration registered.")
@@ -975,6 +1014,11 @@ class MotorsBus(abc.ABC):
 
         id_value = self._decode_sign(data_name, {id_: value})
 
+        # Handle multi-turn position tracking
+        if data_name in self.normalized_data and self.motors[motor].multi_turn > 0:
+            value = self._get_multi_turn_position(id_value[id_], self.model_resolution_table[model], self.motors[motor].multi_turn)
+            id_value = { id_: value }
+
         if normalize and data_name in self.normalized_data:
             id_value = self._normalize(id_value)
 
@@ -1044,6 +1088,10 @@ class MotorsBus(abc.ABC):
 
         if normalize and data_name in self.normalized_data:
             value = self._unnormalize({id_: value})[id_]
+
+        # Handle multi-turn position writing
+        if data_name in self.normalized_data and self.model_multi_turn_table[model] > 0:
+            self._set_multi_turn(id_, value, self.model_resolution_table[model])
 
         value = self._encode_sign(data_name, {id_: value})[id_]
 
@@ -1120,6 +1168,12 @@ class MotorsBus(abc.ABC):
         )
 
         ids_values = self._decode_sign(data_name, ids_values)
+
+        # Handle multi-turn position tracking
+        if data_name in self.normalized_data and any(self.motors[name].multi_turn > 0 for name in names):
+            id_resolutions = {id_: self.model_resolution_table[self._id_to_model(id_)] for id_ in ids}
+            id_multi_turn_values = {id_: self.motors[self._id_to_name(id_)].multi_turn for id_ in ids}
+            ids_values = self._get_multi_turn_positions(ids_values, id_resolutions, id_multi_turn_values)
 
         if normalize and data_name in self.normalized_data:
             ids_values = self._normalize(ids_values)
@@ -1200,6 +1254,7 @@ class MotorsBus(abc.ABC):
             )
 
         ids_values = self._get_ids_values_dict(values)
+        names = [self._id_to_name(id_) for id_ in ids_values]
         models = [self._id_to_model(id_) for id_ in ids_values]
         if self._has_different_ctrl_tables:
             assert_same_address(self.model_ctrl_table, models, data_name)
@@ -1209,6 +1264,10 @@ class MotorsBus(abc.ABC):
 
         if normalize and data_name in self.normalized_data:
             ids_values = self._unnormalize(ids_values)
+
+        # Handle multi-turn position writing
+        if data_name in self.normalized_data and any(self.motors[name].multi_turn > 0 for name in names):
+            self._set_multi_turns(ids_values)
 
         ids_values = self._encode_sign(data_name, ids_values)
 
