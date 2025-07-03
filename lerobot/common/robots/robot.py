@@ -130,6 +130,12 @@ class Robot(abc.ABC):
         """
         pass
 
+    def profile(self) -> None:
+        """
+        Profile the robot if applicable. If not, this should be a no-op.
+        """
+        pass
+
     def _load_calibration(self, fpath: Path | None = None) -> None:
         """
         Helper to load calibration data from the specified file.
