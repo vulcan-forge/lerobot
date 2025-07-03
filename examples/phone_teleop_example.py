@@ -39,28 +39,21 @@ def find_existing_calibration_id(robot_name: str) -> str | None:
 
 
 def main():
-    # Add the daxie directory to sys.path if it's not already there
-    import sys
+    # Get URDF and mesh paths from lerobot package
     from pathlib import Path
     
-    # Get the path to the daxie directory (go up from lerobot-vulcan/examples to daxie/)
-    current_dir = Path(__file__).parent  # lerobot-vulcan/examples/
-    daxie_root = current_dir.parent.parent  # daxie/
-    daxie_path = str(daxie_root)
+    # Get the path to the SO100 model directory
+    current_file = Path(__file__)
+    so100_model_path = current_file.parent.parent / "lerobot" / "common" / "robots" / "so100_follower" / "model"
     
-    if daxie_path not in sys.path:
-        sys.path.insert(0, daxie_path)
-        print(f"Added {daxie_path} to Python path")
-    
-    # Get URDF and mesh paths from daxie package
-    try:
-        from daxie import get_so100_path
-        urdf_path, mesh_path = get_so100_path()
+    if so100_model_path.exists():
+        urdf_path = str(so100_model_path / "so100.urdf")
+        mesh_path = str(so100_model_path / "meshes")
         print(f"Using URDF: {urdf_path}")
         print(f"Using meshes: {mesh_path}")
-    except ImportError as e:
-        print(f"ERROR: Could not import daxie package: {e}")
-        print("Make sure the daxie package is installed and accessible")
+    else:
+        print(f"ERROR: Could not find SO100 model directory at {so100_model_path}")
+        print("Make sure the SO100 model files are available in lerobot/common/robots/so100_follower/model/")
         return
     
     # Find existing calibration or use default ID

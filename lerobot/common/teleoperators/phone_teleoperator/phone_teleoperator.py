@@ -182,43 +182,43 @@ class PhoneTeleoperator(Teleoperator):
             urdf_path = self.config.urdf_path
             mesh_path = self.config.mesh_path
             
-            # Auto-detect SO100 paths if not provided
-            if not urdf_path or not mesh_path:
+            # Resolve relative paths to absolute paths
+            if urdf_path and mesh_path:
+                from pathlib import Path
+                import lerobot
+                
+                # Get the lerobot package root directory
+                lerobot_root = Path(lerobot.__file__).parent.parent
+                
+                # Resolve relative paths
+                if not Path(urdf_path).is_absolute():
+                    urdf_path = str(lerobot_root / urdf_path)
+                if not Path(mesh_path).is_absolute():
+                    mesh_path = str(lerobot_root / mesh_path)
+                
+                logger.info(f"Using SO100 paths - URDF: {urdf_path}, Mesh: {mesh_path}")
+            else:
+                # Fallback auto-detection if paths are empty
                 try:
-                    # Add the daxie directory to sys.path if it's not already there
-                    import sys
                     from pathlib import Path
+                    import lerobot
                     
-                    # Get the path to the daxie directory
-                    current_file = Path(__file__)
-                    possible_daxie_paths = [
-                        current_file.parent.parent.parent.parent.parent,  # lerobot/../daxie
-                        current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot/../daxie/daxie
-                        Path.cwd().parent,  # Current working directory parent
-                        Path.cwd().parent / "daxie",  # Current working directory parent/daxie
-                    ]
+                    # Get the lerobot package root directory
+                    lerobot_root = Path(lerobot.__file__).parent.parent
+                    so100_model_path = lerobot_root / "lerobot" / "common" / "robots" / "so100_follower" / "model"
                     
-                    daxie_found = False
-                    for daxie_path in possible_daxie_paths:
-                        if (daxie_path / "daxie" / "__init__.py").exists():
-                            daxie_str = str(daxie_path)
-                            if daxie_str not in sys.path:
-                                sys.path.insert(0, daxie_str)
-                            daxie_found = True
-                            break
-                    
-                    if daxie_found:
-                        from daxie import get_so100_path
-                        auto_urdf_path, auto_mesh_path = get_so100_path()
+                    if so100_model_path.exists():
+                        auto_urdf_path = str(so100_model_path / "so100.urdf")
+                        auto_mesh_path = str(so100_model_path / "meshes")
                         urdf_path = urdf_path or auto_urdf_path
                         mesh_path = mesh_path or auto_mesh_path
                         logger.info(f"Auto-detected SO100 paths - URDF: {urdf_path}, Mesh: {mesh_path}")
                     else:
-                        raise ImportError("Could not find daxie package for auto-detection")
-                except ImportError as e:
+                        raise FileNotFoundError(f"Could not find SO100 model directory at {so100_model_path}")
+                except Exception as e:
                     logger.warning(f"Could not auto-detect SO100 paths: {e}")
                     if not urdf_path or not mesh_path:
-                        raise ValueError("URDF path and mesh path must be provided in config or daxie package must be available for auto-detection")
+                        raise ValueError("URDF path and mesh path must be provided in config or SO100 model must be available in lerobot/common/robots/so100_follower/model/")
                 
             self.urdf = yourdfpy.URDF.load(urdf_path, mesh_dir=mesh_path)
             self.robot = pk.Robot.from_urdf(self.urdf)
@@ -255,51 +255,16 @@ class PhoneTeleoperator(Teleoperator):
     def _start_grpc_server(self) -> None:
         """Start the gRPC server for phone pose streaming."""
         try:
-            # Import from daxie package
-            from daxie.src.server.pos_grpc_server import start_grpc_server
+            # Import from local transport module
+            from lerobot.common.transport.phone_teleop_grpc.pos_grpc_server import start_grpc_server
             
             self.grpc_server, self.pose_service = start_grpc_server(port=self.config.grpc_port)
             self.hz_grpc = 0.0
             self.pose_service.get_latest_pose(block=False)
             logger.info("gRPC server started for phone communication")
         except ImportError as e:
-            # Try to add daxie to sys.path and retry import
-            import sys
-            from pathlib import Path
-            
-            # Try to find daxie directory relative to this file
-            current_file = Path(__file__)
-            # Go up from lerobot/common/teleoperators/phone_teleoperator/ to find daxie
-            possible_daxie_paths = [
-                current_file.parent.parent.parent.parent.parent,  # lerobot-vulcan/../daxie
-                current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot-vulcan/../daxie/daxie
-                Path.cwd().parent,  # Current working directory parent
-                Path.cwd().parent / "daxie",  # Current working directory parent/daxie
-            ]
-            
-            daxie_found = False
-            for daxie_path in possible_daxie_paths:
-                if (daxie_path / "daxie" / "__init__.py").exists():
-                    daxie_str = str(daxie_path)
-                    if daxie_str not in sys.path:
-                        sys.path.insert(0, daxie_str)
-                        logger.info(f"Added {daxie_str} to Python path for daxie import")
-                    
-                    try:
-                        from daxie.src.server.pos_grpc_server import start_grpc_server
-                        self.grpc_server, self.pose_service = start_grpc_server(port=self.config.grpc_port)
-                        self.hz_grpc = 0.0
-                        self.pose_service.get_latest_pose(block=False)
-                        logger.info("gRPC server started for phone communication (after path fix)")
-                        daxie_found = True
-                        break
-                    except ImportError:
-                        continue
-            
-            if not daxie_found:
-                logger.error(f"Could not import gRPC server from daxie package: {e}")
-                logger.error("Make sure the daxie package is installed or accessible")
-                raise ImportError(f"Failed to import daxie.src.server.pos_grpc_server: {e}")
+            logger.error(f"Could not import gRPC server: {e}")
+            raise ImportError(f"Failed to import phone teleop gRPC server: {e}")
 
     def _open_phone_connection(self, curr_qpos_rad: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Wait for phone to connect and set initial mapping."""
@@ -532,8 +497,8 @@ class PhoneTeleoperator(Teleoperator):
     def _solve_ik(self, target_position: np.ndarray, target_wxyz: np.ndarray) -> list[float]:
         """Solve inverse kinematics for target pose. Returns solution in radians."""
         try:
-            # Import IK solver from daxie package
-            from daxie.src.teleop.solve_ik import solve_ik
+            # Import IK solver from local module
+            from .solve_ik import solve_ik
             
             solution = solve_ik(
                 robot=self.robot,
@@ -544,41 +509,7 @@ class PhoneTeleoperator(Teleoperator):
             
             return solution  # Always return radians
         except ImportError as e:
-            # Try to add daxie to sys.path and retry import
-            import sys
-            from pathlib import Path
-            
-            # Try to find daxie directory relative to this file
-            current_file = Path(__file__)
-            # Go up from lerobot/common/teleoperators/phone_teleoperator/ to find daxie
-            possible_daxie_paths = [
-                current_file.parent.parent.parent.parent.parent,  # lerobot-vulcan/../daxie
-                current_file.parent.parent.parent.parent.parent / "daxie",  # lerobot-vulcan/../daxie/daxie
-                Path.cwd().parent,  # Current working directory parent
-                Path.cwd().parent / "daxie",  # Current working directory parent/daxie
-            ]
-            
-            for daxie_path in possible_daxie_paths:
-                if (daxie_path / "daxie" / "__init__.py").exists():
-                    daxie_str = str(daxie_path)
-                    if daxie_str not in sys.path:
-                        sys.path.insert(0, daxie_str)
-                        logger.info(f"Added {daxie_str} to Python path for IK solver import")
-                    
-                    try:
-                        from daxie.src.teleop.solve_ik import solve_ik
-                        solution = solve_ik(
-                            robot=self.robot,
-                            target_link_name=self.config.target_link_name,
-                            target_position=target_position,
-                            target_wxyz=target_wxyz,
-                        )
-                        
-                        return solution  # Always return radians
-                    except ImportError:
-                        continue
-            
-            logger.error(f"Could not import IK solver from daxie package: {e}")
+            logger.error(f"Could not import IK solver: {e}")
             # Return rest pose in radians
             return list(self.config.rest_pose)
 
