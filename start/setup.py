@@ -82,12 +82,12 @@ def setup_venv():
         # Create virtual environment with Python 3.10
         subprocess.run(["uv", "venv", ".venv", "-p", "3.10"], check=True, cwd=parent_dir)
 
-        # Install dependencies with feetech and smolvla extras
+        # Install dependencies with feetech, smolvla, and phone extras
         # The base dependencies are included automatically
-        subprocess.run(["uv", "pip", "install", "-e", ".[feetech,smolvla]"], check=True, cwd=parent_dir)
+        subprocess.run(["uv", "pip", "install", "-e", ".[feetech,smolvla,phone]"], check=True, cwd=parent_dir)
 
         print("Virtual environment created successfully!")
-        print("Installed dependencies: base + feetech + smolvla")
+        print("Installed dependencies: base + feetech + smolvla + phone")
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error setting up virtual environment: {e}")

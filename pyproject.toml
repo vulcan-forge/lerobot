@@ -93,6 +93,13 @@ intelrealsense = [
 ]
 pi0 = ["transformers>=4.50.3"]
 smolvla = ["transformers>=4.50.3", "num2words>=0.5.14", "accelerate>=1.7.0", "safetensors>=0.4.3"]
+phone = [
+    "grpcio>=1.71.0",
+    "protobuf==6.31.1", 
+    "viser==0.2.23",
+    "yourdfpy==0.0.57",
+    "pyroki @ git+https://github.com/chungmin99/pyroki.git@f234516",
+]
 pusht = ["gym-pusht>=0.1.5 ; python_version < '4.0'"]
 stretch = [
     "hello-robot-stretch-body>=0.7.27 ; python_version < '4.0' and sys_platform == 'linux'",
