@@ -205,6 +205,29 @@ class SourcceyV2Beta(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
+    def save_profile(self) -> None:
+
+        # Get the positions of the motors
+        left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+        right_arm_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
+        arm_pos = {**left_arm_pos, **right_arm_pos}
+
+        # Any geared down, multi-turn motor instead needs to have a min = -1 or max = 1 value
+        # to determine if homing will go to it's min or max position.
+        geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
+        profile = {}
+        motor_homings = {}
+        for motor, pos in arm_pos.items():
+            full_rotate = 1 if motor in geared_down_multi_turn_motors else 0
+            motor_homings[motor] = {
+                "pos": pos,
+                "full_rotate": full_rotate,
+            }
+
+        profile = { "motor_homings": motor_homings, "home_on_start": True }
+        self.profile = profile
+        self._save_profile()
+
     def configure(self):
         # Set-up arm actuators (position mode)
         # We assume that at connection time, arm is in a rest position,
@@ -243,13 +266,30 @@ class SourcceyV2Beta(Robot):
             self.right_arm_bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
 
-    def set_homings(self) -> None:
-        self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
-        self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
-
     def home_motors(self) -> None:
-        self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
-        self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+        if not self.profile:
+            return None
+
+        home_on_start = self.profile["home_on_start"]
+        if not home_on_start:
+            return None
+
+        motor_homings = self.profile["motor_homings"]
+        geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
+        home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
+
+        # For the geared down, multi-turn motors, rotate until max or min or until send_action prevents the motor
+        # from turning further.
+        geared_down_home_motor_positions = {}
+        for motor in geared_down_multi_turn_motors:
+            full_rotate = motor_homings[motor]["full_rotate"]
+            if full_rotate == 1:
+                geared_down_home_motor_positions[motor] = self.calibration[motor].range_max
+            elif full_rotate == -1:
+                geared_down_home_motor_positions[motor] = self.calibration[motor].range_min
+
+        full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
+        self.send_action(full_home_motor_positions)
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:

@@ -716,19 +716,6 @@ class MotorsBus(abc.ABC):
 
         self.calibration = {}
 
-    def set_homings(self, homing_dict: dict[NameOrID, Value]) -> None:
-        """Write the home positions and cache them.
-
-        Args:
-            motors (NameOrID | list[NameOrID] | None, optional): Motors to adjust. Defaults to all motors (`None`).
-        """
-        pass
-
-    def get_homings(self) -> dict[NameOrID, Value]:
-        """Read homings for the motors.
-        """
-        pass
-
     def set_half_turn_homings(self, motors: NameOrID | list[NameOrID] | None = None) -> dict[NameOrID, Value]:
         """Centre each motor range around its current position.
 
