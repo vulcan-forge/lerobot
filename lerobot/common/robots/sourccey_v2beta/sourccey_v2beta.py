@@ -167,7 +167,7 @@ class SourcceyV2Beta(Robot):
         for name in left_arm_multi_turn_motors:
             gear_ratio = self.left_arm_bus.motors[name].gear_ratio
             left_arm_range_mins[name] = 0
-            left_arm_range_maxes[name] = (4096 * gear_ratio) - 1
+            left_arm_range_maxes[name] = int((4096 * gear_ratio) - 1)
 
         input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
         right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
@@ -189,7 +189,7 @@ class SourcceyV2Beta(Robot):
         for name in right_arm_multi_turn_motors:
             gear_ratio = self.right_arm_bus.motors[name].gear_ratio
             right_arm_range_mins[name] = 0
-            right_arm_range_maxes[name] = (4096 * gear_ratio) - 1
+            right_arm_range_maxes[name] = int((4096 * gear_ratio) - 1)
 
         self.left_arm_calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
