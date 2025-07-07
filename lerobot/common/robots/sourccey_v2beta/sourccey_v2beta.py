@@ -206,10 +206,6 @@ class SourcceyV2Beta(Robot):
         print("Calibration saved to", self.calibration_fpath)
 
     def update_profile(self) -> None:
-        if not self.is_connected:
-            self.left_arm_bus.connect()
-            self.right_arm_bus.connect()
-
         # Get the positions of the motors
         left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
         right_arm_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
