@@ -303,7 +303,7 @@ class SourcceyV2Beta(Robot):
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
         print("Homing Motors 5",  motor_homings.items())
         print()
-        home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
+        home_motor_positions = {f"{k}.pos": v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
         print("Homing Motors 6", home_motor_positions)
         print()
 
@@ -338,7 +338,7 @@ class SourcceyV2Beta(Robot):
 
                 print("Homing Motors 7.1.1", motor, home_value, "norm_mode:", motor_obj.norm_mode)
                 print()
-                geared_down_home_motor_positions[motor] = home_value
+                geared_down_home_motor_positions[f"{motor}.pos"] = home_value
 
             elif full_rotate == -1:
                 # For full_rotate == -1, we want the minimum value based on normalization mode
@@ -357,7 +357,7 @@ class SourcceyV2Beta(Robot):
 
                 print("Homing Motors 7.2", motor, home_value, "norm_mode:", motor_obj.norm_mode)
                 print()
-                geared_down_home_motor_positions[motor] = home_value
+                geared_down_home_motor_positions[f"{motor}.pos"] = home_value
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         print("Homing Motors 7", full_home_motor_positions)
