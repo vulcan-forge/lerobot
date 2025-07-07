@@ -276,6 +276,7 @@ class SourcceyV2Beta(Robot):
         if not home_on_start:
             return None
 
+        print("Homing Motors")
         motor_homings = self.profile["motor_homings"]
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
         home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
