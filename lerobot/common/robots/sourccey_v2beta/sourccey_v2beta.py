@@ -149,9 +149,11 @@ class SourcceyV2Beta(Robot):
 
         input("Move left arm of the robot to the middle of its range of motion and press ENTER....")
         left_arm_homing_offsets = self.left_arm_bus.set_half_turn_homings(self.left_arm_motors)
+        left_arm_homing_offsets["left_arm_shoulder_lift"] = 0 # Set offset to 0 for multi turn motors
 
         left_arm_full_turn_motor = ["left_arm_wrist_roll"]
-        left_arm_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in left_arm_full_turn_motor]
+        left_arm_multi_turn_motors = ["left_arm_shoulder_lift"]
+        left_arm_unknown_range_motors = [motor for motor in self.left_arm_motors if motor not in left_arm_full_turn_motor and motor not in left_arm_multi_turn_motors]
 
         print(
             f"Move all arm joints except '{left_arm_full_turn_motor}' sequentially through their "
@@ -162,11 +164,18 @@ class SourcceyV2Beta(Robot):
             left_arm_range_mins[name] = 0
             left_arm_range_maxes[name] = 4095
 
+        for name in left_arm_multi_turn_motors:
+            gear_ratio = self.left_arm_bus.motors[name].gear_ratio
+            left_arm_range_mins[name] = 0
+            left_arm_range_maxes[name] = (4096 * gear_ratio) - 1
+
         input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
         right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
+        right_arm_homing_offsets["right_arm_shoulder_lift"] = 0 # Set offset to 0 for multi turn motors
 
         right_arm_full_turn_motor = ["right_arm_wrist_roll"]
-        right_arm_unknown_range_motors = [motor for motor in self.right_arm_motors if motor not in right_arm_full_turn_motor]
+        right_arm_multi_turn_motors = ["right_arm_shoulder_lift"]
+        right_arm_unknown_range_motors = [motor for motor in self.right_arm_motors if motor not in right_arm_full_turn_motor and motor not in right_arm_multi_turn_motors]
 
         print(
             f"Move all arm joints except '{right_arm_full_turn_motor}' sequentially through their "
@@ -176,6 +185,11 @@ class SourcceyV2Beta(Robot):
         for name in right_arm_full_turn_motor:
             right_arm_range_mins[name] = 0
             right_arm_range_maxes[name] = 4095
+
+        for name in right_arm_multi_turn_motors:
+            gear_ratio = self.right_arm_bus.motors[name].gear_ratio
+            right_arm_range_mins[name] = 0
+            right_arm_range_maxes[name] = (4096 * gear_ratio) - 1
 
         self.left_arm_calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
