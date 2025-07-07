@@ -26,6 +26,8 @@ class RobotConfig(draccus.ChoiceRegistry, abc.ABC):
     id: str | None = None
     # Directory to store calibration file
     calibration_dir: Path | None = None
+    # Directory to store profile file
+    profile_dir: Path | None = None
 
     def __init__(self, **kwargs):
         pass

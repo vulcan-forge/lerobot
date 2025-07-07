@@ -78,7 +78,7 @@ def profile(cfg: ProfileConfig):
         device = make_teleoperator_from_config(cfg.device)
 
     device.connect(calibrate=False)
-    device.profile()
+    device.update_profile()
     device.disconnect()
 
 

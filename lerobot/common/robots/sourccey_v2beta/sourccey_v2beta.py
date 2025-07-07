@@ -207,7 +207,7 @@ class SourcceyV2Beta(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
-    def profile(self) -> None:
+    def update_profile(self) -> None:
 
         # Get the positions of the motors
         left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)

@@ -130,7 +130,7 @@ class Robot(abc.ABC):
         """
         pass
 
-    def profile(self) -> None:
+    def update_profile(self) -> None:
         """
         Profile the robot if applicable. If not, this should be a no-op.
         """

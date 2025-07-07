@@ -13,6 +13,20 @@ uv run -m lerobot.calibrate \
     --teleop.id=sourccey_v2beta_teleop
 ```
 
+```bash
+uv run -m lerobot.profile \
+    --robot.type=sourccey_v2beta \
+    --robot.id=sourccey_v2beta
+```
+
+```bash
+uv run -m lerobot.profile \
+    --teleop.type=sourccey_v2beta_teleop \
+    --teleop.port=COM29 \
+    --teleop.id=sourccey_v2beta_teleop
+```
+
+
 To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
 
 ```
