@@ -285,36 +285,52 @@ class SourcceyV2Beta(Robot):
 
     def home_motors(self) -> None:
         print("Homing Motors 1")
+        print()
         if not self.profile:
             return None
 
         print("Homing Motors 2")
+        print()
         home_on_start = self.profile["home_on_start"]
         if not home_on_start:
             return None
 
         print("Homing Motors 3")
+        print()
         motor_homings = self.profile["motor_homings"]
         print("Homing Motors 4", motor_homings)
+        print()
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
         print("Homing Motors 5",  motor_homings.items())
+        print()
         home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
         print("Homing Motors 6", home_motor_positions)
+        print()
 
         # For the geared down, multi-turn motors, rotate until max or min or until send_action prevents the motor
         # from turning further.
         geared_down_home_motor_positions = {}
         for motor in geared_down_multi_turn_motors:
             full_rotate = motor_homings[motor]["full_rotate"]
+            print("Homing Motors 7.1", motor, full_rotate)
+            print()
             if full_rotate == 1:
+                print("Homing Motors 7.1.1", motor, self.calibration[motor].range_max)
+                print()
                 geared_down_home_motor_positions[motor] = self.calibration[motor].range_max
             elif full_rotate == -1:
+                print("Homing Motors 7.2", motor, self.calibration[motor].range_min)
+                print()
                 geared_down_home_motor_positions[motor] = self.calibration[motor].range_min
+        print("Homing Motors 7.2", geared_down_home_motor_positions)
+        print()
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         print("Homing Motors 7", full_home_motor_positions)
+        print()
         # self.send_action(full_home_motor_positions)
         print("Homing Motors 8 Commented out")
+        print()
         logger.info(f"{self} homing motors for 10 seconds.")
         time.sleep(10)
 
