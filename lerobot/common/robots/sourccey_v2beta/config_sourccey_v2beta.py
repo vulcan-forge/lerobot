@@ -51,6 +51,9 @@ class SourcceyV2BetaConfig(RobotConfig):
 
     cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
 
+    # Home on start
+    home_on_start: bool = False
+
     # Set to `True` for backward compatibility with previous policies/dataset
     use_degrees: bool = False
 

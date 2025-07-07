@@ -133,6 +133,9 @@ class SourcceyV2Beta(Robot):
         self.configure()
         logger.info(f"{self} connected.")
 
+        if self.config.home_on_start:
+            self.home_motors()
+
     @property
     def is_calibrated(self) -> bool:
         return self.left_arm_bus.is_calibrated and self.right_arm_bus.is_calibrated
@@ -281,14 +284,16 @@ class SourcceyV2Beta(Robot):
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
 
     def home_motors(self) -> None:
+        print("Homing Motors 1")
         if not self.profile:
             return None
 
+        print("Homing Motors 2")
         home_on_start = self.profile["home_on_start"]
         if not home_on_start:
             return None
 
-        print("Homing Motors")
+        print("Homing Motors 3")
         motor_homings = self.profile["motor_homings"]
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
         home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
