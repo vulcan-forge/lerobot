@@ -133,8 +133,6 @@ class SourcceyV2Beta(Robot):
         self.configure()
         logger.info(f"{self} connected.")
 
-        self.home_motors()
-
     @property
     def is_calibrated(self) -> bool:
         return self.left_arm_bus.is_calibrated and self.right_arm_bus.is_calibrated
@@ -208,6 +206,9 @@ class SourcceyV2Beta(Robot):
         print("Calibration saved to", self.calibration_fpath)
 
     def update_profile(self) -> None:
+        if not self.is_connected:
+            self.left_arm_bus.connect()
+            self.right_arm_bus.connect()
 
         # Get the positions of the motors
         left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
@@ -229,6 +230,7 @@ class SourcceyV2Beta(Robot):
         profile = { "motor_homings": motor_homings, "home_on_start": True }
         self.profile = profile
         self._save_profile()
+        print("Profile saved to", self.profile_fpath)
 
     def configure(self):
         # Set-up arm actuators (position mode)
