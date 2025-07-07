@@ -314,21 +314,55 @@ class SourcceyV2Beta(Robot):
             full_rotate = motor_homings[motor]["full_rotate"]
             print("Homing Motors 7.1", motor, full_rotate)
             print()
+
+            # Get the motor object to check its normalization mode
+            if motor.startswith("left_arm_"):
+                motor_obj = self.left_arm_bus.motors[motor]
+            else:
+                motor_obj = self.right_arm_bus.motors[motor]
+
             if full_rotate == 1:
-                print("Homing Motors 7.1.1", motor, self.calibration[motor].range_max)
+                # For full_rotate == 1, we want the maximum value based on normalization mode
+                if motor_obj.norm_mode == MotorNormMode.RANGE_M100_100:
+                    # Range -100 to 100, so max is 100
+                    home_value = 100.0
+                elif motor_obj.norm_mode == MotorNormMode.RANGE_0_100:
+                    # Range 0 to 100, so max is 100
+                    home_value = 100.0
+                elif motor_obj.norm_mode == MotorNormMode.DEGREES:
+                    # Degrees mode, use the calibration range max
+                    home_value = self.calibration[motor].range_max
+                else:
+                    # Fallback to calibration range max
+                    home_value = self.calibration[motor].range_max
+
+                print("Homing Motors 7.1.1", motor, home_value, "norm_mode:", motor_obj.norm_mode)
                 print()
-                geared_down_home_motor_positions[motor] = self.calibration[motor].range_max
+                geared_down_home_motor_positions[motor] = home_value
+
             elif full_rotate == -1:
-                print("Homing Motors 7.2", motor, self.calibration[motor].range_min)
+                # For full_rotate == -1, we want the minimum value based on normalization mode
+                if motor_obj.norm_mode == MotorNormMode.RANGE_M100_100:
+                    # Range -100 to 100, so min is -100
+                    home_value = -100.0
+                elif motor_obj.norm_mode == MotorNormMode.RANGE_0_100:
+                    # Range 0 to 100, so min is 0
+                    home_value = 0.0
+                elif motor_obj.norm_mode == MotorNormMode.DEGREES:
+                    # Degrees mode, use the calibration range min
+                    home_value = self.calibration[motor].range_min
+                else:
+                    # Fallback to calibration range min
+                    home_value = self.calibration[motor].range_min
+
+                print("Homing Motors 7.2", motor, home_value, "norm_mode:", motor_obj.norm_mode)
                 print()
-                geared_down_home_motor_positions[motor] = self.calibration[motor].range_min
-        print("Homing Motors 7.2", geared_down_home_motor_positions)
-        print()
+                geared_down_home_motor_positions[motor] = home_value
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         print("Homing Motors 7", full_home_motor_positions)
         print()
-        # self.send_action(full_home_motor_positions)
+        self.send_action(full_home_motor_positions)
         print("Homing Motors 8 Commented out")
         print()
         logger.info(f"{self} homing motors for 10 seconds.")
