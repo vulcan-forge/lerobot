@@ -284,36 +284,22 @@ class SourcceyV2Beta(Robot):
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
 
     def home_motors(self) -> None:
-        print("Homing Motors 1")
-        print()
         if not self.profile:
             return None
 
-        print("Homing Motors 2")
-        print()
         home_on_start = self.profile["home_on_start"]
         if not home_on_start:
             return None
 
-        print("Homing Motors 3")
-        print()
         motor_homings = self.profile["motor_homings"]
-        print("Homing Motors 4", motor_homings)
-        print()
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
-        print("Homing Motors 5",  motor_homings.items())
-        print()
         home_motor_positions = {f"{k}.pos": v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
-        print("Homing Motors 6", home_motor_positions)
-        print()
 
         # For the geared down, multi-turn motors, rotate until max or min or until send_action prevents the motor
         # from turning further.
         geared_down_home_motor_positions = {}
         for motor in geared_down_multi_turn_motors:
             full_rotate = motor_homings[motor]["full_rotate"]
-            print("Homing Motors 7.1", motor, full_rotate)
-            print()
 
             # Get the motor object to check its normalization mode
             if motor.startswith("left_arm_"):
@@ -322,49 +308,29 @@ class SourcceyV2Beta(Robot):
                 motor_obj = self.right_arm_bus.motors[motor]
 
             if full_rotate == 1:
-                # For full_rotate == 1, we want the maximum value based on normalization mode
                 if motor_obj.norm_mode == MotorNormMode.RANGE_M100_100:
-                    # Range -100 to 100, so max is 100
                     home_value = 100.0
                 elif motor_obj.norm_mode == MotorNormMode.RANGE_0_100:
-                    # Range 0 to 100, so max is 100
                     home_value = 100.0
                 elif motor_obj.norm_mode == MotorNormMode.DEGREES:
-                    # Degrees mode, use the calibration range max
                     home_value = self.calibration[motor].range_max
                 else:
-                    # Fallback to calibration range max
                     home_value = self.calibration[motor].range_max
-
-                print("Homing Motors 7.1.1", motor, home_value, "norm_mode:", motor_obj.norm_mode)
-                print()
                 geared_down_home_motor_positions[f"{motor}.pos"] = home_value
 
             elif full_rotate == -1:
-                # For full_rotate == -1, we want the minimum value based on normalization mode
                 if motor_obj.norm_mode == MotorNormMode.RANGE_M100_100:
-                    # Range -100 to 100, so min is -100
                     home_value = -100.0
                 elif motor_obj.norm_mode == MotorNormMode.RANGE_0_100:
-                    # Range 0 to 100, so min is 0
                     home_value = 0.0
                 elif motor_obj.norm_mode == MotorNormMode.DEGREES:
-                    # Degrees mode, use the calibration range min
                     home_value = self.calibration[motor].range_min
                 else:
-                    # Fallback to calibration range min
                     home_value = self.calibration[motor].range_min
-
-                print("Homing Motors 7.2", motor, home_value, "norm_mode:", motor_obj.norm_mode)
-                print()
                 geared_down_home_motor_positions[f"{motor}.pos"] = home_value
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
-        print("Homing Motors 7", full_home_motor_positions)
-        print()
         self.send_action(full_home_motor_positions)
-        print("Homing Motors 8 Commented out")
-        print()
         logger.info(f"{self} homing motors for 10 seconds.")
         time.sleep(10)
 
@@ -530,11 +496,12 @@ class SourcceyV2Beta(Robot):
         all_currents = {**left_arm_current, **right_arm_current}
 
         # Hardcoded safety threshold
-        CURRENT_SAFETY_THRESHOLD = 500  # 500mA
+        CURRENT_SAFETY_THRESHOLD = 250  # 250mA
 
         # Check if any motor is over the current limit
         overcurrent_motors = []
         for motor_name, current in all_currents.items():
+            print("Current Safety Check", motor_name, current)
             if current > CURRENT_SAFETY_THRESHOLD:
                 overcurrent_motors.append(motor_name)
                 logger.warning(f"Safety triggered: {motor_name} current {current}mA > {CURRENT_SAFETY_THRESHOLD}mA")
