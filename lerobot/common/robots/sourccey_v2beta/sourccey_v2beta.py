@@ -295,8 +295,11 @@ class SourcceyV2Beta(Robot):
 
         print("Homing Motors 3")
         motor_homings = self.profile["motor_homings"]
+        print("Homing Motors 4", motor_homings)
         geared_down_multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
+        print("Homing Motors 5",  motor_homings.items())
         home_motor_positions = {k: v["pos"] for k, v in motor_homings.items() if k not in geared_down_multi_turn_motors}
+        print("Homing Motors 6", home_motor_positions)
 
         # For the geared down, multi-turn motors, rotate until max or min or until send_action prevents the motor
         # from turning further.
@@ -309,8 +312,9 @@ class SourcceyV2Beta(Robot):
                 geared_down_home_motor_positions[motor] = self.calibration[motor].range_min
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
-        self.send_action(full_home_motor_positions)
-
+        print("Homing Motors 7", full_home_motor_positions)
+        # self.send_action(full_home_motor_positions)
+        print("Homing Motors 8 Commented out")
         logger.info(f"{self} homing motors for 10 seconds.")
         time.sleep(10)
 
