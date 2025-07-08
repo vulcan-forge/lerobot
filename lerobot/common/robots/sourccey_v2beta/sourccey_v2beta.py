@@ -484,6 +484,10 @@ class SourcceyV2Beta(Robot):
         return adjusted_goal_present_pos
 
     def check_current_safety(self) -> tuple[bool, list[str]]:
+        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+        print()
+        print("Left Arm Present Pos", left_arm_present_pos)
+        print()
         """
         Check if any motor is over current limit and return safety status.
 
