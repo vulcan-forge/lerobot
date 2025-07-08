@@ -227,7 +227,7 @@ class SourcceyV2Beta(Robot):
         right_arm_calibration = {}
         if left_motors:
             left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
-            left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors, _normalize=False)
+            left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors, normalize=False)
 
             print()
             print()
@@ -250,7 +250,7 @@ class SourcceyV2Beta(Robot):
                 )
         if right_motors:
             right_homings = self.right_arm_bus.set_full_turn_homings(right_motors)
-            right_positions = self.right_arm_bus.sync_read("Present_Position", right_motors, _normalize=False)
+            right_positions = self.right_arm_bus.sync_read("Present_Position", right_motors, normalize=False)
             print()
             print()
             print("right_positions:")
