@@ -756,8 +756,8 @@ class MotorsBus(abc.ABC):
         elif not isinstance(motors, list):
             raise TypeError(motors)
 
-        self.reset_calibration(motors)
-        print(f"Resetting calibration for {motors}")
+        # self.reset_calibration(motors)
+        # print(f"Resetting calibration for {motors}")
         actual_positions = self.sync_read("Present_Position", motors, normalize=False)
         homing_offsets = self._get_full_turn_homings(actual_positions)
         for motor, offset in homing_offsets.items():
