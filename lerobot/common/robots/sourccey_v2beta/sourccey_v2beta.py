@@ -333,12 +333,19 @@ class SourcceyV2Beta(Robot):
         self.send_action(full_home_motor_positions)
 
         # For 10 seconds check if any motor is over current, check over current every 0.1 seconds
+        logger.info(f"{self} homing motors for 5 seconds.")
         print("Homing motors for 5 seconds.")
         for i in range(20):
             self.check_current_safety()
             time.sleep(0.25)
 
-        logger.info(f"{self} homing motors for 10 seconds.")
+        time.sleep(5)
+
+        # Sync read the present position of the motors
+        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+        right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
+        print("Left Arm Present Pos", left_arm_present_pos)
+        print("Right Arm Present Pos", right_arm_present_pos)
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
