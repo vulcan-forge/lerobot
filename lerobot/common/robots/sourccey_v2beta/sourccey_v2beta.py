@@ -334,7 +334,7 @@ class SourcceyV2Beta(Robot):
 
         # For 10 seconds check if any motor is over current, check over current every 0.1 seconds
         print("Homing motors for 5 seconds.")
-        for i in range(50):
+        for i in range(10):
             self.check_current_safety()
             time.sleep(0.5)
 
