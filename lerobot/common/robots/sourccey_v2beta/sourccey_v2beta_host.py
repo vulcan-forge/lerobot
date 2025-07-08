@@ -73,6 +73,12 @@ def main():
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
                 _action_sent = robot.send_action(data)
+
+                # Safety check every 0.5 seconds
+                if time.time() - last_safety_check_time > 0.5:
+                    robot.check_current_safety()
+                    last_safety_check_time = time.time()
+
                 last_cmd_time = time.time()
                 watchdog_active = False
             except zmq.Again:

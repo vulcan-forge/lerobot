@@ -419,17 +419,6 @@ class SourcceyV2Beta(Robot):
         self.right_arm_bus.sync_write("Goal_Position", right_arm_goal_pos_raw)
         # self.bus.sync_write("Goal_Velocity", base_wheel_goal_vel)
 
-        # Check safety after sending goals
-        is_safe, overcurrent_motors = self._check_current_safety()
-        if not is_safe:
-            left_arm_goal_pos, right_arm_goal_pos = self._handle_overcurrent_motors(
-                left_arm_present_pos,
-                right_arm_present_pos,
-                left_arm_goal_pos,
-                right_arm_goal_pos,
-                overcurrent_motors
-            )
-
         return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
 
     def _apply_minimum_action(self, goal_present_pos: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
@@ -481,7 +470,7 @@ class SourcceyV2Beta(Robot):
 
         return adjusted_goal_present_pos
 
-    def _check_current_safety(self) -> tuple[bool, list[str]]:
+    def check_current_safety(self) -> tuple[bool, list[str]]:
         """
         Check if any motor is over current limit and return safety status.
 
@@ -501,65 +490,26 @@ class SourcceyV2Beta(Robot):
         # Check if any motor is over the current limit
         overcurrent_motors = []
         for motor_name, current in all_currents.items():
-            print("Current Safety Check", motor_name, current)
             if current > CURRENT_SAFETY_THRESHOLD:
                 overcurrent_motors.append(motor_name)
                 logger.warning(f"Safety triggered: {motor_name} current {current}mA > {CURRENT_SAFETY_THRESHOLD}mA")
 
         if overcurrent_motors:
             logger.warning(f"Emergency stop triggered for motors: {overcurrent_motors}")
-            return False, overcurrent_motors
-
-        return True, []
+            self._handle_overcurrent_motors(overcurrent_motors)
 
     def _handle_overcurrent_motors(
         self,
-        left_arm_present_pos: dict[str, float],
-        right_arm_present_pos: dict[str, float],
-        left_arm_goal_pos: dict[str, float],
-        right_arm_goal_pos: dict[str, float],
         overcurrent_motors: list[str]
-    ) -> tuple[dict[str, float], dict[str, float]]:
-        """
-        Handle overcurrent motors by replacing their goal positions with present positions.
+    ):
+        left_overcurrent_motors = [motor for motor in self.left_arm_motors if motor in overcurrent_motors]
+        right_overcurrent_motors = [motor for motor in self.right_arm_motors if motor in overcurrent_motors]
 
-        Args:
-            left_arm_goal_pos: Dictionary of left arm goal positions with keys like "left_arm_shoulder_pan.pos"
-            right_arm_goal_pos: Dictionary of right arm goal positions with keys like "right_arm_shoulder_pan.pos"
-            overcurrent_motors: List of motor names that are over current (e.g., ["left_arm_shoulder_pan", "right_arm_elbow_flex"])
+        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", left_overcurrent_motors)
+        right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", right_overcurrent_motors)
 
-        Returns:
-            tuple: (modified_left_arm_goal_pos, modified_right_arm_goal_pos) with present positions for overcurrent motors
-        """
-        if not overcurrent_motors:
-            return left_arm_goal_pos, right_arm_goal_pos
-
-        # Create copies of the goal positions to modify
-        modified_left_arm_goal_pos = left_arm_goal_pos.copy()
-        modified_right_arm_goal_pos = right_arm_goal_pos.copy()
-
-        # Replace goal positions with present positions for overcurrent motors
-        for motor_name in overcurrent_motors:
-            if motor_name.startswith("left_arm_"):
-                # Convert motor name to goal position key format
-                goal_key = f"{motor_name}.pos"
-                if goal_key in modified_left_arm_goal_pos:
-                    modified_left_arm_goal_pos[goal_key] = left_arm_present_pos[motor_name]
-                    logger.warning(f"Replaced goal position for {motor_name} with present position: {left_arm_present_pos[motor_name]}")
-            elif motor_name.startswith("right_arm_"):
-                # Convert motor name to goal position key format
-                goal_key = f"{motor_name}.pos"
-                if goal_key in modified_right_arm_goal_pos:
-                    modified_right_arm_goal_pos[goal_key] = right_arm_present_pos[motor_name]
-                    logger.warning(f"Replaced goal position for {motor_name} with present position: {right_arm_present_pos[motor_name]}")
-
-        # Sync write the modified goal positions
-        left_arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in modified_left_arm_goal_pos.items()}
-        self.left_arm_bus.sync_write("Goal_Position", left_arm_goal_pos_raw)
-        right_arm_goal_pos_raw = {k.replace(".pos", ""): v for k, v in modified_right_arm_goal_pos.items()}
-        self.right_arm_bus.sync_write("Goal_Position", right_arm_goal_pos_raw)
-
-        return modified_left_arm_goal_pos, modified_right_arm_goal_pos
+        self.left_arm_bus.sync_write("Goal_Position", left_arm_present_pos)
+        self.right_arm_bus.sync_write("Goal_Position", right_arm_present_pos)
 
     def disconnect(self):
         if not self.is_connected:
