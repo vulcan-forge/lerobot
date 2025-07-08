@@ -67,15 +67,16 @@ def main():
         # Business logic
         start = time.perf_counter()
         duration = 0
+        last_safety_check_time = time.time()
         while duration < host.connection_time_s:
             loop_start_time = time.time()
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
-                _action_sent = robot.send_action(data)
+                robot.send_action(data)
 
-                # Safety check every 0.5 seconds
-                if time.time() - last_safety_check_time > 0.5:
+                if time.time() - last_safety_check_time > 0.1:
+                    print("Checking current safety")
                     robot.check_current_safety()
                     last_safety_check_time = time.time()
 
