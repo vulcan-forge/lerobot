@@ -227,23 +227,36 @@ class SourcceyV2Beta(Robot):
         self.right_arm_calibration = {}
         if left_motors:
             left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
+            left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors)
             for motor, homing in left_homings.items():
+                max_res = int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
+
+                # We should be at max range, min_range is a half rotation away from max
+                max_range = left_positions[motor]
+                min_range = max_range - (max_res // 2)
                 self.left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
                     homing_offset=homing,
-                    range_min=0,
-                    range_max= int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
+                    range_min=min_range,
+                    range_max=max_range
                 )
         if right_motors:
             right_homings = self.right_arm_bus.set_full_turn_homings(right_motors)
+            right_positions = self.right_arm_bus.sync_read("Present_Position", right_motors)
             for motor, homing in right_homings.items():
+                max_res = int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
+
+                # We should be at max range, min_range is a half rotation away from max
+                max_range = right_positions[motor]
+                min_range = max_range - (max_res // 2)
+
                 self.right_arm_calibration[motor] = MotorCalibration(
                     id=self.right_arm_bus.motors[motor].id,
                     drive_mode=0,
                     homing_offset=homing,
-                    range_min=0,
-                    range_max= int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
+                    range_min=min_range,
+                    range_max=max_range
                 )
 
     def update_profile(self) -> None:
@@ -365,11 +378,16 @@ class SourcceyV2Beta(Robot):
 
         time.sleep(5)
 
-        # Sync read the present position of the motors
-        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
-        right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
-        print("Left Arm Present Pos", left_arm_present_pos)
-        print("Right Arm Present Pos", right_arm_present_pos)
+        print("Re-enabling torque after homing")
+        # Print left shoulder and right shoulder calibration
+        print("Left shoulder calibration:")
+        print(self.left_arm_calibration["left_arm_shoulder_lift"])
+        print("Right shoulder calibration:")
+        print(self.right_arm_calibration["right_arm_shoulder_lift"])
+
+        # Re-enable torque after homing
+        self.left_arm_bus.enable_torque(self.left_arm_motors)
+        self.right_arm_bus.enable_torque(self.right_arm_motors)
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
