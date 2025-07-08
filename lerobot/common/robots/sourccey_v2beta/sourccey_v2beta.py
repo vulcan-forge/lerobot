@@ -336,7 +336,7 @@ class SourcceyV2Beta(Robot):
         print("Homing motors for 5 seconds.")
         for i in range(50):
             self.check_current_safety()
-            time.sleep(0.25)
+            time.sleep(0.5)
 
         logger.info(f"{self} homing motors for 10 seconds.")
 
