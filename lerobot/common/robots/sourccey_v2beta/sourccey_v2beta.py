@@ -223,8 +223,6 @@ class SourcceyV2Beta(Robot):
         print("Calibration saved to", self.calibration_fpath)
 
     def calibrate_multi_turn_motors(self, left_motors: list[str], right_motors: list[str]) -> None:
-        self.left_arm_calibration = {}
-        self.right_arm_calibration = {}
         if left_motors:
             left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
             left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors)
