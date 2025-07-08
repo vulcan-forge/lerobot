@@ -381,9 +381,9 @@ class SourcceyV2Beta(Robot):
         print("Re-enabling torque after homing")
         # Print left shoulder and right shoulder calibration
         print("Left shoulder calibration:")
-        print(self.left_arm_calibration["left_arm_shoulder_lift"])
+        print(self.left_arm_calibration)
         print("Right shoulder calibration:")
-        print(self.right_arm_calibration["right_arm_shoulder_lift"])
+        print(self.right_arm_calibration)
 
         # Re-enable torque after homing
         self.left_arm_bus.enable_torque(self.left_arm_motors)
