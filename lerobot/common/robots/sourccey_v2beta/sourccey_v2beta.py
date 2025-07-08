@@ -253,9 +253,6 @@ class SourcceyV2Beta(Robot):
                 if (min_range < 0):
                     min_range = 0
 
-                # We should be at max range, min_range is 1/3 rotation away from max
-                max_range = left_positions[motor]
-                min_range = max_range - max_res
                 left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
