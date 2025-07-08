@@ -245,9 +245,17 @@ class SourcceyV2Beta(Robot):
             for motor, homing in left_homings.items():
                 max_res = int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
 
+                max_range = right_positions[motor]
+                if (max_range > max_res):
+                    max_range = max_res
+
+                min_range = max_range - max_res
+                if (min_range < 0):
+                    min_range = 0
+
                 # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = left_positions[motor]
-                min_range = max_range - (max_res // 3)
+                min_range = max_range - max_res
                 left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
@@ -275,9 +283,13 @@ class SourcceyV2Beta(Robot):
             for motor, homing in right_homings.items():
                 max_res = int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
 
-                # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = right_positions[motor]
-                min_range = max_range - (max_res // 3)
+                if (max_range > max_res):
+                    max_range = max_res
+
+                min_range = max_range - max_res
+                if (min_range < 0):
+                    min_range = 0
 
                 right_arm_calibration[motor] = MotorCalibration(
                     id=self.right_arm_bus.motors[motor].id,
