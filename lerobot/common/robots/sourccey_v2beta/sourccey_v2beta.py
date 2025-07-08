@@ -367,7 +367,7 @@ class SourcceyV2Beta(Robot):
             self.right_arm_bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
 
-    def home_motors(self, calibrate: bool = True) -> None:
+    def home_motors(self) -> None:
         # Home motors and set the proper offset for the multi-turn motors
         if not self.profile:
             return None

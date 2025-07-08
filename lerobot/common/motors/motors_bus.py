@@ -1121,6 +1121,7 @@ class MotorsBus(abc.ABC):
         value = self._encode_sign(data_name, {id_: value})[id_]
 
         err_msg = f"Failed to write '{data_name}' on {id_=} with '{value}' after {num_retry + 1} tries."
+        print("value", value)
         self._write(addr, length, id_, value, num_retry=num_retry, raise_on_error=True, err_msg=err_msg)
 
     def _write(
@@ -1135,6 +1136,7 @@ class MotorsBus(abc.ABC):
         err_msg: str = "",
     ) -> tuple[int, int]:
         data = self._serialize_data(value, length)
+        print("data", data)
         for n_try in range(1 + num_retry):
             comm, error = self.packet_handler.writeTxRx(self.port_handler, motor_id, addr, length, data)
             if self._is_comm_success(comm):
