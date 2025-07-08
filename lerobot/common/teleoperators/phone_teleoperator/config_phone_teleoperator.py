@@ -34,7 +34,8 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     mesh_path: str = "lerobot/common/robots/so100_follower/model/meshes"
     
     # IK solver settings
-    target_link_name: str = "Fixed_Jaw"
+    # target_link_name: str = "Fixed_Jaw"
+    target_link_name: str = "Feetech-Servo-Motor-v1-5"
     rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # Always in radians - initial robot positions for IK solver
 
     # Phone mapping settings

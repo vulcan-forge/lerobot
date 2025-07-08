@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from lerobot.common.cameras.configs import CameraConfig, Cv2Rotation
 from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
@@ -40,20 +41,24 @@ def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
 class SourcceyV2BetaConfig(RobotConfig):
-    left_arm_port: str = "/dev/ttyUSB0"
-    right_arm_port: str = "/dev/ttyACM0"
-
+    # Arm Configuration
+    left_arm_port: str
+    right_arm_port: str
+    enable_left_arm: bool = True
+    enable_right_arm: bool = True  # Set to False if right arm is not connected
+    
+    # Motor Configuration
+    use_degrees: bool = False
+    
+    # Safety Configuration
+    max_relative_target: Optional[float] = None
+    
+    # Disconnect Configuration
     disable_torque_on_disconnect: bool = True
-
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
-    max_relative_target: int | None = None
-
+    
+    # Camera Configuration
     cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
 
-    # Set to `True` for backward compatibility with previous policies/dataset
-    use_degrees: bool = False
 
 @dataclass
 class SourcceyV2BetaHostConfig:
