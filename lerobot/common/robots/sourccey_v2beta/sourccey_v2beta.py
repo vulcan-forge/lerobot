@@ -170,7 +170,7 @@ class SourcceyV2Beta(Robot):
         for name in left_arm_multi_turn_motors:
             gear_ratio = self.left_arm_bus.motors[name].gear_ratio
             left_arm_range_mins[name] = 0
-            left_arm_range_maxes[name] = int((4096 * gear_ratio) - 1)
+            left_arm_range_maxes[name] = int((4096 * gear_ratio)) - 1
 
         input("Move right arm of the robot to the middle of its range of motion and press ENTER....")
         right_arm_homing_offsets = self.right_arm_bus.set_half_turn_homings(self.right_arm_motors)
@@ -192,7 +192,7 @@ class SourcceyV2Beta(Robot):
         for name in right_arm_multi_turn_motors:
             gear_ratio = self.right_arm_bus.motors[name].gear_ratio
             right_arm_range_mins[name] = 0
-            right_arm_range_maxes[name] = int((4096 * gear_ratio) - 1)
+            right_arm_range_maxes[name] = int((4096 * gear_ratio)) - 1
 
         self.left_arm_calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
@@ -223,10 +223,32 @@ class SourcceyV2Beta(Robot):
         print("Calibration saved to", self.calibration_fpath)
 
     def calibrate_multi_turn_motors(self, left_motors: list[str], right_motors: list[str]) -> None:
+        self.left_arm_calibration = {}
+        self.right_arm_calibration = {}
         if left_motors:
-            self.left_arm_bus.set_full_turn_homings(left_motors)
+            left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
+            for motor, homing in left_homings.items():
+                self.left_arm_calibration[motor] = MotorCalibration(
+                    id=self.left_arm_bus.motors[motor].id,
+                    drive_mode=0,
+                    homing_offset=homing,
+                    range_min=0,
+                    range_max= int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
+                )
         if right_motors:
-            self.right_arm_bus.set_full_turn_homings(right_motors)
+            right_homings = self.right_arm_bus.set_full_turn_homings(right_motors)
+            for motor, homing in right_homings.items():
+                self.right_arm_calibration[motor] = MotorCalibration(
+                    id=self.right_arm_bus.motors[motor].id,
+                    drive_mode=0,
+                    homing_offset=homing,
+                    range_min=0,
+                    range_max= int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
+                )
+
+        self.left_arm_bus.write_calibration(self.left_arm_calibration)
+        self.right_arm_bus.write_calibration(self.right_arm_calibration)
+        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
 
     def update_profile(self) -> None:
         # Get the positions of the motors
