@@ -761,7 +761,7 @@ class MotorsBus(abc.ABC):
         actual_positions = self.sync_read("Present_Position", motors, normalize=False)
         homing_offsets = self._get_full_turn_homings(actual_positions)
         for motor, offset in homing_offsets.items():
-            self.write("Homing_Offset", motor, 1000) #offset)
+            self.write("Homing_Offset", motor, 2000) #offset)
 
         return homing_offsets
 
