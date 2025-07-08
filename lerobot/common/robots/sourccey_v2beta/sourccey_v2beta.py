@@ -194,9 +194,9 @@ class SourcceyV2Beta(Robot):
             right_arm_range_mins[name] = 0
             right_arm_range_maxes[name] = int((4096 * gear_ratio)) - 1
 
-        self.left_arm_calibration = {}
+        left_arm_calibration = {}
         for name, motor in self.left_arm_bus.motors.items():
-            self.left_arm_calibration[name] = MotorCalibration(
+            left_arm_calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=0,
                 homing_offset=left_arm_homing_offsets[name],
@@ -204,10 +204,10 @@ class SourcceyV2Beta(Robot):
                 range_max=left_arm_range_maxes[name],
             )
 
-        self.right_arm_calibration = {}
+        right_arm_calibration = {}
         for name, motor in self.right_arm_bus.motors.items():
             drive_mode = 1 if name == "right_arm_gripper" else 0
-            self.right_arm_calibration[name] = MotorCalibration(
+            right_arm_calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=drive_mode,
                 homing_offset=right_arm_homing_offsets[name],
@@ -215,14 +215,16 @@ class SourcceyV2Beta(Robot):
                 range_max=right_arm_range_maxes[name],
             )
 
-        self.left_arm_bus.write_calibration(self.left_arm_calibration)
-        self.right_arm_bus.write_calibration(self.right_arm_calibration)
+        self.left_arm_bus.write_calibration(left_arm_calibration)
+        self.right_arm_bus.write_calibration(right_arm_calibration)
 
-        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
+        self.calibration = {**left_arm_calibration, **right_arm_calibration}
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
     def calibrate_multi_turn_motors(self, left_motors: list[str], right_motors: list[str]) -> None:
+        left_arm_calibration = {}
+        right_arm_calibration = {}
         if left_motors:
             left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
             left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors)
@@ -232,7 +234,7 @@ class SourcceyV2Beta(Robot):
                 # We should be at max range, min_range is a half rotation away from max
                 max_range = left_positions[motor]
                 min_range = max_range - (max_res // 2)
-                self.left_arm_calibration[motor] = MotorCalibration(
+                left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
                     homing_offset=homing,
@@ -249,13 +251,19 @@ class SourcceyV2Beta(Robot):
                 max_range = right_positions[motor]
                 min_range = max_range - (max_res // 2)
 
-                self.right_arm_calibration[motor] = MotorCalibration(
+                right_arm_calibration[motor] = MotorCalibration(
                     id=self.right_arm_bus.motors[motor].id,
                     drive_mode=0,
                     homing_offset=homing,
                     range_min=min_range,
                     range_max=max_range
                 )
+
+        print("self calibration before")
+        print(self.calibration)
+        self.calibration = {**self.calibration, **left_arm_calibration, **right_arm_calibration}
+        print("self calibration after")
+        print(self.calibration)
 
     def update_profile(self) -> None:
         # Get the positions of the motors
@@ -378,10 +386,8 @@ class SourcceyV2Beta(Robot):
 
         print("Re-enabling torque after homing")
         # Print left shoulder and right shoulder calibration
-        print("Left shoulder calibration:")
-        print(self.left_arm_calibration)
-        print("Right shoulder calibration:")
-        print(self.right_arm_calibration)
+        print("calibration:")
+        print(self.calibration)
 
         # Re-enable torque after homing
         self.left_arm_bus.enable_torque(self.left_arm_motors)
