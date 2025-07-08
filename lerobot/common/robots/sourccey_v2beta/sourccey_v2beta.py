@@ -226,12 +226,17 @@ class SourcceyV2Beta(Robot):
         left_arm_calibration = {}
         right_arm_calibration = {}
         if left_motors:
+            left_positions_before = self.left_arm_bus.sync_read("Present_Position", left_motors, normalize=False)
             left_homings = self.left_arm_bus.set_full_turn_homings(left_motors)
             left_positions = self.left_arm_bus.sync_read("Present_Position", left_motors, normalize=False)
 
             print()
             print()
-            print("left_positions:")
+            print("left_positions_before:")
+            print(left_positions_before)
+            print()
+            print()
+            print("left_positions after:")
             print(left_positions)
             print()
             print()
@@ -249,11 +254,17 @@ class SourcceyV2Beta(Robot):
                     range_max=max_range
                 )
         if right_motors:
+            right_positions_before = self.right_arm_bus.sync_read("Present_Position", right_motors, normalize=False)
             right_homings = self.right_arm_bus.set_full_turn_homings(right_motors)
             right_positions = self.right_arm_bus.sync_read("Present_Position", right_motors, normalize=False)
+
             print()
             print()
-            print("right_positions:")
+            print("right_positions_before:")
+            print(right_positions_before)
+            print()
+            print()
+            print("right_positions after:")
             print(right_positions)
             print()
             print()
