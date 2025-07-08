@@ -331,8 +331,14 @@ class SourcceyV2Beta(Robot):
 
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         self.send_action(full_home_motor_positions)
+
+        # For 10 seconds check if any motor is over current, check over current every 0.1 seconds
+        for i in range(100):
+            self.check_current_safety()
+            time.sleep(0.1)
+
         logger.info(f"{self} homing motors for 10 seconds.")
-        time.sleep(10)
+        print("Homing motors for 10 seconds.")
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
