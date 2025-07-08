@@ -75,7 +75,7 @@ def main():
                 data = dict(json.loads(msg))
                 robot.send_action(data)
 
-                if time.time() - last_safety_check_time > 0.1:
+                if time.time() - last_safety_check_time > 0.25:
                     robot.check_current_safety()
                     last_safety_check_time = time.time()
 
