@@ -514,10 +514,12 @@ class SourcceyV2Beta(Robot):
         # Only read and write if there are overcurrent motors for each arm
         if left_overcurrent_motors:
             left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", left_overcurrent_motors)
+            print("Left Arm Present Pos", left_arm_present_pos)
             self.left_arm_bus.sync_write("Goal_Position", left_arm_present_pos)
 
         if right_overcurrent_motors:
             right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", right_overcurrent_motors)
+            print("Right Arm Present Pos", right_arm_present_pos)
             self.right_arm_bus.sync_write("Goal_Position", right_arm_present_pos)
 
     def disconnect(self):
