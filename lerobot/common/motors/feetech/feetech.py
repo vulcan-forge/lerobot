@@ -316,7 +316,18 @@ class FeetechMotorsBus(MotorsBus):
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
             max_res = int((self.model_resolution_table[model] * self.motors[motor].gear_ratio)) - 1
-            full_turn_homings[motor] = pos - int(max_res)
+            offset = pos - int(max_res)
+
+            # Ensure the offset stays within the range -6143 to +6143
+            max_offset = max_res // 2
+            if offset < -max_offset:
+                # If too negative, wrap around by adding max_res
+                offset = offset + max_res
+            elif offset > max_offset:
+                # If too positive, wrap around by subtracting max_res
+                offset = offset - max_res
+
+            full_turn_homings[motor] = offset
 
         return full_turn_homings
 
