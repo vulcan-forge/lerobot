@@ -246,13 +246,13 @@ class SourcceyV2Beta(Robot):
                     range_max= int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
                 )
 
-        self.left_arm_bus.write_calibration(self.left_arm_calibration)
-        self.right_arm_bus.write_calibration(self.right_arm_calibration)
-        print("Calibration written")
-        print(self.left_arm_calibration)
-        print(self.right_arm_calibration)
-        self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
-        print(self.calibration)
+        # self.left_arm_bus.write_calibration(self.left_arm_calibration)
+        # self.right_arm_bus.write_calibration(self.right_arm_calibration)
+        # print("Calibration written")
+        # print(self.left_arm_calibration)
+        # print(self.right_arm_calibration)
+        # self.calibration = {**self.left_arm_calibration, **self.right_arm_calibration}
+        # print(self.calibration)
 
     def update_profile(self) -> None:
         # Get the positions of the motors
