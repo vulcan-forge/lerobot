@@ -97,7 +97,7 @@ class Motor:
     id: int
     model: str
     norm_mode: MotorNormMode
-    gear_ratio: float = 1.0
+    gear_ratio: float = 1.0 # Gear ratio of the motor - max gear ratio is 4 due to STS calibration offsets maxing out at 8192
     multi_turn: int = 0
 
 
@@ -744,8 +744,32 @@ class MotorsBus(abc.ABC):
 
         return homing_offsets
 
+    def set_full_turn_homings(self, motors: NameOrID | list[NameOrID] | None = None) -> dict[NameOrID, Value]:
+        """
+        Set the homing offset for the given motors to the full turn offset.
+        """
+        if motors is None:
+            motors = list(self.motors)
+        elif isinstance(motors, (str, int)):
+            motors = [motors]
+        elif not isinstance(motors, list):
+            raise TypeError(motors)
+
+        self.reset_calibration(motors)
+        print(f"Resetting calibration for {motors}")
+        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+        homing_offsets = self._get_full_turn_homings(actual_positions)
+        for motor, offset in homing_offsets.items():
+            self.write("Homing_Offset", motor, offset)
+
+        return homing_offsets
+
     @abc.abstractmethod
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        pass
+
+    @abc.abstractmethod
+    def _get_full_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
         pass
 
     def record_ranges_of_motion(

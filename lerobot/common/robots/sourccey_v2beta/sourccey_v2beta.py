@@ -222,6 +222,10 @@ class SourcceyV2Beta(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
+    def calibrate_multi_turn_motors(self, left_motors: list[str], right_motors: list[str]) -> None:
+        self.left_arm_bus.set_full_turn_homings(left_motors)
+        self.right_arm_bus.set_full_turn_homings(right_motors)
+
     def update_profile(self) -> None:
         # Get the positions of the motors
         left_arm_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
@@ -283,7 +287,8 @@ class SourcceyV2Beta(Robot):
             self.right_arm_bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.right_arm_bus.motors[motor].id}")
 
-    def home_motors(self) -> None:
+    def home_motors(self, calibrate: bool = True) -> None:
+        # Home motors and set the proper offset for the multi-turn motors
         if not self.profile:
             return None
 
@@ -332,11 +337,10 @@ class SourcceyV2Beta(Robot):
         full_home_motor_positions = {**home_motor_positions, **geared_down_home_motor_positions}
         self.send_action(full_home_motor_positions)
 
-        # For 10 seconds check if any motor is over current, check over current every 0.1 seconds
         logger.info(f"{self} homing motors for 5 seconds.")
         print("Homing motors for 5 seconds.")
         for i in range(20):
-            self.check_current_safety()
+            self.check_current_safety_with_calibration()
             time.sleep(0.25)
 
         time.sleep(5)
@@ -484,10 +488,6 @@ class SourcceyV2Beta(Robot):
         return adjusted_goal_present_pos
 
     def check_current_safety(self) -> tuple[bool, list[str]]:
-        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
-        print()
-        print("Left Arm Present Pos", left_arm_present_pos)
-        print()
         """
         Check if any motor is over current limit and return safety status.
 
@@ -514,6 +514,53 @@ class SourcceyV2Beta(Robot):
         if overcurrent_motors:
             logger.warning(f"Emergency stop triggered for motors: {overcurrent_motors}")
             self._handle_overcurrent_motors(overcurrent_motors)
+            return False, overcurrent_motors
+
+        return True, []
+
+    def check_current_safety_with_calibration(self):
+        """
+        Check current safety and calibrate multi-turn motors if they are overcurrent.
+        This is specifically for use during homing when multi-turn motors might need calibration.
+
+        Returns:
+            bool: True if safe or successfully calibrated, False if other motors are overcurrent
+        """
+        # Read current from all motors
+        left_arm_current = self.left_arm_bus.sync_read("Present_Current", self.left_arm_motors)
+        right_arm_current = self.right_arm_bus.sync_read("Present_Current", self.right_arm_motors)
+        all_currents = {**left_arm_current, **right_arm_current}
+
+        # Hardcoded safety threshold
+        CURRENT_SAFETY_THRESHOLD = 250  # 250mA
+
+        # Check if any motor is over the current limit
+        overcurrent_motors = []
+        for motor_name, current in all_currents.items():
+            if current > CURRENT_SAFETY_THRESHOLD:
+                overcurrent_motors.append(motor_name)
+                logger.warning(f"Safety triggered: {motor_name} current {current}mA > {CURRENT_SAFETY_THRESHOLD}mA")
+
+        if not overcurrent_motors:
+            return
+
+        # Check if overcurrent motors are multi-turn motors that can be calibrated
+        multi_turn_motors = ["left_arm_shoulder_lift", "right_arm_shoulder_lift"]
+        overcurrent_multi_turn = [motor for motor in overcurrent_motors if motor in multi_turn_motors]
+        other_overcurrent = [motor for motor in overcurrent_motors if motor not in multi_turn_motors]
+
+        # If only multi-turn motors are overcurrent, calibrate them
+        if overcurrent_multi_turn:
+            logger.info(f"Calibrating multi-turn motors: {overcurrent_multi_turn}")
+            left_multi_turn = [motor for motor in overcurrent_multi_turn if motor.startswith("left_arm_")]
+            right_multi_turn = [motor for motor in overcurrent_multi_turn if motor.startswith("right_arm_")]
+            self.calibrate_multi_turn_motors(left_multi_turn, right_multi_turn)
+            self._handle_overcurrent_motors(overcurrent_multi_turn)
+
+        # If other motors are overcurrent, handle them normally
+        if other_overcurrent:
+            logger.warning(f"Emergency stop triggered for non-multi-turn motors: {other_overcurrent}")
+            self._handle_overcurrent_motors(other_overcurrent)
 
     def _handle_overcurrent_motors(
         self,
@@ -525,12 +572,10 @@ class SourcceyV2Beta(Robot):
         # Only read and write if there are overcurrent motors for each arm
         if left_overcurrent_motors:
             left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", left_overcurrent_motors)
-            print("Left Arm Present Pos", left_arm_present_pos)
             self.left_arm_bus.sync_write("Goal_Position", left_arm_present_pos)
 
         if right_overcurrent_motors:
             right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", right_overcurrent_motors)
-            print("Right Arm Present Pos", right_arm_present_pos)
             self.right_arm_bus.sync_write("Goal_Position", right_arm_present_pos)
 
     def disconnect(self):

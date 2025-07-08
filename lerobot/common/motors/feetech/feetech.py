@@ -302,10 +302,23 @@ class FeetechMotorsBus(MotorsBus):
         half_turn_homings = {}
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
-            max_res = self.model_resolution_table[model] - 1
+            max_res = int((self.model_resolution_table[model] * self.motors[motor].gear_ratio)) - 1
             half_turn_homings[motor] = pos - int(max_res / 2)
 
         return half_turn_homings
+
+    def _get_full_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        """
+        On Feetech Motors:
+        Present_Position = Actual_Position - Homing_Offset
+        """
+        full_turn_homings = {}
+        for motor, pos in positions.items():
+            model = self._get_motor_model(motor)
+            max_res = int((self.model_resolution_table[model] * self.motors[motor].gear_ratio)) - 1
+            full_turn_homings[motor] = pos - int(max_res)
+
+        return full_turn_homings
 
     def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
         for motor in self._get_motors_list(motors):
