@@ -245,7 +245,7 @@ class SourcceyV2Beta(Robot):
             for motor, homing in left_homings.items():
                 max_res = int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
 
-                max_range = right_positions[motor]
+                max_range = left_positions[motor]
                 if (max_range > max_res):
                     max_range = max_res
 
