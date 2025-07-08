@@ -231,9 +231,9 @@ class SourcceyV2Beta(Robot):
             for motor, homing in left_homings.items():
                 max_res = int((4096 * self.left_arm_bus.motors[motor].gear_ratio)) - 1
 
-                # We should be at max range, min_range is a half rotation away from max
+                # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = left_positions[motor]
-                min_range = max_range - (max_res // 2)
+                min_range = max_range - (max_res // 3)
                 left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
@@ -247,9 +247,9 @@ class SourcceyV2Beta(Robot):
             for motor, homing in right_homings.items():
                 max_res = int((4096 * self.right_arm_bus.motors[motor].gear_ratio)) - 1
 
-                # We should be at max range, min_range is a half rotation away from max
+                # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = right_positions[motor]
-                min_range = max_range - (max_res // 2)
+                min_range = max_range - (max_res // 3)
 
                 right_arm_calibration[motor] = MotorCalibration(
                     id=self.right_arm_bus.motors[motor].id,
@@ -387,7 +387,7 @@ class SourcceyV2Beta(Robot):
         print("Re-enabling torque after homing")
         # Print left shoulder and right shoulder calibration
         print("calibration:")
-        print(self.calibration)
+        # print(self.calibration)
 
         # Re-enable torque after homing
         self.left_arm_bus.enable_torque(self.left_arm_motors)
