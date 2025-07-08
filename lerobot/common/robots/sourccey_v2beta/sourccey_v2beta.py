@@ -233,7 +233,7 @@ class SourcceyV2Beta(Robot):
 
                 # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = left_positions[motor]
-                min_range = max_range - (max_res // 3)
+                min_range = max_range - (max_res // 6)
                 left_arm_calibration[motor] = MotorCalibration(
                     id=self.left_arm_bus.motors[motor].id,
                     drive_mode=0,
@@ -249,7 +249,7 @@ class SourcceyV2Beta(Robot):
 
                 # We should be at max range, min_range is 1/3 rotation away from max
                 max_range = right_positions[motor]
-                min_range = max_range - (max_res // 3)
+                min_range = max_range - (max_res // 6)
 
                 right_arm_calibration[motor] = MotorCalibration(
                     id=self.right_arm_bus.motors[motor].id,
