@@ -311,22 +311,26 @@ class FeetechMotorsBus(MotorsBus):
         """
         On Feetech Motors:
         Present_Position = Actual_Position - Homing_Offset
+
+        This method calculates the homing offset needed to set the motor to its maximum position.
+        The offset should cause the motor to wrap around past 0 to reach the maximum position.
         """
         full_turn_homings = {}
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
             max_res = int((self.model_resolution_table[model] * self.motors[motor].gear_ratio)) - 1
-            offset = pos - int(max_res)
+            half_res = max_res // 2
 
-            # Ensure the offset stays within the range -6143 to +6143
-            max_offset = max_res // 2
-            if offset < -max_offset:
-                # If too negative, wrap around by adding max_res
-                offset = offset + max_res
-            elif offset > max_offset:
-                # If too positive, wrap around by subtracting max_res
-                offset = offset - max_res
+            # We want Present_Position = max_res
+            # So: max_res = pos - homing_offset
+            # Therefore: homing_offset = pos - max_res
+            if (pos > half_res):
+                offset = pos - max_res
+            else:
+                offset = pos + 1
 
+            # The offset can be negative or positive, and the motor will handle the wrapping
+            # Feetech motors can handle offsets that cause wrapping around the position range
             full_turn_homings[motor] = offset
 
         return full_turn_homings
