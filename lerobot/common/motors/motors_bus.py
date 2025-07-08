@@ -709,10 +709,11 @@ class MotorsBus(abc.ABC):
 
         for motor in motors:
             model = self._get_motor_model(motor)
-            max_res = self.model_resolution_table[model] - 1
+            gear_ratio = self.motors[motor].gear_ratio
+            max_res = int((self.model_resolution_table[model] * gear_ratio)) - 1
             self.write("Homing_Offset", motor, 0, normalize=False)
             self.write("Min_Position_Limit", motor, 0, normalize=False)
-            self.write("Max_Position_Limit", motor, max_res, normalize=False)
+            self.write("Max_Position_Limit", motor, max_res , normalize=False)
 
         self.calibration = {}
 
