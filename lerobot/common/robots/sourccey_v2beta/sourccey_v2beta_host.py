@@ -76,8 +76,6 @@ def main():
                 robot.send_action(data)
 
                 if time.time() - last_safety_check_time > 0.1:
-                    print("Checking current safety")
-                    print()
                     robot.check_current_safety()
                     last_safety_check_time = time.time()
 

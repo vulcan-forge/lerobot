@@ -492,9 +492,6 @@ class SourcceyV2Beta(Robot):
 
         # Hardcoded safety threshold
         CURRENT_SAFETY_THRESHOLD = 250  # 250mA
-        print()
-        print('all_currents', all_currents)
-        print()
 
         # Check if any motor is over the current limit
         overcurrent_motors = []
