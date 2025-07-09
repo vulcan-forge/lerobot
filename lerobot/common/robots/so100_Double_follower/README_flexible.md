@@ -6,6 +6,7 @@ This directory contains scripts for calibrating and teleoperating dual SO100 rob
 
 - `flexible_calibrate.py` - Flexible calibration script that asks for port and motor ID range for each arm
 - `dual_teleop_flexible.py` - Flexible dual teleop script that supports different motor ID ranges
+- `dual_record_flexible.py` - Flexible dual recording script for collecting training data
 - `test_calibration_loading.py` - Test script to verify calibration file loading
 - `README_flexible.md` - This file
 
@@ -42,6 +43,28 @@ The script will:
 - Connect to all arms
 - Start teleop (leader arms control follower arms)
 
+### 3. Recording Training Data
+
+Run the flexible recording script:
+
+```bash
+python dual_record_flexible.py --interactive
+```
+
+Or with a configuration file:
+
+```bash
+python dual_record_flexible.py --config recording_config.json
+```
+
+The script will:
+- Ask for configuration for each arm (port and motor ID range)
+- Ask for dataset configuration (repo ID, task description, number of episodes, etc.)
+- Load the corresponding calibration files
+- Connect to all arms
+- Record training data from both leader and follower arms
+- Save the dataset locally and optionally push to Hugging Face Hub
+
 ## Calibration File Structure
 
 The flexible calibration system creates individual calibration files for each arm:
@@ -67,6 +90,45 @@ For a typical dual-arm setup:
 - **Right Follower**: COM4, motor IDs 7-12
 - **Left Leader**: COM1, motor IDs 1-6
 - **Right Leader**: COM2, motor IDs 7-12
+
+## Recording Configuration Example
+
+```json
+{
+  "arms": {
+    "left_follower": {
+      "port": "COM3",
+      "motor_ids": [1, 2, 3, 4, 5, 6],
+      "id_range": "1-6"
+    },
+    "right_follower": {
+      "port": "COM4",
+      "motor_ids": [7, 8, 9, 10, 11, 12],
+      "id_range": "7-12"
+    },
+    "left_leader": {
+      "port": "COM1",
+      "motor_ids": [1, 2, 3, 4, 5, 6],
+      "id_range": "1-6"
+    },
+    "right_leader": {
+      "port": "COM2",
+      "motor_ids": [7, 8, 9, 10, 11, 12],
+      "id_range": "7-12"
+    }
+  },
+  "dataset": {
+    "repo_id": "username/dual_so100_dataset",
+    "single_task": "Pick up objects with both arms",
+    "num_episodes": 10,
+    "episode_time_s": 60,
+    "reset_time_s": 10,
+    "push_to_hub": true
+  },
+  "fps": 30,
+  "display_data": false
+}
+```
 
 ## Testing
 
@@ -98,6 +160,11 @@ This will:
 - Check that calibration files are saved correctly
 - Use the test script to verify file loading
 
+### Recording Issues
+- Ensure all arms are properly calibrated before recording
+- Check that dataset repository ID is valid
+- Verify network connection if pushing to Hugging Face Hub
+
 ## Differences from Standard LeRobot
 
 The standard LeRobot calibration expects:
@@ -110,17 +177,21 @@ The flexible system supports:
 - Individual calibration files per arm
 - User-specified ports and motor ID ranges
 - Metadata for easy identification
+- Dual-arm recording for training data collection
 
 ## Usage Tips
 
 1. **Calibrate one arm at a time** to avoid confusion
 2. **Use consistent naming** (left_follower, right_follower, etc.)
-3. **Test calibration loading** before running teleop
+3. **Test calibration loading** before running teleop or recording
 4. **Keep track of your configuration** (ports and motor IDs)
 5. **Backup calibration files** if needed
+6. **Start with short recording sessions** to test the setup
+7. **Use descriptive task descriptions** for better dataset organization
 
 ## File Locations
 
 - Calibration files: `~/.lerobot/calibrations/`
 - Scripts: `lerobot/common/robots/so100_Double_follower/`
-- Test files: Same directory as scripts 
+- Test files: Same directory as scripts
+- Recorded datasets: Local storage and optionally Hugging Face Hub 
