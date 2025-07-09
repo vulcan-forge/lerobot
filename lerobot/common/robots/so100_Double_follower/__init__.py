@@ -3,3 +3,6 @@ from .config_so100_dual_follower import SO100DualFollowerConfig, SO100DualFollow
 from .so100_follower import SO100Follower
 from .so100_follower_end_effector import SO100FollowerEndEffector
 from .so100_dual_follower import SO100DualFollower
+
+# Module-level import for registration
+so100_dual_follower = SO100DualFollower
