@@ -114,9 +114,8 @@ class SO100DoubleLeader(Teleoperator):
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         left_range_mins, left_range_maxes = self.left_bus.record_ranges_of_motion(left_unknown_range_motors)
-        for name in left_full_turn_motor:
-            left_range_mins[name] = 0
-            left_range_maxes[name] = 4095
+        left_range_mins[left_full_turn_motor] = 0
+        left_range_maxes[left_full_turn_motor] = 4095
 
         input(f"Move right teleoperator to the middle of its range of motion and press ENTER....")
         right_homing_offsets = self.right_bus.set_half_turn_homings()
@@ -128,9 +127,8 @@ class SO100DoubleLeader(Teleoperator):
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         right_range_mins, right_range_maxes = self.right_bus.record_ranges_of_motion(right_unknown_range_motors)
-        for name in right_full_turn_motor:
-            right_range_mins[name] = 0
-            right_range_maxes[name] = 4095
+        right_range_mins[right_full_turn_motor] = 0
+        right_range_maxes[right_full_turn_motor] = 4095
 
         self.left_calibration = {}
         for name, motor in self.left_bus.motors.items():
