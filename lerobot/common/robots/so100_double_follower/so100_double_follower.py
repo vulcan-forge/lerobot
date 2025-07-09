@@ -77,8 +77,8 @@ class SO100DoubleFollower(Robot):
     @property
     def _motors_ft(self) -> dict[str, type]:
         return {
-            **{f"{motor}.pos": float for motor in self.left_bus.motors},
-            **{f"{motor}.pos": float for motor in self.right_bus.motors},
+            **{f"left_{motor}.pos": float for motor in self.left_bus.motors},
+            **{f"right_{motor}.pos": float for motor in self.right_bus.motors},
         }
 
     @property
@@ -132,34 +132,31 @@ class SO100DoubleFollower(Robot):
             self.right_bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
         input(f"Move left arm to the middle of its range of motion and press ENTER....")
-        left_homing_offsets = self.left_bus.set_half_turn_homings(self.left_motors)
-        
+        left_homing_offsets = self.left_bus.set_half_turn_homings()
 
-        left_full_turn_motor = "left_wrist_roll"
-        left_unknown_range_motors = [motor for motor in self.left_motors if motor != left_full_turn_motor]
+        left_full_turn_motor = "wrist_roll"
+        left_unknown_range_motors = [motor for motor in self.left_bus.motors if motor != left_full_turn_motor]
         print(
             f"Move all joints except '{left_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         left_range_mins, left_range_maxes = self.left_bus.record_ranges_of_motion(left_unknown_range_motors)
-        for name in left_full_turn_motor:
-            left_range_mins[name] = 0
-            left_range_maxes[name] = 4095
+        left_range_mins[left_full_turn_motor] = 0
+        left_range_maxes[left_full_turn_motor] = 4095
 
         input(f"Move right arm to the middle of its range of motion and press ENTER....")
-        right_homing_offsets = self.right_bus.set_half_turn_homings(self.right_motors)
+        right_homing_offsets = self.right_bus.set_half_turn_homings()
         
-        right_full_turn_motor = "right_wrist_roll"
-        right_unknown_range_motors = [motor for motor in self.right_motors if motor != right_full_turn_motor]
+        right_full_turn_motor = "wrist_roll"
+        right_unknown_range_motors = [motor for motor in self.right_bus.motors if motor != right_full_turn_motor]
 
         print(
             f"Move all joints except '{right_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         right_range_mins, right_range_maxes = self.right_bus.record_ranges_of_motion(right_unknown_range_motors)
-        for name in right_full_turn_motor:
-            right_range_mins[name] = 0
-            right_range_maxes[name] = 4095
+        right_range_mins[right_full_turn_motor] = 0
+        right_range_maxes[right_full_turn_motor] = 4095
 
         self.left_bus_calibration = {}
         for name, motor in self.left_bus.motors.items():
@@ -173,7 +170,7 @@ class SO100DoubleFollower(Robot):
 
         self.right_bus_calibration = {}
         for name, motor in self.right_bus.motors.items():
-            drive_mode = 1 if name == "right_gripper" else 0
+            drive_mode = 1 if name == "gripper" else 0
             self.right_bus_calibration[name] = MotorCalibration(
                 id=motor.id,
                 drive_mode=drive_mode,
@@ -229,10 +226,10 @@ class SO100DoubleFollower(Robot):
         # Read arm position
         start = time.perf_counter()
         left_obs_dict = self.left_bus.sync_read("Present_Position")
-        left_obs_dict = {f"{motor}.pos": val for motor, val in left_obs_dict.items()}
+        left_obs_dict = {f"left_{motor}.pos": val for motor, val in left_obs_dict.items()}
 
         right_obs_dict = self.right_bus.sync_read("Present_Position")
-        right_obs_dict = {f"{motor}.pos": val for motor, val in right_obs_dict.items()}
+        right_obs_dict = {f"right_{motor}.pos": val for motor, val in right_obs_dict.items()}
 
         obs_dict = {**left_obs_dict, **right_obs_dict}
         dt_ms = (time.perf_counter() - start) * 1e3
@@ -263,8 +260,8 @@ class SO100DoubleFollower(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        left_goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("left_")}
-        right_goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("right_")}
+        left_goal_pos = {key.removesuffix(".pos").removeprefix("left_"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("left_")}
+        right_goal_pos = {key.removesuffix(".pos").removeprefix("right_"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("right_")}
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
@@ -280,7 +277,7 @@ class SO100DoubleFollower(Robot):
         # Send goal position to the arm
         self.left_bus.sync_write("Goal_Position", left_goal_pos)
         self.right_bus.sync_write("Goal_Position", right_goal_pos)
-        return {**left_goal_pos, **right_goal_pos}
+        return {f"left_{motor}.pos": val for motor, val in left_goal_pos.items()} | {f"right_{motor}.pos": val for motor, val in right_goal_pos.items()}
 
     def disconnect(self):
         if not self.is_connected:
