@@ -134,29 +134,31 @@ class SO100DoubleFollower(Robot):
         input(f"Move left arm to the middle of its range of motion and press ENTER....")
         left_homing_offsets = self.left_bus.set_half_turn_homings()
 
-        left_full_turn_motor = "left_wrist_roll"
-        left_unknown_range_motors = [motor for motor in self.left_bus.motors if motor != left_full_turn_motor]
+        left_full_turn_motor = ["left_wrist_roll"]
+        left_unknown_range_motors = [motor for motor in self.left_bus.motors if motor not in left_full_turn_motor]
         print(
             f"Move all joints except '{left_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         left_range_mins, left_range_maxes = self.left_bus.record_ranges_of_motion(left_unknown_range_motors)
-        left_range_mins[left_full_turn_motor] = 0
-        left_range_maxes[left_full_turn_motor] = 4095
+        for name in left_full_turn_motor:
+            left_range_mins[name] = 0
+            left_range_maxes[name] = 4095
 
         input(f"Move right arm to the middle of its range of motion and press ENTER....")
         right_homing_offsets = self.right_bus.set_half_turn_homings()
         
-        right_full_turn_motor = "right_wrist_roll"
-        right_unknown_range_motors = [motor for motor in self.right_bus.motors if motor != right_full_turn_motor]
+        right_full_turn_motor = ["right_wrist_roll"]
+        right_unknown_range_motors = [motor for motor in self.right_bus.motors if motor not in right_full_turn_motor]
 
         print(
             f"Move all joints except '{right_full_turn_motor}' sequentially through their "
             "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
         )
         right_range_mins, right_range_maxes = self.right_bus.record_ranges_of_motion(right_unknown_range_motors)
-        right_range_mins[right_full_turn_motor] = 0
-        right_range_maxes[right_full_turn_motor] = 4095
+        for name in right_full_turn_motor:
+            right_range_mins[name] = 0
+            right_range_maxes[name] = 4095
 
         self.left_bus_calibration = {}
         for name, motor in self.left_bus.motors.items():
