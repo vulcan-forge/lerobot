@@ -2,6 +2,8 @@
 
 import time
 import threading
+import json
+from pathlib import Path
 from lerobot.common.motors.feetech import FeetechMotorsBus
 from lerobot.common.motors import Motor, MotorNormMode
 
@@ -14,6 +16,42 @@ class SimpleDualSO100Teleop:
         
         self.running = False
         self.fps = 30
+        
+        # Load existing calibrations
+        self.load_calibrations()
+        
+    def load_calibrations(self):
+        """Load existing calibrations for each arm"""
+        # Try to find calibration files
+        self.left_follower_cal = None
+        self.right_follower_cal = None
+        self.left_leader_cal = None
+        self.right_leader_cal = None
+        
+        cal_dir = Path.home() / ".lerobot" / "calibrations"
+        
+        # Look for calibration files
+        for cal_file in cal_dir.glob("*.json"):
+            try:
+                with open(cal_file, 'r') as f:
+                    cal_data = json.load(f)
+                
+                # Check if this is a calibration for our ports
+                if "port" in cal_data and cal_data["port"] == self.left_follower_port:
+                    self.left_follower_cal = cal_data
+                    print(f"Loaded left follower calibration from {cal_file}")
+                elif "port" in cal_data and cal_data["port"] == self.right_follower_port:
+                    self.right_follower_cal = cal_data
+                    print(f"Loaded right follower calibration from {cal_file}")
+                elif "port" in cal_data and cal_data["port"] == self.left_leader_port:
+                    self.left_leader_cal = cal_data
+                    print(f"Loaded left leader calibration from {cal_file}")
+                elif "port" in cal_data and cal_data["port"] == self.right_leader_port:
+                    self.right_leader_cal = cal_data
+                    print(f"Loaded right leader calibration from {cal_file}")
+                    
+            except Exception as e:
+                print(f"Error loading calibration {cal_file}: {e}")
         
     def connect_all(self):
         """Connect all arms with minimal checks"""
@@ -28,7 +66,8 @@ class SimpleDualSO100Teleop:
                     "wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
                     "wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
                     "gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
-                }
+                },
+                calibration=self.left_follower_cal
             )
             self.left_follower_bus.connect()
             print("✓ Left follower connected")
@@ -47,7 +86,8 @@ class SimpleDualSO100Teleop:
                     "wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
                     "wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
                     "gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
-                }
+                },
+                calibration=self.right_follower_cal
             )
             self.right_follower_bus.connect()
             print("✓ Right follower connected")
@@ -66,7 +106,8 @@ class SimpleDualSO100Teleop:
                     "wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
                     "wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
                     "gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
-                }
+                },
+                calibration=self.left_leader_cal
             )
             self.left_leader_bus.connect()
             print("✓ Left leader connected")
@@ -85,7 +126,8 @@ class SimpleDualSO100Teleop:
                     "wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
                     "wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
                     "gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
-                }
+                },
+                calibration=self.right_leader_cal
             )
             self.right_leader_bus.connect()
             print("✓ Right leader connected")
@@ -122,35 +164,13 @@ class SimpleDualSO100Teleop:
                 start_time = time.perf_counter()
                 
                 try:
-                    # Get leader positions (raw values, no calibration)
-                    left_leader_pos = {}
-                    for motor_name in ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]:
-                        try:
-                            value = self.left_leader_bus.read("Present_Position", motor_name)
-                            left_leader_pos[motor_name] = value
-                        except:
-                            pass
+                    # Get leader positions (calibrated values)
+                    left_leader_pos = self.left_leader_bus.sync_read("Present_Position")
+                    right_leader_pos = self.right_leader_bus.sync_read("Present_Position")
                     
-                    right_leader_pos = {}
-                    for motor_name in ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]:
-                        try:
-                            value = self.right_leader_bus.read("Present_Position", motor_name)
-                            right_leader_pos[motor_name] = value
-                        except:
-                            pass
-                    
-                    # Send to followers (raw values)
-                    for motor_name, value in left_leader_pos.items():
-                        try:
-                            self.left_follower_bus.write("Goal_Position", motor_name, value)
-                        except:
-                            pass
-                    
-                    for motor_name, value in right_leader_pos.items():
-                        try:
-                            self.right_follower_bus.write("Goal_Position", motor_name, value)
-                        except:
-                            pass
+                    # Send to followers (calibrated values)
+                    self.left_follower_bus.sync_write("Goal_Position", left_leader_pos)
+                    self.right_follower_bus.sync_write("Goal_Position", right_leader_pos)
                     
                 except Exception as e:
                     print(f"Error in teleop loop: {e}")
