@@ -19,9 +19,9 @@ from lerobot.common.cameras import CameraConfig
 from ..config import RobotConfig
 
 
-@RobotConfig.register_subclass("so100_follower")
+@RobotConfig.register_subclass("so100_dual_follower")
 @dataclass
-class SO100FollowerConfig(RobotConfig):
+class SO100DualFollowerConfig(RobotConfig):
     # Port to connect to the left arm
     left_port: str
     
@@ -42,10 +42,10 @@ class SO100FollowerConfig(RobotConfig):
     use_degrees: bool = False
 
 
-@RobotConfig.register_subclass("so100_follower_end_effector")
+@RobotConfig.register_subclass("so100_dual_follower_end_effector")
 @dataclass
-class SO100FollowerEndEffectorConfig(SO100FollowerConfig):
-    """Configuration for the SO100FollowerEndEffector robot."""
+class SO100DualFollowerEndEffectorConfig(SO100DualFollowerConfig):
+    """Configuration for the SO100DualFollowerEndEffector robot."""
 
     # Default bounds for the end-effector position (in meters)
     end_effector_bounds: dict[str, list[float]] = field(
