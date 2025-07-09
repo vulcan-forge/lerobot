@@ -29,6 +29,10 @@ def make_teleoperator_from_config(config: TeleoperatorConfig) -> Teleoperator:
         from .so100_leader import SO100Leader
 
         return SO100Leader(config)
+    elif config.type == "so100_dual_leader":
+        from .so100_dual_leader import SO100DualLeader
+
+        return SO100DualLeader(config)
     elif config.type == "so101_leader":
         from .so101_leader import SO101Leader
 
