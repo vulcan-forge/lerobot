@@ -122,13 +122,35 @@ class SimpleDualSO100Teleop:
                 start_time = time.perf_counter()
                 
                 try:
-                    # Get leader positions
-                    left_leader_pos = self.left_leader_bus.sync_read("Present_Position")
-                    right_leader_pos = self.right_leader_bus.sync_read("Present_Position")
+                    # Get leader positions (raw values, no calibration)
+                    left_leader_pos = {}
+                    for motor_name in ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]:
+                        try:
+                            value = self.left_leader_bus.read("Present_Position", motor_name)
+                            left_leader_pos[motor_name] = value
+                        except:
+                            pass
                     
-                    # Send to followers
-                    self.left_follower_bus.sync_write("Goal_Position", left_leader_pos)
-                    self.right_follower_bus.sync_write("Goal_Position", right_leader_pos)
+                    right_leader_pos = {}
+                    for motor_name in ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]:
+                        try:
+                            value = self.right_leader_bus.read("Present_Position", motor_name)
+                            right_leader_pos[motor_name] = value
+                        except:
+                            pass
+                    
+                    # Send to followers (raw values)
+                    for motor_name, value in left_leader_pos.items():
+                        try:
+                            self.left_follower_bus.write("Goal_Position", motor_name, value)
+                        except:
+                            pass
+                    
+                    for motor_name, value in right_leader_pos.items():
+                        try:
+                            self.right_follower_bus.write("Goal_Position", motor_name, value)
+                        except:
+                            pass
                     
                 except Exception as e:
                     print(f"Error in teleop loop: {e}")
