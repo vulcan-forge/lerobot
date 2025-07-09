@@ -47,7 +47,7 @@ from lerobot.common.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
     koch_leader,
-    sourccey_v2beta_leader,
+    sourccey_v2beta_teleop,
     make_teleoperator_from_config,
     so100_leader,
     so101_leader,

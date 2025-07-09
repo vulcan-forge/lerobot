@@ -60,6 +60,6 @@ def get_cv2_backend() -> int:
     import cv2
 
     if platform.system() == "Windows":
-        return cv2.CAP_AVFOUNDATION
+        return cv2.CAP_DSHOW
     else:
         return cv2.CAP_ANY

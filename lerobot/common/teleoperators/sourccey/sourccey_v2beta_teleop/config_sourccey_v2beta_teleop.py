@@ -14,13 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from dataclasses import dataclass
+
+from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 
 from ...config import TeleoperatorConfig
 
 
-@TeleoperatorConfig.register_subclass("sourccey_v2beta_leader")
+@TeleoperatorConfig.register_subclass("sourccey_v2beta_teleop")
 @dataclass
-class SourcceyV2BetaLeaderConfig(TeleoperatorConfig):
+class SourcceyV2BetaTeleopConfig(TeleoperatorConfig):
     # Port to connect to the arm
-    port: str
+    left_arm_port: str
+    right_arm_port: str

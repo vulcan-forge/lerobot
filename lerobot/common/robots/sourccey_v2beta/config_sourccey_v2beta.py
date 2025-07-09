@@ -18,6 +18,7 @@ from lerobot.common.cameras.configs import CameraConfig, Cv2Rotation
 from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
 from lerobot.common.robots.config import RobotConfig
+from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 
 
 def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
@@ -39,7 +40,8 @@ def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
 class SourcceyV2BetaConfig(RobotConfig):
-    port = "/dev/ttyACM0"  # port to connect to the bus
+    left_arm_port: str = "/dev/ttyUSB0"
+    right_arm_port: str = "/dev/ttyACM0"
 
     disable_torque_on_disconnect: bool = True
 
@@ -52,7 +54,6 @@ class SourcceyV2BetaConfig(RobotConfig):
 
     # Set to `True` for backward compatibility with previous policies/dataset
     use_degrees: bool = False
-
 
 @dataclass
 class SourcceyV2BetaHostConfig:

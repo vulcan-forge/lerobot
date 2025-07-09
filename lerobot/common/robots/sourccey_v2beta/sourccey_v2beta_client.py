@@ -86,9 +86,6 @@ class SourcceyV2BetaClient(Robot):
                 "right_arm_wrist_flex.pos",
                 "right_arm_wrist_roll.pos",
                 "right_arm_gripper.pos",
-                # "x.vel",
-                # "y.vel",
-                # "theta.vel",
             ),
             float,
         )
@@ -202,22 +199,22 @@ class SourcceyV2BetaClient(Robot):
         self, observation: Dict[str, Any]
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         """Extracts frames, and state from the parsed observation."""
-        flat_state = observation[OBS_STATE]
+        flat_state = {key: observation.get(key, 0.0) for key in self._state_order}
 
-        state_vec = np.array(
-            [flat_state.get(k, 0.0) for k in self._state_order],
-            dtype=np.float32,
-        )
+        state_vec = np.array([flat_state[key] for key in self._state_order], dtype=np.float32)
+
+        obs_dict: Dict[str, Any] = {**flat_state, "observation.state": state_vec}
 
         # Decode images
-        image_observation = {k: v for k, v in observation.items() if k.startswith(OBS_IMAGES)}
         current_frames: Dict[str, np.ndarray] = {}
-        for cam_name, image_b64 in image_observation.items():
+        for cam_name, image_b64 in observation.items():
+            if cam_name not in self._cameras_ft:
+                continue
             frame = self._decode_image_from_b64(image_b64)
             if frame is not None:
                 current_frames[cam_name] = frame
 
-        return current_frames, {"observation.state": state_vec}
+        return current_frames, obs_dict
 
     def _get_data(self) -> Tuple[Dict[str, np.ndarray], Dict[str, Any], Dict[str, Any]]:
         """
@@ -269,8 +266,8 @@ class SourcceyV2BetaClient(Robot):
         for cam_name, frame in frames.items():
             if frame is None:
                 logging.warning("Frame is None")
-                frame = np.zeros((640, 480, 3), dtype=np.uint8)
-            obs_dict[cam_name] = torch.from_numpy(frame)
+                frame = np.zeros((320, 240, 3), dtype=np.uint8)
+            obs_dict[cam_name] = frame
 
         return obs_dict
 
@@ -330,7 +327,10 @@ class SourcceyV2BetaClient(Robot):
 
         # TODO(Steven): Remove the np conversion when it is possible to record a non-numpy array value
         actions = np.array([action.get(k, 0.0) for k in self._state_order], dtype=np.float32)
-        return {"action": actions}
+
+        action_sent = {key: actions[i] for i, key in enumerate(self._state_order)}
+        action_sent["action"] = actions
+        return action_sent
 
     def disconnect(self):
         """Cleans ZMQ comms"""

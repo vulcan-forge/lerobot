@@ -33,10 +33,10 @@ def make_teleoperator_from_config(config: TeleoperatorConfig) -> Teleoperator:
         from .so101_leader import SO101Leader
 
         return SO101Leader(config)
-    elif config.type == "sourccey_v2beta_leader":
-        from .sourccey.sourccey_v2beta_leader import SourcceyV2BetaLeader
+    elif config.type == "sourccey_v2beta_teleop":
+        from .sourccey.sourccey_v2beta_teleop import SourcceyV2BetaTeleop
 
-        return SourcceyV2BetaLeader(config)
+        return SourcceyV2BetaTeleop(config)
     elif config.type == "stretch3":
         from .stretch3_gamepad import Stretch3GamePad
 
