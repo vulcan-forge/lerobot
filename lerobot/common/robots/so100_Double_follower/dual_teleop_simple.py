@@ -79,12 +79,12 @@ class SimpleDualSO100Teleop:
             self.right_leader_bus = FeetechMotorsBus(
                 port=self.right_leader_port,
                 motors={
-                    "shoulder_pan": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100),
-                    "shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
-                    "elbow_flex": Motor(3, "sts3215", MotorNormMode.RANGE_M100_100),
-                    "wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
-                    "wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
-                    "gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+                    "shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+                    "shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+                    "elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+                    "wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
+                    "wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
+                    "gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
                 }
             )
             self.right_leader_bus.connect()
