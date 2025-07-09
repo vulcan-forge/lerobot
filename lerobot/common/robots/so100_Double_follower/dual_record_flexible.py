@@ -198,13 +198,15 @@ class FlexibleDualSO100Recorder:
             if 'left_' in action_key:
                 if 'left_follower' not in arm_actions:
                     arm_actions['left_follower'] = {}
-                motor_name = action_key.replace('left_', '')
+                # Extract motor name by removing 'left_' prefix and '.pos' suffix
+                motor_name = action_key.replace('left_', '').replace('.pos', '')
                 # Extract the float value from numpy array
                 arm_actions['left_follower'][motor_name] = float(value[0])
             elif 'right_' in action_key:
                 if 'right_follower' not in arm_actions:
                     arm_actions['right_follower'] = {}
-                motor_name = action_key.replace('right_', '')
+                # Extract motor name by removing 'right_' prefix and '.pos' suffix
+                motor_name = action_key.replace('right_', '').replace('.pos', '')
                 # Extract the float value from numpy array
                 arm_actions['right_follower'][motor_name] = float(value[0])
         
