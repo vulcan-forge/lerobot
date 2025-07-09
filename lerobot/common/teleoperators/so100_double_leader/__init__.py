@@ -1,2 +1,2 @@
-from .config_so100_leader import SO100LeaderConfig
-from .so100_leader import SO100Leader
+from .config_so100_double_leader import SO100DoubleLeaderConfig
+from .so100_double_leader import SO100DoubleLeader
