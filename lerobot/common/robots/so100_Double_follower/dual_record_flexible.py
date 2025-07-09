@@ -3,6 +3,7 @@
 import time
 import json
 import argparse
+import numpy as np
 from pathlib import Path
 from lerobot.common.motors.feetech import FeetechMotorsBus, OperatingMode
 from lerobot.common.motors import Motor, MotorNormMode, MotorCalibration
@@ -182,7 +183,8 @@ class FlexibleDualSO100Recorder:
                 positions = bus.sync_read("Present_Position")
                 prefix = arm_name.replace('_leader', '')
                 for motor_name, pos in positions.items():
-                    actions[f"{prefix}_{motor_name}.pos"] = pos
+                    # Convert to numpy array with correct dtype
+                    actions[f"{prefix}_{motor_name}.pos"] = np.array([pos], dtype=np.float32)
             except Exception as e:
                 print(f"Error reading from {arm_name}: {e}")
         
@@ -197,12 +199,14 @@ class FlexibleDualSO100Recorder:
                 if 'left_follower' not in arm_actions:
                     arm_actions['left_follower'] = {}
                 motor_name = action_key.replace('left_', '')
-                arm_actions['left_follower'][motor_name] = value
+                # Extract the float value from numpy array
+                arm_actions['left_follower'][motor_name] = float(value[0])
             elif 'right_' in action_key:
                 if 'right_follower' not in arm_actions:
                     arm_actions['right_follower'] = {}
                 motor_name = action_key.replace('right_', '')
-                arm_actions['right_follower'][motor_name] = value
+                # Extract the float value from numpy array
+                arm_actions['right_follower'][motor_name] = float(value[0])
         
         # Send to each arm
         for arm_name, motor_actions in arm_actions.items():
@@ -221,7 +225,8 @@ class FlexibleDualSO100Recorder:
                 positions = bus.sync_read("Present_Position")
                 prefix = arm_name.replace('_follower', '')
                 for motor_name, pos in positions.items():
-                    observations[f"{prefix}_{motor_name}.pos"] = pos
+                    # Convert to numpy array with correct dtype
+                    observations[f"{prefix}_{motor_name}.pos"] = np.array([pos], dtype=np.float32)
             except Exception as e:
                 print(f"Error reading from {arm_name}: {e}")
         
@@ -293,10 +298,10 @@ class FlexibleDualSO100Recorder:
                     self.dataset.save_episode()
                     recorded_episodes += 1
                 
-                # Reset time between episodes
+                # Reset time between episodes (fixed at 10 seconds)
                 if recorded_episodes < num_episodes and not events["stop_recording"]:
                     log_say("Reset the environment")
-                    time.sleep(self.config['dataset'].get('reset_time_s', 10))
+                    time.sleep(10)  # Fixed 10 second reset time
                 
                 # Handle re-recording
                 if events["rerecord_episode"]:
@@ -306,11 +311,9 @@ class FlexibleDualSO100Recorder:
                     self.dataset.clear_episode_buffer()
                     continue
             
-            # Finalize dataset
-            if self.config['dataset'].get('push_to_hub', False):
-                self.dataset.push_to_hub()
-            
+            # Finalize dataset (no push to hub by default)
             print(f"Recording complete! Recorded {recorded_episodes} episodes.")
+            print(f"Dataset saved locally. To push to Hugging Face Hub, edit the script.")
             
         except KeyboardInterrupt:
             print("\nRecording interrupted by user")
@@ -366,10 +369,6 @@ def get_config_from_user():
     config['dataset']['single_task'] = input("Enter task description: ").strip()
     config['dataset']['num_episodes'] = int(input("Enter number of episodes to record: "))
     config['dataset']['episode_time_s'] = int(input("Enter episode duration in seconds: "))
-    config['dataset']['reset_time_s'] = int(input("Enter reset time between episodes in seconds: "))
-    
-    push_to_hub = input("Push dataset to Hugging Face Hub? (y/n): ").strip().lower()
-    config['dataset']['push_to_hub'] = push_to_hub == 'y'
     
     display_data = input("Display data during recording? (y/n): ").strip().lower()
     config['display_data'] = display_data == 'y'
