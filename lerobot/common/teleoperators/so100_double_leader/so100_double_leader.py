@@ -94,7 +94,14 @@ class SO100DoubleLeader(Teleoperator):
 
     @property
     def is_calibrated(self) -> bool:
-        return self.left_bus.is_calibrated and self.right_bus.is_calibrated
+        left_calibrated = self.left_bus.is_calibrated
+        right_calibrated = self.right_bus.is_calibrated
+        print(f"DEBUG: Left bus calibrated: {left_calibrated}")
+        print(f"DEBUG: Right bus calibrated: {right_calibrated}")
+        print(f"DEBUG: Calibration file path: {self.calibration_fpath}")
+        print(f"DEBUG: Calibration file exists: {self.calibration_fpath.is_file()}")
+        print(f"DEBUG: Calibration dict keys: {list(self.calibration.keys())}")
+        return left_calibrated and right_calibrated
 
     def calibrate(self) -> None:
         logger.info(f"\nRunning calibration of {self}")
