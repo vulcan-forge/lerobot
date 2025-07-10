@@ -63,6 +63,7 @@ class SO100DoubleLeader(Teleoperator):
                 "right_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
                 "right_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
             },
+            calibration=self.calibration,
         )
     @property
     def action_features(self) -> dict[str, type]:
