@@ -487,3 +487,39 @@ Congrats 🎉, your robot is all set to learn a task on its own. Start training 
 
 > [!TIP]
 >  If you have any questions or need help, please reach out on [Discord](https://discord.com/invite/s3KuuzsPFb).
+
+
+
+COMMANDS
+
+```
+python -m lerobot.teleoperate \
+    --robot.type=so100_double_follower \
+    --robot.left_port=/dev/ttyUSB3 \
+    --robot.right_port=/dev/ttyUSB2 \
+    --robot.id=double_so100_follower \
+    --robot.cameras="{ front: {type: opencv, index_or_path: '/dev/video0', width: 640, height: 480, fps: 30}, side: {type: opencv, index_or_path: '/dev/video2', width: 640, height: 480, fps: 30}}" \
+    --teleop.type=so100_double_leader \
+    --teleop.left_port=/dev/ttyUSB1 \
+    --teleop.right_port=/dev/ttyUSB0 \
+    --teleop.id=so100_double_leader \
+    --display_data=true
+```
+
+```
+python -m lerobot.record 
+  --robot.type=so100_double_follower \
+  --robot.left_port=/dev/ttyUSB3 \
+  --robot.right_port=/dev/ttyUSB2 \
+  --robot.id=double_so100_follower \
+  --robot.cameras="{ front: {type: opencv, index_or_path: '/dev/video0', width: 640, height: 480, fps: 30}, side: {type: opencv, index_or_path: '/dev/video2', width: 640, height: 480, fps: 30 }" \
+  --teleop.type=so100_double_leader \ 
+  --teleop.type=so100_double_leader \
+  --teleop.left_port=/dev/ttyUSB1 \
+  --teleop.right_port=/dev/ttyUSB0 \
+  --teleop.id=so100_double_leader \
+  --dataset.repo_id=local/double_so100_towelfold_000 \
+  --dataset.num_episodes=1 \
+  --dataset.single_task="Dual arm manipulation task" \
+  --dataset.push_to_hub=false
+```
