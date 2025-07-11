@@ -492,7 +492,7 @@ Congrats 🎉, your robot is all set to learn a task on its own. Start training 
 
 COMMANDS
 
-```
+```bash
 python -m lerobot.teleoperate \
     --robot.type=so100_double_follower \
     --robot.left_port=/dev/ttyUSB0 \
@@ -504,7 +504,7 @@ python -m lerobot.teleoperate \
     --display_data=true
 ```
 
-```
+```bash
 python -m lerobot.record \
     --robot.type=so100_double_follower \
     --robot.left_port=/dev/ttyUSB0 \
@@ -514,29 +514,54 @@ python -m lerobot.record \
     --teleop.left_port=/dev/ttyUSB1 \
     --teleop.right_port=/dev/ttyUSB3 \
     --dataset.repo_id=local/so100_double-001__towel-a__set000__mylesr \
-    --dataset.num_episodes=1 \
+    --dataset.num_episodes=10 \
     --dataset.single_task="Grab the towel and fold it" \
     --dataset.push_to_hub=false
 ```
 
+```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/so100_double-001__towel-a__set000__mylesr \
+  --policy.type=act \
+  --output_dir=outputs/train/act__so100_double-towel-a__set000__mylesr \
+  --job_name=act__so100_double-towel-a__set000__mylesr\
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --policy.push_to_hub=false \
+  --steps=20000
+```
+
+# Evaluate
+```bash
+python -m lerobot.record  \
+  --robot.type=so100_double_follower \
+  --robot.left_port=/dev/ttyUSB0 \
+  --robot.right_port=/dev/ttyUSB2 \
+  --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
+  --policy.path="outputs/train/act__so100_double-towel-a__set000__mylesr/checkpoints/020000/pretrained_model" \
+  --dataset.repo_id=local/eval_so100_double-001__towel-a__set000__mylesr \
+  --dataset.num_episodes=1 \
+  --dataset.single_task="Grab the towel and fold it" \
+  --dataset.push_to_hub=false
+```
 
 
 WINDOWS
-```
+```bash
 python -m lerobot.teleoperate \
     --robot.type=so100_double_follower \
     --robot.left_port=COM5 \
     --robot.right_port=COM6 \
-    --robot.id=double_so100_follower \
+    --robbashot.id=double_so100_follower \
     --robot.cameras="{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, side: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
     --teleop.type=so100_double_leader \
     --teleop.left_port=COM13 \
-    --teleop.right_port=COM14 \
+    --telbasheop.right_port=COM14 \
     --teleop.id=so100_double_leader \
     --display_data=true
 ```
 
-```
+```bash
 python -m lerobot.record 
   --robot.type=so100_double_follower \
   --robot.left_port=/dev/ttyUSB3 \
