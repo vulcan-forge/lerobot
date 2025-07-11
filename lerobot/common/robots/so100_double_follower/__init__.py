@@ -1,0 +1,2 @@
+from .config_so100_double_follower import SO100DoubleFollowerConfig
+from .so100_double_follower import SO100DoubleFollower
