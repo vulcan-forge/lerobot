@@ -1,0 +1,104 @@
+### SO100 model_2 URDF corrections (2025-07-14)
+
+Problem encountered
+-------------------
+When the `model_2/so100.urdf` was used with the PhoneTeleoperator, the arm motion was wildly incorrect: links bent the wrong way, joint directions were inverted, and IK solutions were unusable.  The original URDF in `model/so100.urdf` worked perfectly.  A diff showed that **joint orientation and limit metadata** in `model_2` had drifted from the original reference model.
+
+Root‐cause analysis
+-------------------
+Although mesh geometries and link positions were identical, three kinds of metadata divergence broke IK:
+1. **Joint *axis* sign flips** – sign on the Y/X axis changed, reversing rotation direction.
+2. **Joint *origin* rotations (`rpy` values)** – shoulder & elbow joints had completely different frame rotations (e.g. `-1.8` rad instead of `+π/2`).  IK therefore solved for a robot assembled differently in 3-D space.
+3. **Joint *limits* and effort/velocity caps** – mismatched ranges constrained the solver and introduced hard clipping.
+
+Exactly what was fixed
+---------------------
+### 1. Joint axes
+| Joint name  | Old axis in model_2 | Correct axis |
+|-------------|--------------------|--------------|
+| `shoulder_pan` | `0  1  0` | `0 -1  0` |
+| `shoulder_lift`| `1  0  0` | `-1 0  0` |
+| `wrist_roll`   | `0  1  0` | `0 -1  0` |
+
+### 2. Joint origins (RPY)
+| Joint name        | Old RPY                | Correct RPY           |
+|-------------------|------------------------|-----------------------|
+| `shoulder_pan`    | `1.57079 0 0`          | `1.5708 0 0`          |
+| `shoulder_lift`   | **`-1.8 0 0`**         | `1.5708 0 0`          |
+| `elbow_flex`      | `1.57079 0 0`          | `-1.5708 0 0`         |
+| `wrist_flex`      | **`-1 0 0`**           | `-1.5708 0 0`         |
+
+### 3. Joint limits & dynamics
+All limits were copied verbatim from the original reference URDF.  Effort/velocity were set to `0` (unspecified) to mirror the original:
+
+```
+shoulder_pan   lower="-2.1"   upper="2.1"
+shoulder_lift  lower="-0.1"  upper="3.45"
+elbow_flex     lower="-0.2"  upper="3.14159"
+wrist_flex     lower="-1.8"  upper="1.8"
+wrist_roll     lower="-3.14159" upper="3.14159"
+gripper        lower="0"     upper="1.7"
+```
+
+Outcome
+-------
+After these corrections the PhoneTeleoperator produced identical behaviour with either URDF: IK solutions match the real SO100 kinematics, joint directions map intuitively to phone motion, and no spontaneous contortions occur.
+
+Maintainer notes
+----------------
+*Keep this file alongside the URDF so future edits preserve these crucial conventions.*  Any tool-driven export (e.g. SolidWorks → URDF exporter) must verify axis directions and RPY values before replacing this hand-corrected file. 
+
+
+
+===============================================
+
+
+Ctrl+K to generate a command
+Nope. It was much different, but still just as utter nonsense in what movements the arm made compared to what the phone upt in. I don't suppose you notice any other differences? 
+
+Let me look more carefully at the other differences between the URDFs. There might be differences in the joint origins, limits, or other parameters that are causing the issue.
+I see some differences! Let me check the joint origins and limits more systematically:
+Found a difference! The original uses 1.5708 while the new one uses 1.57079. Let me check all the joint origins and limits:
+I found several critical differences! Let me compare the joint origins systematically:
+Original URDF:
+shoulder_pan: rpy="1.5708 0 0"
+shoulder_lift: rpy="1.5708 0 0"
+elbow_flex: rpy="-1.5708 0 0"
+wrist_flex: rpy="-1.5708 0 0"
+New URDF:
+shoulder_pan: rpy="1.57079 0 0" ← DIFFERENT
+shoulder_lift: rpy="-1.8 0 0" ← COMPLETELY DIFFERENT
+elbow_flex: rpy="1.57079 0 0" ← SIGN FLIPPED
+wrist_flex: rpy="-1 0 0" ← DIFFERENT
+These are major differences that would completely change the kinematic chain! Let me fix them:
+Now let me check the joint limits too:
+Perfect! I've fixed all the major differences:
+Joint origins (rpy values): Fixed all the rotation values to match the original
+Joint limits: Updated all limits to match the original exactly
+Effort/velocity limits: Changed from 35/1 to 0/0 to match original
+The new URDF should now be kinematically identical to the original working one. The differences were much more significant than just the axis signs - the entire joint orientations and limits were different, which would completely change how the IK solver interprets the robot's kinematic chain.
+Try it now - it should work exactly like the original!
+Ok, what did you do? because that worked and made all of the difference. 
+
+Great! The key differences that made it work were:
+1. Joint Origins (rpy values) - This was the biggest problem
+The joint orientations were completely wrong in the new URDF:
+Original (working):
+shoulder_pan: rpy="1.5708 0 0" (90° around X)
+shoulder_lift: rpy="1.5708 0 0" (90° around X)
+elbow_flex: rpy="-1.5708 0 0" (-90° around X)
+wrist_flex: rpy="-1.5708 0 0" (-90° around X)
+New (broken):
+shoulder_pan: rpy="1.57079 0 0" (slightly different)
+shoulder_lift: rpy="-1.8 0 0" (completely wrong!)
+elbow_flex: rpy="1.57079 0 0" (sign flipped!)
+wrist_flex: rpy="-1 0 0" (wrong angle!)
+These orientation differences completely changed the kinematic chain. The IK solver was trying to solve for a robot with different joint orientations than the actual robot, so the solutions were completely wrong.
+2. Joint Limits - Also critical
+The limits were different, which affects how the IK solver searches for solutions:
+Original: lower="-2.1" upper="2.1" for shoulder_pan
+New: lower="-2" upper="2" for shoulder_pan
+3. Joint Axes - Less critical but still important
+The axis signs were flipped, which I fixed earlier.
+The joint origins (rpy values) were the main culprit. The shoulder_lift joint was especially wrong - it had -1.8 instead of 1.5708, which is a completely different orientation. This meant the IK solver thought the shoulder joint was oriented completely differently than it actually is, leading to the "contorted" behavior you saw.
+The lesson: Even small differences in joint orientations can completely break inverse kinematics, because the solver needs to understand exactly how each joint is oriented in 3D space to calculate the correct joint angles.
