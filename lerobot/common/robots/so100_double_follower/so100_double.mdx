@@ -513,7 +513,7 @@ python -m lerobot.record \
     --teleop.type=so100_double_leader \
     --teleop.left_port=/dev/ttyUSB1 \
     --teleop.right_port=/dev/ttyUSB3 \
-    --dataset.repo_id=local/so100_double-001__towel-a__set000__mylesr \
+    --dataset.repo_id=local/so100_double-001__towel-d__set000__mylesr \
     --dataset.num_episodes=10 \
     --dataset.single_task="Grab the towel and fold it" \
     --dataset.push_to_hub=false
@@ -521,14 +521,29 @@ python -m lerobot.record \
 
 ```bash
 python lerobot/scripts/train.py \
-  --dataset.repo_id=local/so100_double-001__towel-a__set000__mylesr \
+  --dataset.repo_id=local/so100_double-001__towel-d__set000__mylesr \
   --policy.type=act \
-  --output_dir=outputs/train/act__so100_double-towel-a__set000__mylesr \
-  --job_name=act__so100_double-towel-a__set000__mylesr\
+  --output_dir=outputs/train/act__so100_double-towel-d__set000__mylesr \
+  --job_name=act__so100_double-towel-d__set000__mylesr \
   --policy.device=cuda \
   --wandb.enable=false \
   --policy.push_to_hub=false \
   --steps=20000
+```
+
+# Continuing training
+```bash
+python lerobot/scripts/train.py \
+  --dataset.repo_id=local/so100_double-001__towel-d__set000__mylesr \
+  --policy.type=act \
+  --output_dir=outputs/train/act__so100_double-towel-d__set000__mylesr \
+  --job_name=act__so100_double-towel-d__set000__mylesr \
+  --policy.device=cuda \
+  --wandb.enable=false \
+  --policy.push_to_hub=false \
+  --steps=40000 \
+  --config_path="outputs/train/act__so100_double-towel-d__set000__mylesr/checkpoints/020000/pretrained_model/train_config.json" \
+  --resume=true
 ```
 
 # Evaluate
@@ -538,8 +553,8 @@ python -m lerobot.record  \
   --robot.left_port=/dev/ttyUSB0 \
   --robot.right_port=/dev/ttyUSB2 \
   --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
-  --policy.path="outputs/train/act__so100_double-towel-a__set000__mylesr/checkpoints/020000/pretrained_model" \
-  --dataset.repo_id=local/eval_so100_double-001__towel-a__set000__mylesr \
+  --policy.path="outputs/train/act__so100_double-towel-d__set000__mylesr/checkpoints/020000/pretrained_model" \
+  --dataset.repo_id=local/eval_so100_double-001__towel-d__set000__mylesr \
   --dataset.num_episodes=1 \
   --dataset.single_task="Grab the towel and fold it" \
   --dataset.push_to_hub=false
