@@ -474,9 +474,9 @@ class PhoneTeleoperator(Teleoperator):
             if len(solution_final) > 2:
                 solution_final[2] -= 90
             
-            # wrist_roll (index 4): direction reversal only (no offset)
+           # wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_final) > 4:
-                solution_final[4] = -(solution_final[4] - 90)
+                solution_final[4] = -(solution_final[4] + 90)
 
             # Update gripper state - convert percentage (0-100) to gripper position
             # gripper_value is 0-100, we need to map it to configured range

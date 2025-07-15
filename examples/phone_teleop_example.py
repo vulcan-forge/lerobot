@@ -83,7 +83,7 @@ def main():
         urdf_path=urdf_path,
         mesh_path=mesh_path,
         # In the new URDF the end-effector link is named "jaw"
-        target_link_name="jaw",
+        target_link_name="gripper",
         sensitivity_normal=0.5,
         sensitivity_precision=0.2,
         rotation_sensitivity=1.0,
