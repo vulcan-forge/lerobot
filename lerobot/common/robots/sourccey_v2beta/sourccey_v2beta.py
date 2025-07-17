@@ -302,15 +302,18 @@ class SourcceyV2Beta(Robot):
         # base_wheel_goal_vel = self._body_to_wheel_raw(
         #     base_goal_vel["x.vel"], base_goal_vel["y.vel"], base_goal_vel["theta.vel"]
         # )
+
+        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
+        right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
+
         # Check for NaN values and skip sending actions if any are found
         if any(np.isnan(v) for v in left_arm_goal_pos.values()) or any(np.isnan(v) for v in right_arm_goal_pos.values()):
             logger.warning("NaN values detected in left arm goal positions. Skipping action execution.")
-            return {**left_arm_goal_pos, **right_arm_goal_pos, **base_goal_vel}
+            return {**left_arm_present_pos, **right_arm_present_pos, **base_wheel_goal_vel}
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
-        left_arm_present_pos = self.left_arm_bus.sync_read("Present_Position", self.left_arm_motors)
-        right_arm_present_pos = self.right_arm_bus.sync_read("Present_Position", self.right_arm_motors)
+        
         if self.config.max_relative_target is not None:
             left_arm_goal_present_pos = {key: (g_pos, left_arm_present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
             left_arm_adjusted_goal_present_pos = self._apply_minimum_action(left_arm_goal_present_pos)

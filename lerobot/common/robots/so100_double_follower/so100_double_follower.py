@@ -19,6 +19,8 @@ import time
 from functools import cached_property
 from typing import Any
 
+import numpy as np
+
 from lerobot.common.cameras.utils import make_cameras_from_configs
 from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.common.motors import Motor, MotorCalibration, MotorNormMode
@@ -265,14 +267,21 @@ class SO100DoubleFollower(Robot):
         left_goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("left_")}
         right_goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos") and key.startswith("right_")}
 
+        left_present_pos = self.left_bus.sync_read("Present_Position")
+        right_present_pos = self.right_bus.sync_read("Present_Position")
+
+        # Check for NaN values and skip sending actions if any are found
+        if any(np.isnan(v) for v in left_present_pos.values()) or any(np.isnan(v) for v in right_present_pos.values()):
+            logger.warning("NaN values detected in left arm goal positions. Skipping action execution.")
+            return {**left_present_pos, **right_present_pos}
+
+
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            left_present_pos = self.left_bus.sync_read("Present_Position")
             left_goal_present_pos = {key: (g_pos, left_present_pos[key]) for key, g_pos in left_goal_pos.items()}
             left_goal_pos = ensure_safe_goal_position(left_goal_present_pos, self.config.max_relative_target)
             
-            right_present_pos = self.right_bus.sync_read("Present_Position")
             right_goal_present_pos = {key: (g_pos, right_present_pos[key]) for key, g_pos in right_goal_pos.items()}            
             right_goal_pos = ensure_safe_goal_position(right_goal_present_pos, self.config.max_relative_target)
 

@@ -495,25 +495,25 @@ COMMANDS
 ```bash
 python -m lerobot.teleoperate \
     --robot.type=so100_double_follower \
-    --robot.left_port=/dev/ttyUSB0 \
-    --robot.right_port=/dev/ttyUSB2 \
-    --robot.cameras="{ left: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 3, width: 640, height: 480, fps: 30}}" \
+    --robot.left_port=/dev/ttyUSB1 \
+    --robot.right_port=/dev/ttyUSB3 \
+    --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
     --teleop.type=so100_double_leader \
-    --teleop.left_port=/dev/ttyUSB1 \
-    --teleop.right_port=/dev/ttyUSB3 \
+    --teleop.left_port=/dev/ttyUSB0 \
+    --teleop.right_port=/dev/ttyUSB2 \
     --display_data=true 
 ```
 
 ```bash
 python -m lerobot.record \
     --robot.type=so100_double_follower \
-    --robot.left_port=/dev/ttyUSB0 \
-    --robot.right_port=/dev/ttyUSB2 \
-    --robot.cameras="{ left: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 3, width: 640, height: 480, fps: 30}}" \
+    --robot.left_port=/dev/ttyUSB1 \
+    --robot.right_port=/dev/ttyUSB3 \
+    --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
     --teleop.type=so100_double_leader \
-    --teleop.left_port=/dev/ttyUSB1 \
-    --teleop.right_port=/dev/ttyUSB3 \
-    --dataset.repo_id=local/so100_double-001__towel-h__set001__mylesr \
+    --teleop.left_port=/dev/ttyUSB0 \
+    --teleop.right_port=/dev/ttyUSB2 \
+    --dataset.repo_id=local/so100_double-001__towel-e__set003__TEST \
     --dataset.num_episodes=10 \
     --dataset.single_task="Grab the towel and fold it" \
     --dataset.push_to_hub=false
@@ -534,11 +534,11 @@ python lerobot/scripts/train.py \
 # Distributed Training
 ```bash
 torchrun --nproc_per_node=2 lerobot/scripts/train.py \
- --dataset.repo_id=local/so100_double-001__towel-4a-2b-4c-2d-3e__set000__combined \
+ --dataset.repo_id=local/so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
  --policy.type=act \
  --policy.device=cuda \
- --output_dir=outputs/train/act__so100_double-001__towel-4a-2b-4c-2d-3e__set000__combined \
- --job_name=act__so100_double-001__towel-4a-2b-4c-2d-3e__set000__combined \
+ --output_dir=outputs/train/act__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
+ --job_name=act__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
  --wandb.enable=false \
  --policy.push_to_hub=false \
  --steps=50000 \
@@ -578,11 +578,11 @@ CUDA_VISIBLE_DEVICES=1 python lerobot/scripts/train.py \
 ```bash
 python -m lerobot.record  \
   --robot.type=so100_double_follower \
-  --robot.left_port=/dev/ttyUSB0 \
-  --robot.right_port=/dev/ttyUSB2 \
-  --robot.cameras="{ left: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 3, width: 640, height: 480, fps: 30}}" \
-  --policy.path="outputs/train/act__so100_double-001__towel-4a-2b-4c-2d__set000__combined/checkpoints/last/pretrained_model" \
-  --dataset.repo_id=local/eval__so100_double-001__towel-4a-2b-4c-2d__set004__combined \
+  --robot.left_port=/dev/ttyUSB1 \
+  --robot.right_port=/dev/ttyUSB3 \
+  --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
+  --policy.path="outputs/train/act__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined/checkpoints/050000/pretrained_model" \
+  --dataset.repo_id=local/eval__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
   --dataset.num_episodes=1 \
   --dataset.single_task="Grab the towel and fold it" \
   --dataset.push_to_hub=false
@@ -591,8 +591,8 @@ python -m lerobot.record  \
 
 ```bash
 python lerobot/scripts/combine_dataset.py \
-    --repo_ids local/so100_double-001__towel-a__set000__mylesr local/so100_double-001__towel-a__set001__mylesr local/so100_double-001__towel-a__set002__mylesr local/so100_double-001__towel-a__set003__mylesr local/so100_double-001__towel-b__set000__mylesr local/so100_double-001__towel-b__set001__mylesr local/so100_double-001__towel-c__set000__mylesr local/so100_double-001__towel-c__set001__mylesr local/so100_double-001__towel-c__set002__mylesr local/so100_double-001__towel-c__set003__mylesr local/so100_double-001__towel-d__set000__mylesr local/so100_double-001__towel-d__set001__mylesr local/so100_double-001__towel-e__set000__mylesr local/so100_double-001__towel-e__set001__mylesr local/so100_double-001__towel-e__set002__mylesr \
-    --output_repo_id=local/so100_double-001__towel-4a-2b-4c-2d-3e__set000__combined \
+    --repo_ids local/so100_double-001__towel-a__set000__mylesr local/so100_double-001__towel-a__set001__mylesr local/so100_double-001__towel-a__set002__mylesr local/so100_double-001__towel-a__set003__mylesr local/so100_double-001__towel-b__set000__mylesr local/so100_double-001__towel-b__set001__mylesr local/so100_double-001__towel-c__set000__mylesr local/so100_double-001__towel-c__set001__mylesr local/so100_double-001__towel-c__set002__mylesr local/so100_double-001__towel-c__set003__mylesr local/so100_double-001__towel-d__set000__mylesr local/so100_double-001__towel-d__set001__mylesr local/so100_double-001__towel-d__set002__mylesr local/so100_double-001__towel-d__set003__mylesr local/so100_double-001__towel-e__set000__mylesr local/so100_double-001__towel-e__set001__mylesr local/so100_double-001__towel-e__set002__mylesr local/so100_double-001__towel-g__set002__mylesr local/so100_double-001__towel-g__set003__mylesr local/so100_double-001__towel-g__set004__mylesr local/so100_double-001__towel-g__set005__mylesr local/so100_double-001__towel-i__set000__mylesr local/so100_double-001__towel-i__set001__mylesr local/so100_double-001__towel-i__set002__mylesr local/so100_double-001__towel-i__set003__mylesr \
+    --output_repo_id=local/so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
     --push_to_hub=0
 
 ```
