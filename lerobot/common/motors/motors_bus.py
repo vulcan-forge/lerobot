@@ -97,7 +97,6 @@ class Motor:
     id: int
     model: str
     norm_mode: MotorNormMode
-    gear_ratio: float = 1.0
 
 
 class JointOutOfRangeError(Exception):
