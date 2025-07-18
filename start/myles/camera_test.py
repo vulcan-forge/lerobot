@@ -5,7 +5,7 @@ ls -la /dev/video*
 lsusb | grep -i camera
 
 # Check if you have any video devices that work
-python3 -c
+python3 -c "
 import cv2
 import glob
 
@@ -25,4 +25,4 @@ for i in range(10):
         cap.release()
     else:
         print(f'  /dev/video{i}: ✗ Cannot open')
-        
+"
