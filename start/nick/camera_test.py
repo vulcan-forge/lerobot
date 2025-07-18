@@ -160,6 +160,24 @@ def get_device_usb_info(device_path: str) -> Optional[Dict]:
     return None
 
 
+def map_usb_to_video_devices() -> Dict[str, List[str]]:
+    """Map USB bus:device numbers to video device paths"""
+    mapping = {}
+
+    # Get all video devices
+    video_devices = glob.glob('/dev/video*')
+
+    for device in video_devices:
+        usb_info = get_device_usb_info(device)
+        if usb_info and 'bus_num' in usb_info and 'dev_num' in usb_info:
+            usb_key = f"{usb_info['bus_num']}:{usb_info['dev_num']}"
+            if usb_key not in mapping:
+                mapping[usb_key] = []
+            mapping[usb_key].append(device)
+
+    return mapping
+
+
 def detect_video_devices() -> List[Dict]:
     """Detect all video devices in /dev/video* with port information"""
     print("=== 1. Video Device Detection ===")
@@ -221,7 +239,7 @@ def detect_video_devices() -> List[Dict]:
 
 
 def detect_usb_cameras() -> List[Dict]:
-    """Detect USB cameras using lsusb with port information"""
+    """Detect USB cameras using lsusb with port information and video device mapping"""
     print("\n=== 2. USB Camera Detection ===")
     usb_output = run_shell_command("lsusb")
     camera_devices = []
@@ -245,7 +263,8 @@ def detect_usb_cameras() -> List[Dict]:
                         'vendor_id': vendor_id,
                         'product_id': product_id,
                         'name': name,
-                        'full_line': line.strip()
+                        'full_line': line.strip(),
+                        'video_devices': []
                     }
                     camera_devices.append(camera_info)
                 else:
@@ -256,14 +275,28 @@ def detect_usb_cameras() -> List[Dict]:
                         'device': 'Unknown',
                         'vendor_id': 'Unknown',
                         'product_id': 'Unknown',
-                        'name': 'Unknown'
+                        'name': 'Unknown',
+                        'video_devices': []
                     })
+
+    # Map USB devices to video devices
+    usb_to_video_mapping = map_usb_to_video_devices()
+
+    # Add video device information to each camera
+    for cam in camera_devices:
+        usb_key = f"{cam['bus']}:{cam['device']}"
+        if usb_key in usb_to_video_mapping:
+            cam['video_devices'] = usb_to_video_mapping[usb_key]
 
     if camera_devices:
         print(f"Found {len(camera_devices)} camera-like USB device(s):")
         for cam in camera_devices:
             print(f"  Bus {cam['bus']} Device {cam['device']}: {cam['name']}")
             print(f"    Vendor/Product: {cam['vendor_id']}:{cam['product_id']}")
+            if cam['video_devices']:
+                print(f"    Video devices: {', '.join(cam['video_devices'])}")
+            else:
+                print(f"    Video devices: None found (may not be accessible)")
     else:
         print("No camera-like USB devices found")
 
@@ -571,7 +604,9 @@ def generate_summary(video_devices: List[Dict], usb_cameras: List[Dict],
     if usb_cameras:
         print("\nUSB camera devices:")
         for cam in usb_cameras:
+            video_devices_str = ", ".join(cam['video_devices']) if cam['video_devices'] else "None found"
             print(f"  Bus {cam['bus']} Device {cam['device']}: {cam['name']} ({cam['vendor_id']}:{cam['product_id']})")
+            print(f"    Video devices: {video_devices_str}")
 
     print(f"\nLinux tools available: {sum(linux_tools.values())}/{len(linux_tools)}")
     for tool, available in linux_tools.items():
