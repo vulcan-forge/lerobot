@@ -24,7 +24,11 @@ def run_command(cmd: str) -> str:
 def get_real_cameras() -> List[Dict]:
     """Get real cameras using v4l2-ctl"""
     cameras = []
-    v4l2_output = run_command("v4l2-ctl --list-devices 2>/dev/null")
+    # Try with sudo first, then without
+    v4l2_output = run_command("sudo v4l2-ctl --list-devices 2>/dev/null")
+
+    if not v4l2_output:
+        v4l2_output = run_command("v4l2-ctl --list-devices 2>/dev/null")
 
     if v4l2_output:
         current_camera = None
