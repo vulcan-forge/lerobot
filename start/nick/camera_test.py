@@ -6,10 +6,10 @@ Shows which USB ports your cameras are connected to.
 """
 
 import glob
+import os
 import re
 import subprocess
 from typing import Dict, List
-import os
 
 
 def run_command(cmd: str) -> str:
@@ -21,32 +21,67 @@ def run_command(cmd: str) -> str:
         return ""
 
 
+def get_real_cameras() -> List[Dict]:
+    """Get real cameras using v4l2-ctl"""
+    cameras = []
+    v4l2_output = run_command("v4l2-ctl --list-devices 2>/dev/null")
+
+    if v4l2_output:
+        current_camera = None
+        for line in v4l2_output.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('/dev/'):
+                # This is a camera name line
+                if 'usb' in line.lower():
+                    current_camera = {
+                        'name': line,
+                        'devices': []
+                    }
+                    cameras.append(current_camera)
+            elif line.startswith('/dev/video') and current_camera:
+                # This is a video device for the current camera
+                current_camera['devices'].append(line)
+
+    return cameras
+
+
 def get_usb_port_info() -> Dict[str, str]:
     """Get USB port information for all devices"""
     port_info = {}
     usb_tree = run_command("lsusb -t 2>/dev/null")
 
     if usb_tree:
-        current_bus = None
-        current_port = None
-
         for line in usb_tree.split('\n'):
-            if line.strip():
-                # Parse bus and port
-                bus_match = re.search(r'Bus (\d+)', line)
+            if line.strip() and 'Dev' in line and 'Class=Video' in line:
+                # Parse lines like: |__ Port 001: Dev 011, If 0, Class=Video, Driver=uvcvideo, 480M
                 port_match = re.search(r'Port (\d+)(?:\.(\d+))?', line)
+                dev_match = re.search(r'Dev (\d+)', line)
 
-                if bus_match and port_match:
-                    current_bus = bus_match.group(1)
+                if port_match and dev_match:
                     port_parts = port_match.groups()
-                    current_port = f"{port_parts[0]}.{port_parts[1]}" if port_parts[1] else port_parts[0]
+                    if port_parts[1]:  # Has sub-port
+                        port = f"{port_parts[0]}.{port_parts[1]}"
+                    else:
+                        port = port_parts[0]
 
-                # Extract device info
-                device_match = re.search(r'(\w+)\s+(\w+)\s+(\w+)\s+(.+)', line)
-                if device_match and current_bus and current_port:
-                    device_name = device_match.group(4)
-                    device_key = f"{current_bus}:{current_port}"
-                    port_info[device_key] = device_name
+                    dev_num = dev_match.group(1)
+
+                    # Find the bus number from the line above
+                    bus_match = re.search(r'Bus (\d+)', line)
+                    if bus_match:
+                        bus_num = bus_match.group(1)
+                        device_key = f"{bus_num}:{dev_num}"
+                        port_info[device_key] = f"Port {port}"
+                    else:
+                        # Look for bus in previous lines
+                        lines_before = usb_tree.split('\n')[:usb_tree.split('\n').index(line)]
+                        for prev_line in reversed(lines_before):
+                            bus_match = re.search(r'Bus (\d+)', prev_line)
+                            if bus_match:
+                                bus_num = bus_match.group(1)
+                                device_key = f"{bus_num}:{dev_num}"
+                                port_info[device_key] = f"Port {port}"
+                                break
 
     return port_info
 
@@ -98,37 +133,31 @@ def find_camera_ports():
     print("Camera USB Port Detection")
     print("=" * 30)
 
-    # Get USB port information
-    usb_ports = get_usb_port_info()
+    # Get real cameras using v4l2-ctl
+    real_cameras = get_real_cameras()
 
-    # Find all video devices
-    video_devices = glob.glob('/dev/video*')
-
-    if not video_devices:
-        print("No video devices found.")
+    if not real_cameras:
+        print("No real cameras found.")
         return
 
-    print(f"Found {len(video_devices)} video device(s):\n")
+    print(f"Found {len(real_cameras)} camera(s):\n")
 
-    for device in sorted(video_devices):
-        usb_info = get_video_device_usb_info(device)
+    for camera in real_cameras:
+        print(f"Camera: {camera['name']}")
+        print(f"  Video devices: {', '.join(camera['devices'])}")
 
-        if usb_info and 'bus_num' in usb_info and 'dev_num' in usb_info:
-            bus = usb_info['bus_num']
-            dev = usb_info['dev_num']
+        # Get USB info for the first device of this camera
+        if camera['devices']:
+            usb_info = get_video_device_usb_info(camera['devices'][0])
+            if usb_info and 'bus_num' in usb_info and 'dev_num' in usb_info:
+                bus = usb_info['bus_num']
+                dev = usb_info['dev_num']
+                vendor_info = ""
+                if 'vendor_id' in usb_info and 'model_id' in usb_info:
+                    vendor_info = f" ({usb_info['vendor_id']}:{usb_info['model_id']})"
+                print(f"  USB Bus: {bus}, Device: {dev}{vendor_info}")
 
-            # Find the USB port for this device
-            usb_key = f"{bus}:{dev}"
-            port_name = usb_ports.get(usb_key, "Unknown")
-
-            vendor_info = ""
-            if 'vendor_id' in usb_info and 'model_id' in usb_info:
-                vendor_info = f" ({usb_info['vendor_id']}:{usb_info['model_id']})"
-
-            print(f"  {device} → USB Bus {bus}, Device {dev}{vendor_info}")
-            print(f"    Port: {port_name}\n")
-        else:
-            print(f"  {device} → No USB info available\n")
+        print()
 
 
 if __name__ == "__main__":
