@@ -282,38 +282,57 @@
         <parent link="Gripper-Base-Back-v1" />
         <child link="Gripper-Base-Front-Angled-Camera-v1" />
     </joint>
-    <joint name="Feetech-Servo-Motor-v1_Revolute-16" type="revolute">
+    <joint name="shoulder_pan" type="revolute">
         <origin xyz="0.07705126000000007 0.03499999999999999 -0.010871179999999736" rpy="3.4450928483976567e-16 -3.1900305907108096e-15 9.86076131526302e-32" />
         <parent link="Feetech-Servo-Motor-v1" />
         <child link="Shoulder-With-Gearbox-V3-v1" />
         <axis xyz="-2.702154975338666e-16 3.4450928483976646e-16 1.0" />
-        <limit lower="-1.570796" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-2.1" upper="2.1" effort="1000000" velocity="1000000" />
     </joint>
-    <joint name="Feetech-Servo-Motor-v1-1_Revolute-17" type="revolute">
+    <joint name="shoulder_lift" type="revolute">
         <origin xyz="-0.028296179999999983 0.05962626000000003 0.03499999999999997" rpy="-1.5707963267948968 6.125368411724997e-16 1.570796326794896" />
         <parent link="Feetech-Servo-Motor-v1-1" />
         <child link="Arm-Bicep-v1" />
         <axis xyz="-1.0000000000000022 -7.984489878059184e-16 -8.556395221968228e-16" />
-        <limit lower="-1.570796" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-0.1" upper="3.45" effort="1000000" velocity="1000000" />
     </joint>
-    <joint name="Feetech-Servo-Motor-v1-2_Revolute-18" type="revolute">
+    <joint name="elbow_flex" type="revolute">
         <origin xyz="-0.027296179999999504 0.055126270000000324 0.0349999999999994" rpy="1.5707963267948974 1.1006918418051147e-15 1.5707963267948986" />
         <parent link="Feetech-Servo-Motor-v1-2" />
         <child link="Arm-Forearm-v1" />
         <axis xyz="1.0000000000000195 -1.1021770808896294e-15 -1.2116079980132914e-15" />
-        <limit lower="-1.570796" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-0.2" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
-    <joint name="Feetech-Servo-Motor-v1-3_Revolute-19" type="revolute">
+    <joint name="wrist_flex" type="revolute">
         <origin xyz="0.02441378 -0.4205 0.07050075" rpy="-3.1415926535897927 -1.5707963267948961 0" />
         <parent link="Feetech-Servo-Motor-v1-3" />
         <child link="Arm-Wrist-v1" />
         <axis xyz="0.9999999999999769 -1.3047061815035669e-15 1.2127764798815551e-15" />
-        <limit lower="-1.570796" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-1.8" upper="1.8" effort="1000000" velocity="1000000" />
     </joint>
-    <joint name="Feetech-Servo-Motor-v1-4_Revolute-20" type="continuous">
+    <joint name="wrist_roll" type="continuous">
         <origin xyz="0.02441378 -0.48625 0.06950075" rpy="1.5707963267949865 -1.5777218104420236e-30 0.0" />
         <parent link="Feetech-Servo-Motor-v1-4" />
         <child link="Gripper-Base-Back-v1" />
         <axis xyz="0.0 8.978648026117131e-14 1.0" />
+        <limit effort="1000000" velocity="1000000" />
+    </joint>
+    
+    <!-- Dummy gripper link for the 6th joint -->
+    <link name="gripper_dummy">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.01" />
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
+        </inertial>
+    </link>
+    
+    <!-- Dummy gripper joint to satisfy 6-joint expectation -->
+    <joint name="gripper" type="revolute">
+        <origin xyz="0.0 0.0 0.05" rpy="0 0 0" />
+        <parent link="Gripper-Base-Back-v1" />
+        <child link="gripper_dummy" />
+        <axis xyz="1 0 0" />
+        <limit lower="0" upper="1.7" effort="1000000" velocity="1000000" />
     </joint>
 </robot>
