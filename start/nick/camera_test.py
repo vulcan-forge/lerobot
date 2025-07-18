@@ -4,7 +4,7 @@ Comprehensive Camera Detection Test Script for Linux
 
 This script provides multiple methods to detect and test cameras on Linux systems:
 1. System-level detection using /dev/video* devices
-2. USB device enumeration
+2. USB device enumeration with port information
 3. LeRobot's built-in camera detection
 4. OpenCV-based camera testing
 5. RealSense camera detection (if available)
@@ -20,6 +20,7 @@ import glob
 import logging
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -69,23 +70,144 @@ def check_linux_system() -> bool:
     return True
 
 
-def detect_video_devices() -> List[str]:
-    """Detect all video devices in /dev/video*"""
+def get_usb_port_info() -> Dict[str, Dict]:
+    """Get detailed USB port information for all devices"""
+    port_info = {}
+
+    # Get USB device tree
+    usb_tree = run_shell_command("lsusb -t 2>/dev/null")
+    if usb_tree and not usb_tree.startswith("Error"):
+        current_bus = None
+        current_port = None
+
+        for line in usb_tree.split('\n'):
+            if line.strip():
+                # Parse bus and port information
+                if 'Bus' in line and 'Port' in line:
+                    # Extract bus and port numbers
+                    bus_match = re.search(r'Bus (\d+)', line)
+                    port_match = re.search(r'Port (\d+)(?:\.(\d+))?', line)
+
+                    if bus_match and port_match:
+                        current_bus = int(bus_match.group(1))
+                        port_parts = port_match.groups()
+                        if port_parts[1]:  # Has sub-port
+                            current_port = f"{port_parts[0]}.{port_parts[1]}"
+                        else:
+                            current_port = port_parts[0]
+
+                # Extract device info
+                device_match = re.search(r'(\w+)\s+(\w+)\s+(\w+)\s+(.+)', line)
+                if device_match and current_bus is not None and current_port is not None:
+                    speed = device_match.group(1)
+                    device_class = device_match.group(2)
+                    device_subclass = device_match.group(3)
+                    device_name = device_match.group(4)
+
+                    device_key = f"{current_bus}:{current_port}"
+                    port_info[device_key] = {
+                        'bus': current_bus,
+                        'port': current_port,
+                        'speed': speed,
+                        'class': device_class,
+                        'subclass': device_subclass,
+                        'name': device_name
+                    }
+
+    return port_info
+
+
+def get_device_usb_info(device_path: str) -> Optional[Dict]:
+    """Get USB information for a specific video device"""
+    try:
+        # Get device info using udevadm
+        udev_info = run_shell_command(f"udevadm info --query=property --name={device_path}")
+        if udev_info and not udev_info.startswith("Error"):
+            usb_info = {}
+
+            # Extract USB bus and device numbers
+            for line in udev_info.split('\n'):
+                if line.startswith('ID_USB_INTERFACE_NUM='):
+                    usb_info['interface'] = line.split('=')[1]
+                elif line.startswith('ID_USB_DRIVER='):
+                    usb_info['driver'] = line.split('=')[1]
+                elif line.startswith('ID_VENDOR_ID='):
+                    usb_info['vendor_id'] = line.split('=')[1]
+                elif line.startswith('ID_MODEL_ID='):
+                    usb_info['model_id'] = line.split('=')[1]
+                elif line.startswith('ID_SERIAL_SHORT='):
+                    usb_info['serial'] = line.split('=')[1]
+                elif line.startswith('ID_USB_INTERFACES='):
+                    usb_info['interfaces'] = line.split('=')[1]
+
+            # Get USB path using sysfs
+            sysfs_path = run_shell_command(f"readlink -f /sys/class/video4linux/{os.path.basename(device_path)}/device")
+            if sysfs_path and not sysfs_path.startswith("Error"):
+                # Navigate up to find USB device path
+                usb_path = run_shell_command(f"find {sysfs_path} -name 'busnum' -o -name 'devnum' | head -1")
+                if usb_path and not usb_path.startswith("Error"):
+                    usb_dir = os.path.dirname(usb_path)
+                    busnum = run_shell_command(f"cat {usb_dir}/busnum 2>/dev/null")
+                    devnum = run_shell_command(f"cat {usb_dir}/devnum 2>/dev/null")
+                    if busnum and devnum and not busnum.startswith("Error") and not devnum.startswith("Error"):
+                        usb_info['bus_num'] = busnum.strip()
+                        usb_info['dev_num'] = devnum.strip()
+
+            return usb_info if usb_info else None
+    except Exception as e:
+        logger.debug(f"Error getting USB info for {device_path}: {e}")
+
+    return None
+
+
+def detect_video_devices() -> List[Dict]:
+    """Detect all video devices in /dev/video* with port information"""
     print("=== 1. Video Device Detection ===")
     video_devices = sorted(glob.glob('/dev/video*'), key=lambda x: int(x.split('video')[1]))
+    device_info_list = []
 
     if video_devices:
         print(f"Found {len(video_devices)} video device(s):")
+
+        # Get USB port information
+        usb_port_info = get_usb_port_info()
+
         for device in video_devices:
+            device_info = {'path': device, 'usb_info': None}
+
+            # Get USB information for this device
+            usb_info = get_device_usb_info(device)
+            if usb_info:
+                device_info['usb_info'] = usb_info
+
+                # Try to match with port info
+                if 'bus_num' in usb_info and 'dev_num' in usb_info:
+                    device_key = f"{usb_info['bus_num']}:{usb_info['dev_num']}"
+                    if device_key in usb_port_info:
+                        device_info['port_info'] = usb_port_info[device_key]
+
+            device_info_list.append(device_info)
+
             print(f"  {device}")
+            if usb_info:
+                print(f"    USB Bus: {usb_info.get('bus_num', 'Unknown')}")
+                print(f"    USB Device: {usb_info.get('dev_num', 'Unknown')}")
+                if 'port_info' in device_info:
+                    port_info = device_info['port_info']
+                    print(f"    USB Port: {port_info['port']}")
+                    print(f"    USB Speed: {port_info['speed']}")
+                if usb_info.get('vendor_id') and usb_info.get('model_id'):
+                    print(f"    Vendor/Model: {usb_info['vendor_id']}:{usb_info['model_id']}")
+                if usb_info.get('driver'):
+                    print(f"    Driver: {usb_info['driver']}")
 
         # Get detailed info using v4l2-ctl if available
         print("\nDetailed device information:")
-        for device in video_devices:
+        for device_info in device_info_list:
+            device = device_info['path']
             print(f"\n{device}:")
             info = run_shell_command(f"v4l2-ctl --device={device} --info 2>/dev/null")
             if info and not info.startswith("Error") and not info.startswith("Command timed out"):
-                # Extract device name
                 lines = info.split('\n')
                 for line in lines:
                     if 'Card type' in line or 'Driver name' in line:
@@ -95,35 +217,66 @@ def detect_video_devices() -> List[str]:
     else:
         print("No video devices found in /dev/video*")
 
-    return video_devices
+    return device_info_list
 
 
-def detect_usb_cameras() -> List[str]:
-    """Detect USB cameras using lsusb"""
+def detect_usb_cameras() -> List[Dict]:
+    """Detect USB cameras using lsusb with port information"""
     print("\n=== 2. USB Camera Detection ===")
     usb_output = run_shell_command("lsusb")
-    camera_lines = []
+    camera_devices = []
 
     if usb_output and not usb_output.startswith("Error"):
         lines = usb_output.split('\n')
         for line in lines:
             if any(keyword in line.lower() for keyword in ['camera', 'webcam', 'video', 'uvc']):
-                camera_lines.append(line.strip())
+                # Parse lsusb output: Bus 001 Device 003: ID 046d:0825 Logitech, Inc. Webcam C270
+                match = re.match(r'Bus (\d+) Device (\d+): ID ([a-f0-9]{4}):([a-f0-9]{4}) (.+)', line)
+                if match:
+                    bus = match.group(1)
+                    device = match.group(2)
+                    vendor_id = match.group(3)
+                    product_id = match.group(4)
+                    name = match.group(5)
 
-    if camera_lines:
-        print(f"Found {len(camera_lines)} camera-like USB device(s):")
-        for line in camera_lines:
-            print(f"  {line}")
+                    camera_info = {
+                        'bus': bus,
+                        'device': device,
+                        'vendor_id': vendor_id,
+                        'product_id': product_id,
+                        'name': name,
+                        'full_line': line.strip()
+                    }
+                    camera_devices.append(camera_info)
+                else:
+                    # Fallback for non-standard format
+                    camera_devices.append({
+                        'full_line': line.strip(),
+                        'bus': 'Unknown',
+                        'device': 'Unknown',
+                        'vendor_id': 'Unknown',
+                        'product_id': 'Unknown',
+                        'name': 'Unknown'
+                    })
+
+    if camera_devices:
+        print(f"Found {len(camera_devices)} camera-like USB device(s):")
+        for cam in camera_devices:
+            print(f"  Bus {cam['bus']} Device {cam['device']}: {cam['name']}")
+            print(f"    Vendor/Product: {cam['vendor_id']}:{cam['product_id']}")
     else:
         print("No camera-like USB devices found")
 
-    return camera_lines
+    return camera_devices
 
 
 def test_opencv_cameras(max_index: int = 30) -> List[Dict]:
-    """Test OpenCV cameras using indices and device paths"""
+    """Test OpenCV cameras using indices and device paths with port information"""
     print(f"\n=== 3. OpenCV Camera Testing (0-{max_index-1}) ===")
     working_cameras = []
+
+    # Get USB port information
+    usb_port_info = get_usb_port_info()
 
     # Test numeric indices
     for i in range(max_index):
@@ -144,14 +297,45 @@ def test_opencv_cameras(max_index: int = 30) -> List[Dict]:
                     'width': width,
                     'height': height,
                     'fps': fps,
-                    'backend': backend
+                    'backend': backend,
+                    'usb_info': None,
+                    'port_info': None
                 }
+
+                # Try to get USB information for this camera index
+                # This is tricky for indices, but we can try to match with device paths
+                for device_path in glob.glob('/dev/video*'):
+                    cap_test = cv2.VideoCapture(device_path)
+                    if cap_test.isOpened():
+                        # Check if this device path corresponds to the same camera
+                        # by comparing properties
+                        test_width = int(cap_test.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        test_height = int(cap_test.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        if test_width == width and test_height == height:
+                            usb_info = get_device_usb_info(device_path)
+                            if usb_info:
+                                camera_info['usb_info'] = usb_info
+                                if 'bus_num' in usb_info and 'dev_num' in usb_info:
+                                    device_key = f"{usb_info['bus_num']}:{usb_info['dev_num']}"
+                                    if device_key in usb_port_info:
+                                        camera_info['port_info'] = usb_port_info[device_key]
+                            break
+                        cap_test.release()
+
                 working_cameras.append(camera_info)
 
                 print(f"  Camera {i}: ✓ Working")
                 print(f"    Frame shape: {frame.shape}")
                 print(f"    Properties: {width}x{height} @ {fps:.1f}fps")
                 print(f"    Backend: {backend}")
+                if camera_info['usb_info']:
+                    usb_info = camera_info['usb_info']
+                    print(f"    USB Bus: {usb_info.get('bus_num', 'Unknown')}")
+                    print(f"    USB Device: {usb_info.get('dev_num', 'Unknown')}")
+                    if camera_info['port_info']:
+                        port_info = camera_info['port_info']
+                        print(f"    USB Port: {port_info['port']}")
+                        print(f"    USB Speed: {port_info['speed']}")
             else:
                 print(f"  Camera {i}: ✗ Opened but no frame")
             cap.release()
@@ -178,14 +362,34 @@ def test_opencv_cameras(max_index: int = 30) -> List[Dict]:
                     'width': width,
                     'height': height,
                     'fps': fps,
-                    'backend': backend
+                    'backend': backend,
+                    'usb_info': None,
+                    'port_info': None
                 }
+
+                # Get USB information for this device
+                usb_info = get_device_usb_info(device)
+                if usb_info:
+                    camera_info['usb_info'] = usb_info
+                    if 'bus_num' in usb_info and 'dev_num' in usb_info:
+                        device_key = f"{usb_info['bus_num']}:{usb_info['dev_num']}"
+                        if device_key in usb_port_info:
+                            camera_info['port_info'] = usb_port_info[device_key]
+
                 working_cameras.append(camera_info)
 
                 print(f"  {device}: ✓ Working")
                 print(f"    Frame shape: {frame.shape}")
                 print(f"    Properties: {width}x{height} @ {fps:.1f}fps")
                 print(f"    Backend: {backend}")
+                if camera_info['usb_info']:
+                    usb_info = camera_info['usb_info']
+                    print(f"    USB Bus: {usb_info.get('bus_num', 'Unknown')}")
+                    print(f"    USB Device: {usb_info.get('dev_num', 'Unknown')}")
+                    if camera_info['port_info']:
+                        port_info = camera_info['port_info']
+                        print(f"    USB Port: {port_info['port']}")
+                        print(f"    USB Speed: {port_info['speed']}")
             else:
                 print(f"  {device}: ✗ Opened but no frame")
             cap.release()
@@ -196,7 +400,7 @@ def test_opencv_cameras(max_index: int = 30) -> List[Dict]:
 
 
 def test_lerobot_cameras() -> List[Dict]:
-    """Test cameras using LeRobot's built-in detection"""
+    """Test cameras using LeRobot's built-in detection with port information"""
     if not LEROBOT_AVAILABLE:
         print("\n=== 4. LeRobot Camera Detection ===")
         print("LeRobot not available. Skipping.")
@@ -205,15 +409,37 @@ def test_lerobot_cameras() -> List[Dict]:
     print("\n=== 4. LeRobot Camera Detection ===")
     all_cameras = []
 
+    # Get USB port information
+    usb_port_info = get_usb_port_info()
+
     # Test OpenCV cameras through LeRobot
     try:
         print("Testing OpenCV cameras through LeRobot...")
         opencv_cameras = OpenCVCamera.find_cameras()
         for cam_info in opencv_cameras:
+            # Try to get USB information for this camera
+            cam_id = cam_info.get('id')
+            if isinstance(cam_id, str) and cam_id.startswith('/dev/video'):
+                usb_info = get_device_usb_info(cam_id)
+                if usb_info:
+                    cam_info['usb_info'] = usb_info
+                    if 'bus_num' in usb_info and 'dev_num' in usb_info:
+                        device_key = f"{usb_info['bus_num']}:{usb_info['dev_num']}"
+                        if device_key in usb_port_info:
+                            cam_info['port_info'] = usb_port_info[device_key]
+
             all_cameras.append(cam_info)
             print(f"  Found OpenCV camera: {cam_info['name']}")
             print(f"    ID: {cam_info['id']}")
             print(f"    Backend: {cam_info.get('backend_api', 'Unknown')}")
+            if 'usb_info' in cam_info:
+                usb_info = cam_info['usb_info']
+                print(f"    USB Bus: {usb_info.get('bus_num', 'Unknown')}")
+                print(f"    USB Device: {usb_info.get('dev_num', 'Unknown')}")
+                if 'port_info' in cam_info:
+                    port_info = cam_info['port_info']
+                    print(f"    USB Port: {port_info['port']}")
+                    print(f"    USB Speed: {port_info['speed']}")
             if 'default_stream_profile' in cam_info:
                 profile = cam_info['default_stream_profile']
                 print(f"    Profile: {profile['width']}x{profile['height']} @ {profile['fps']}fps")
@@ -225,9 +451,11 @@ def test_lerobot_cameras() -> List[Dict]:
         print("\nTesting RealSense cameras through LeRobot...")
         realsense_cameras = RealSenseCamera.find_cameras()
         for cam_info in realsense_cameras:
+            # RealSense cameras already have physical port info
             all_cameras.append(cam_info)
             print(f"  Found RealSense camera: {cam_info['name']}")
             print(f"    Serial: {cam_info['id']}")
+            print(f"    Physical Port: {cam_info.get('physical_port', 'Unknown')}")
             print(f"    Firmware: {cam_info.get('firmware_version', 'Unknown')}")
             print(f"    USB Type: {cam_info.get('usb_type_descriptor', 'Unknown')}")
             if 'default_stream_profile' in cam_info:
@@ -303,13 +531,18 @@ def check_linux_tools() -> Dict[str, bool]:
     tools['ffmpeg'] = not ffmpeg_output.startswith("Error") and not ffmpeg_output.startswith("Command timed out")
     print(f"  ffmpeg: {'✓ Available' if tools['ffmpeg'] else '✗ Not available'}")
 
+    # Check udevadm
+    udevadm_output = run_shell_command("udevadm --version 2>/dev/null")
+    tools['udevadm'] = not udevadm_output.startswith("Error") and not udevadm_output.startswith("Command timed out")
+    print(f"  udevadm: {'✓ Available' if tools['udevadm'] else '✗ Not available'}")
+
     return tools
 
 
-def generate_summary(video_devices: List[str], usb_cameras: List[str],
+def generate_summary(video_devices: List[Dict], usb_cameras: List[Dict],
                     opencv_cameras: List[Dict], lerobot_cameras: List[Dict],
                     linux_tools: Dict[str, bool]) -> None:
-    """Generate a summary of all findings"""
+    """Generate a summary of all findings with port information"""
     print("\n" + "="*50)
     print("CAMERA DETECTION SUMMARY")
     print("="*50)
@@ -327,7 +560,18 @@ def generate_summary(video_devices: List[str], usb_cameras: List[str],
     if opencv_cameras:
         print("\nWorking camera details:")
         for cam in opencv_cameras:
-            print(f"  {cam['id']} ({cam['type']}): {cam['width']}x{cam['height']} @ {cam['fps']:.1f}fps")
+            port_info = ""
+            if cam.get('port_info'):
+                port_info = f" (USB Port: {cam['port_info']['port']})"
+            elif cam.get('usb_info'):
+                usb_info = cam['usb_info']
+                port_info = f" (USB Bus: {usb_info.get('bus_num', 'Unknown')}, Device: {usb_info.get('dev_num', 'Unknown')})"
+            print(f"  {cam['id']} ({cam['type']}): {cam['width']}x{cam['height']} @ {cam['fps']:.1f}fps{port_info}")
+
+    if usb_cameras:
+        print("\nUSB camera devices:")
+        for cam in usb_cameras:
+            print(f"  Bus {cam['bus']} Device {cam['device']}: {cam['name']} ({cam['vendor_id']}:{cam['product_id']})")
 
     print(f"\nLinux tools available: {sum(linux_tools.values())}/{len(linux_tools)}")
     for tool, available in linux_tools.items():
@@ -336,7 +580,7 @@ def generate_summary(video_devices: List[str], usb_cameras: List[str],
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Comprehensive camera detection test for Linux systems",
+        description="Comprehensive camera detection test for Linux systems with port information",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -368,8 +612,8 @@ Examples:
     test_opencv = args.opencv or args.all or not (args.opencv or args.realsense)
     test_realsense = args.realsense or args.all or not (args.opencv or args.realsense)
 
-    print("Comprehensive Camera Detection Test for Linux")
-    print("=" * 50)
+    print("Comprehensive Camera Detection Test for Linux (with Port Information)")
+    print("=" * 70)
 
     # Run tests
     video_devices = detect_video_devices()
