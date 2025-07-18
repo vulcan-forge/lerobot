@@ -80,7 +80,11 @@ def find_camera_ports():
     # Find all video devices
     video_devices = glob.glob('/dev/video*')
 
-    cameras_found = []
+    if not video_devices:
+        print("No video devices found.")
+        return
+
+    print(f"Found {len(video_devices)} video device(s):\n")
 
     for device in sorted(video_devices):
         usb_info = get_video_device_usb_info(device)
@@ -93,22 +97,10 @@ def find_camera_ports():
             usb_key = f"{bus}:{dev}"
             port_name = usb_ports.get(usb_key, "Unknown")
 
-            # Check if it's a camera (look for camera keywords)
-            if any(keyword in port_name.lower() for keyword in ['camera', 'webcam', 'video', 'uvc']):
-                cameras_found.append({
-                    'device': device,
-                    'bus': bus,
-                    'device_num': dev,
-                    'port_name': port_name
-                })
-
-    if cameras_found:
-        print(f"Found {len(cameras_found)} camera(s):\n")
-        for cam in cameras_found:
-            print(f"  {cam['device']} → USB Bus {cam['bus']}, Device {cam['device_num']}")
-            print(f"    Port: {cam['port_name']}\n")
-    else:
-        print("No cameras found.")
+            print(f"  {device} → USB Bus {bus}, Device {dev}")
+            print(f"    Port: {port_name}\n")
+        else:
+            print(f"  {device} → No USB info available\n")
 
 
 if __name__ == "__main__":
