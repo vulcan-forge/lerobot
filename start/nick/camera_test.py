@@ -9,6 +9,7 @@ import glob
 import re
 import subprocess
 from typing import Dict, List
+import os
 
 
 def run_command(cmd: str) -> str:
@@ -51,20 +52,43 @@ def get_usb_port_info() -> Dict[str, str]:
 
 
 def get_video_device_usb_info(device_path: str) -> Dict:
-    """Get USB info for a video device"""
+    """Get USB info for a video device using udevadm"""
     usb_info = {}
 
-    # Get USB bus/device numbers
-    sysfs_path = run_command(f"readlink -f /sys/class/video4linux/{device_path.split('/')[-1]}/device")
-    if sysfs_path:
-        usb_path = run_command(f"find {sysfs_path} -name 'busnum' -o -name 'devnum' | head -1")
-        if usb_path:
-            usb_dir = usb_path.rsplit('/', 1)[0]
-            busnum = run_command(f"cat {usb_dir}/busnum 2>/dev/null")
-            devnum = run_command(f"cat {usb_dir}/devnum 2>/dev/null")
-            if busnum and devnum:
-                usb_info['bus_num'] = busnum.strip()
-                usb_info['dev_num'] = devnum.strip()
+    # Use udevadm to get device properties
+    udev_output = run_command(f"udevadm info --query=property --name={device_path}")
+
+    if udev_output:
+        for line in udev_output.split('\n'):
+            if line.startswith('ID_VENDOR_ID='):
+                usb_info['vendor_id'] = line.split('=')[1]
+            elif line.startswith('ID_MODEL_ID='):
+                usb_info['model_id'] = line.split('=')[1]
+            elif line.startswith('ID_USB_INTERFACE_NUM='):
+                usb_info['interface'] = line.split('=')[1]
+
+    # Try to get bus/device numbers from sysfs
+    try:
+        # Get the device path in sysfs
+        device_name = device_path.split('/')[-1]
+        sysfs_path = run_command(f"readlink -f /sys/class/video4linux/{device_name}/device")
+
+        if sysfs_path:
+            # Navigate up to find the USB device directory
+            current_path = sysfs_path
+            for _ in range(10):  # Limit depth to avoid infinite loops
+                if os.path.exists(f"{current_path}/busnum") and os.path.exists(f"{current_path}/devnum"):
+                    busnum = run_command(f"cat {current_path}/busnum 2>/dev/null")
+                    devnum = run_command(f"cat {current_path}/devnum 2>/dev/null")
+                    if busnum and devnum:
+                        usb_info['bus_num'] = busnum.strip()
+                        usb_info['dev_num'] = devnum.strip()
+                        break
+                current_path = os.path.dirname(current_path)
+                if current_path == '/':
+                    break
+    except:
+        pass
 
     return usb_info
 
@@ -97,7 +121,11 @@ def find_camera_ports():
             usb_key = f"{bus}:{dev}"
             port_name = usb_ports.get(usb_key, "Unknown")
 
-            print(f"  {device} → USB Bus {bus}, Device {dev}")
+            vendor_info = ""
+            if 'vendor_id' in usb_info and 'model_id' in usb_info:
+                vendor_info = f" ({usb_info['vendor_id']}:{usb_info['model_id']})"
+
+            print(f"  {device} → USB Bus {bus}, Device {dev}{vendor_info}")
             print(f"    Port: {port_name}\n")
         else:
             print(f"  {device} → No USB info available\n")
