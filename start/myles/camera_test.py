@@ -25,4 +25,4 @@ for i in range(10):
         cap.release()
     else:
         print(f'  /dev/video{i}: ✗ Cannot open')
-"
+        
