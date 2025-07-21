@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 """
-Example usage of PhoneTeleoperatorSourccey with SO100 robot (motors 7-12).
+Example usage of PhoneTeleoperator with SO100 robot.
 
 This script demonstrates how to integrate phone teleoperation into the new lerobot architecture.
-It uses the PhoneTeleoperatorSourccey to receive commands from a mobile phone via gRPC and control an SO100 robot.
+It uses the PhoneTeleoperator to receive commands from a mobile phone via gRPC and control an SO100 robot.
 
 Requirements:
 - Install additional dependencies: pip install pyroki viser yourdfpy
@@ -16,9 +16,8 @@ Requirements:
 import time
 from pathlib import Path
 
-from lerobot.common.robots.so100_follower import SO100FollowerConfig
-from lerobot.common.robots.so100_follower.so100_follower_2 import SO100Follower2
-from lerobot.common.teleoperators.phone_teleoperator.phone_teleoperator_sourccey import PhoneTeleoperatorSourccey, PhoneTeleoperatorSourcceyConfig
+from lerobot.common.robots.so100_follower import SO100Follower, SO100FollowerConfig
+from lerobot.common.teleoperators.phone_teleoperator import PhoneTeleoperator, PhoneTeleoperatorConfig
 from lerobot.common.constants import HF_LEROBOT_CALIBRATION, ROBOTS
 
 
@@ -45,16 +44,18 @@ def main():
     
     # Get the path to the SO100 model directory
     current_file = Path(__file__)
-    so100_model_path = current_file.parent.parent / "lerobot" / "common" / "robots" / "so100_follower" / "model"
+    # Use the new SO100 model located in `model_2`
+    so100_model_path = current_file.parent.parent / "lerobot" / "common" / "robots" / "sourccey_v2beta" / "model"
     
     if so100_model_path.exists():
-        urdf_path = str(so100_model_path / "so100.urdf")
+        urdf_path = str(so100_model_path / "Arm.urdf")
+        # The new URDF references STL files inside the `assets` folder
         mesh_path = str(so100_model_path / "meshes")
         print(f"Using URDF: {urdf_path}")
         print(f"Using meshes: {mesh_path}")
     else:
         print(f"ERROR: Could not find SO100 model directory at {so100_model_path}")
-        print("Make sure the SO100 model files are available in lerobot/common/robots/so100_follower/model/")
+        print("Make sure the SO100 model files are available in lerobot/common/robots/sourccey_v2beta/model/")
         return
     
     # Find existing calibration or use default ID
@@ -77,17 +78,18 @@ def main():
     )
     
     # Configuration for the phone teleoperator
-    phone_config = PhoneTeleoperatorSourcceyConfig(
-        id="sourccey_teleop_main",
+    phone_config = PhoneTeleoperatorConfig(
+        id="phone_teleop_main",
         urdf_path=urdf_path,
         mesh_path=mesh_path,
-        target_link_name="Fixed_Jaw",
+        # In the new URDF the end-effector link is named "jaw"
+        target_link_name="Feetech-Servo-Motor-v1-5",
         sensitivity_normal=0.5,
         sensitivity_precision=0.2,
         rotation_sensitivity=1.0,
         initial_position=(0.0, -0.17, 0.237),
         initial_wxyz=(0, 0, 1, 0),  # wxyz quaternion
-        # rest_pose=(0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240),  # radians - conservative middle position
+        # rest_pose=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),  # radians - conservative middle position
         enable_visualization=True,
         viser_port=8080,
         # SO100 gripper configuration - matches SO100FollowerConfig.max_gripper_pos = 50
@@ -96,8 +98,8 @@ def main():
     )
     
     # Initialize robot and teleoperator
-    robot = SO100Follower2(robot_config)  # Uses motors 7-12 instead of 1-6
-    phone_teleop = PhoneTeleoperatorSourccey(phone_config)
+    robot = SO100Follower(robot_config)
+    phone_teleop = PhoneTeleoperator(phone_config)
     
     try:
         # Connect devices
