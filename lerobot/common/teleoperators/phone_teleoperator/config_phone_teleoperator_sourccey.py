@@ -30,8 +30,8 @@ class PhoneTeleoperatorSourcceyConfig(TeleoperatorConfig):
     grpc_timeout: float = 100.0
     
     # Robot model paths - same as SO100
-    urdf_path: str = "lerobot/common/robots/so100_follower/model/so100.urdf"
-    mesh_path: str = "lerobot/common/robots/so100_follower/model/meshes"
+    urdf_path: str = "lerobot/common/robots/so100_follower/model_2/so100.urdf"
+    mesh_path: str = "lerobot/common/robots/so100_follower/model_2/assets"
     
     # IK solver settings - same as SO100
     target_link_name: str = "Fixed_Jaw"
