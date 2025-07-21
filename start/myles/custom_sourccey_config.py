@@ -28,8 +28,8 @@ def custom_sourccey_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("custom_sourccey_v2beta")
 @dataclass
 class CustomSourcceyV2BetaConfig(RobotConfig):
-    left_arm_port: str = "/dev/ttyACM1"
-    right_arm_port: str = "/dev/ttyACM0"
+    left_arm_port: str = "/dev/ttyACM0"
+    right_arm_port: str = "/dev/ttyACM1"
 
     disable_torque_on_disconnect: bool = True
 
