@@ -36,7 +36,7 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     # IK solver settings
     # target_link_name: str = "Fixed_Jaw"
     target_link_name: str = "Feetech-Servo-Motor-v1-5"
-    rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # Always in radians - initial robot positions for IK solver
+    rest_pose: tuple[float, ...] = (0.003836, 2.675149, -0.535490, -1.443061, -0.026851, 0.433922)  # Always in radians - initial robot positions for IK solver
 
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
@@ -44,8 +44,10 @@ class PhoneTeleoperatorConfig(TeleoperatorConfig):
     sensitivity_precision: float = 0.2
     
     # Initial robot pose (when connecting phone)
-    initial_position: tuple[float, ...] = (0.0, -0.17, 0.237)  # meters
-    initial_wxyz: tuple[float, ...] = (0, 0, 1, 0)  # quaternion (w,x,y,z)
+    # initial_position: tuple[float, ...] = (0.0, -0.17, 0.237)  # meters
+    # initial_wxyz: tuple[float, ...] = (0, 0, 1, 0)  # quaternion (w,x,y,z)
+    initial_position: tuple[float, ...] = (0.001583, -0.000018, 0.181977)  # meters
+    initial_wxyz: tuple[float, ...] = (-0.671163, 0.678572, -0.213378, -0.208688)  # quaternion (w,x,y,z)
     
     # Visualization settings
     enable_visualization: bool = True
