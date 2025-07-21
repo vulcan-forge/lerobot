@@ -24,24 +24,24 @@ from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
     return {
         "front_left": OpenCVCameraConfig(
-            index_or_path="/dev/video12", fps=30, width=320, height=240
+            index_or_path="/dev/video2", fps=10, width=640, height=480
         ),
         "front_right": OpenCVCameraConfig(
-            index_or_path="/dev/video4", fps=30, width=320, height=240
+            index_or_path="/dev/video4", fps=10, width=640, height=480
         ),
         "wrist_left": OpenCVCameraConfig(
-            index_or_path="/dev/video0", fps=30, width=320, height=240
+            index_or_path="/dev/video0", fps=10, width=640, height=480
         ),
         "wrist_right": OpenCVCameraConfig(
-            index_or_path="/dev/video8", fps=30, width=320, height=240
+            index_or_path="/dev/video6", fps=10, width=640, height=480
         ),
     }
 
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
 class SourcceyV2BetaConfig(RobotConfig):
-    left_arm_port: str = "/dev/ttyACM1"
-    right_arm_port: str = "/dev/ttyACM0"
+    left_arm_port: str = "/dev/ttyACM0"
+    right_arm_port: str = "/dev/ttyACM1"
 
     disable_torque_on_disconnect: bool = True
 
