@@ -22,7 +22,7 @@ from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 
 
 def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
-    return {
+    config = {
         "front_left": OpenCVCameraConfig(
             index_or_path="/dev/video0", fps=10, width=640, height=480
         ),
@@ -36,6 +36,8 @@ def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
             index_or_path="/dev/video6", fps=10, width=640, height=480
         ),
     }
+    print("Loaded camera config: ", config)
+    return config
 
 @RobotConfig.register_subclass("sourccey_v2beta")
 @dataclass
