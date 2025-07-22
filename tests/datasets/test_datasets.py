@@ -29,22 +29,21 @@ from PIL import Image
 from safetensors.torch import load_file
 
 import lerobot
-from lerobot.scripts import remove_episodes
-from lerobot.common.datasets.factory import make_dataset, combine_datasets
-from lerobot.common.datasets.image_writer import image_array_to_pil_image
-from lerobot.common.datasets.lerobot_dataset import (
+from lerobot.configs.default import DatasetConfig
+from lerobot.configs.train import TrainPipelineConfig
+from lerobot.datasets.factory import make_dataset
+from lerobot.datasets.image_writer import image_array_to_pil_image
+from lerobot.datasets.lerobot_dataset import (
     LeRobotDataset,
     MultiLeRobotDataset,
 )
-from lerobot.common.datasets.utils import (
+from lerobot.datasets.utils import (
     create_branch,
     flatten_dict,
     unflatten_dict,
 )
-from lerobot.common.envs.factory import make_env_config
-from lerobot.common.policies.factory import make_policy_config
-from lerobot.configs.default import DatasetConfig
-from lerobot.configs.train import TrainPipelineConfig
+from lerobot.envs.factory import make_env_config
+from lerobot.policies.factory import make_policy_config
 from tests.fixtures.constants import DUMMY_CHW, DUMMY_HWC, DUMMY_REPO_ID
 from tests.utils import require_x86_64_kernel
 
@@ -560,7 +559,7 @@ def test_create_branch():
 
 def test_dataset_feature_with_forward_slash_raises_error():
     # make sure dir does not exist
-    from lerobot.common.constants import HF_LEROBOT_HOME
+    from lerobot.constants import HF_LEROBOT_HOME
 
     dataset_dir = HF_LEROBOT_HOME / "lerobot/test/with/slash"
     # make sure does not exist
