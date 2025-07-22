@@ -495,13 +495,13 @@ COMMANDS
 ```bash
 python src/lerobot/teleoperate.py \
     --robot.type=bi_so100_follower \
-    --robot.left_port=/dev/robotLeft \
-    --robot.right_port=/dev/robotRight \
+    --robot.left_arm_port=/dev/robotLeft \
+    --robot.right_arm_port=/dev/robotRight \
     --robot.id=bi_so100_follower-001 \
-    --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
+    --robot.cameras="{ left: {type: opencv, index_or_path: /dev/cameraLeft, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: /dev/cameraRight, width: 640, height: 480, fps: 30}}" \
     --teleop.type=bi_so100_leader \
-    --teleop.left_port=/dev/teleopLeft \
-    --teleop.right_port=/dev/teleopRight \
+    --teleop.left_arm_port=/dev/teleopLeft \
+    --teleop.right_arm_port=/dev/teleopRight \
     --teleop.id=bi_so100_leader-001 \
     --display_data=true 
 ```
@@ -509,13 +509,13 @@ python src/lerobot/teleoperate.py \
 ```bash
 python -m lerobot.record \
     --robot.type=bi_so100_follower \
-    --robot.left_port=/dev/robotLeft \
-    --robot.right_port=/dev/robotRight \
+    --robot.left_arm_port=/dev/robotLeft \
+    --robot.right_arm_port=/dev/robotRight \
     --robot.id=bi_so100_follower-001 \
     --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
     --teleop.type=bi_so100_leader \
-    --teleop.left_port=/dev/teleopLeft \
-    --teleop.right_port=/dev/teleopRight \
+    --teleop.left_arm_port=/dev/teleopLeft \
+    --teleop.right_arm_port=/dev/teleopRight \
     --teleop.id=bi_so100_leader-001 \
     --dataset.repo_id=local/so100_double-001__towel-e__set003__TEST \
     --dataset.num_episodes=10 \
