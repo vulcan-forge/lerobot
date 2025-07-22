@@ -493,26 +493,30 @@ Congrats 🎉, your robot is all set to learn a task on its own. Start training 
 COMMANDS
 
 ```bash
-python -m lerobot.teleoperate \
-    --robot.type=so100_double_follower \
-    --robot.left_port=/dev/ttyUSB1 \
-    --robot.right_port=/dev/ttyUSB3 \
+python src/lerobot/teleoperate.py \
+    --robot.type=bi_so100_follower \
+    --robot.left_port=/dev/robotLeft \
+    --robot.right_port=/dev/robotRight \
+    --robot.id=bi_so100_follower-001 \
     --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
-    --teleop.type=so100_double_leader \
-    --teleop.left_port=/dev/ttyUSB0 \
-    --teleop.right_port=/dev/ttyUSB2 \
+    --teleop.type=bi_so100_leader \
+    --teleop.left_port=/dev/teleopLeft \
+    --teleop.right_port=/dev/teleopRight \
+    --teleop.id=bi_so100_leader-001 \
     --display_data=true 
 ```
 
 ```bash
 python -m lerobot.record \
-    --robot.type=so100_double_follower \
-    --robot.left_port=/dev/ttyUSB1 \
-    --robot.right_port=/dev/ttyUSB3 \
+    --robot.type=bi_so100_follower \
+    --robot.left_port=/dev/robotLeft \
+    --robot.right_port=/dev/robotRight \
+    --robot.id=bi_so100_follower-001 \
     --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
-    --teleop.type=so100_double_leader \
-    --teleop.left_port=/dev/ttyUSB0 \
-    --teleop.right_port=/dev/ttyUSB2 \
+    --teleop.type=bi_so100_leader \
+    --teleop.left_port=/dev/teleopLeft \
+    --teleop.right_port=/dev/teleopRight \
+    --teleop.id=bi_so100_leader-001 \
     --dataset.repo_id=local/so100_double-001__towel-e__set003__TEST \
     --dataset.num_episodes=10 \
     --dataset.single_task="Grab the towel and fold it" \
@@ -577,9 +581,9 @@ CUDA_VISIBLE_DEVICES=1 python lerobot/scripts/train.py \
 # Evaluate
 ```bash
 python -m lerobot.record  \
-  --robot.type=so100_double_follower \
-  --robot.left_port=/dev/ttyUSB1 \
-  --robot.right_port=/dev/ttyUSB3 \
+  --robot.type=bi_so100_follower \
+  --robot.left_port=/dev/robotLeft \
+  --robot.right_port=/dev/robotRight \
   --robot.cameras="{ left: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, right: {type: opencv, index_or_path: 2, width: 640, height: 480, fps: 30}}" \
   --policy.path="outputs/train/act__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined/checkpoints/050000/pretrained_model" \
   --dataset.repo_id=local/eval__so100_double-001__towel-4a-2b-4c-4d-3e-4g-4i__set000__combined \
