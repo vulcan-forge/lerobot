@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2025 The HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .config import TeleoperatorConfig
-from .teleoperator import Teleoperator
-from .utils import make_teleoperator_from_config
+from dataclasses import dataclass
 
-from .sourccey_v3beta.sourccey_v3beta_leader.sourccey_v3beta_leader import SourcceyV3BetaLeader
-from .sourccey_v3beta.bi_sourccey_v3beta_leader.bi_sourccey_v3beta_leader import BiSourcceyV3BetaLeader
+from ...config import TeleoperatorConfig
 
 
+@TeleoperatorConfig.register_subclass("sourccey_v3beta_leader")
+@dataclass
+class SourcceyV3BetaLeaderConfig(TeleoperatorConfig):
+    # Port to connect to the arm
+    port: str

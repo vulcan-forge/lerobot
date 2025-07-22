@@ -1,2 +1,0 @@
-from .config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
-from .sourccey_v2beta_teleop import SourcceyV2BetaTeleop

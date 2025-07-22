@@ -1,8 +1,16 @@
 from dataclasses import dataclass, field
 
 from lerobot.cameras.configs import CameraConfig
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from lerobot.robots.config import RobotConfig
 
+
+def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
+    return {
+        "wrist": OpenCVCameraConfig(
+            index_or_path="/dev/video0", fps=30, width=640, height=480
+        ),
+    }
 
 @RobotConfig.register_subclass("sourccey_v3beta_follower")
 @dataclass
@@ -25,7 +33,7 @@ class SourcceyV3BetaFollowerConfig(RobotConfig):
     min_action_threshold: float = 0.5
 
     # cameras
-    cameras: dict[str, CameraConfig] = field(default_factory=dict)
+    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v3beta_cameras_config)
 
     # Set to `True` for backward compatibility with previous policies/dataset
     use_degrees: bool = False

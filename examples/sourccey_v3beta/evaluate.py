@@ -1,29 +1,23 @@
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.datasets.utils import hw_to_dataset_features
-from lerobot.common.robots.sourccey_v2beta.config_sourccey_v2beta import SourcceyV2BetaClientConfig
-from lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_client import SourcceyV2BetaClient
-from lerobot.common.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.config_sourccey_v2beta_teleop import SourcceyV2BetaTeleopConfig
-from lerobot.common.teleoperators.sourccey.sourccey_v2beta_teleop.sourccey_v2beta_teleop import SourcceyV2BetaTeleop
-from lerobot.common.utils.control_utils import init_keyboard_listener
-from lerobot.common.utils.utils import log_say
-from lerobot.common.utils.visualization_utils import _init_rerun
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.utils import hw_to_dataset_features
+from lerobot.policies.act.modeling_act import ACTPolicy
+from lerobot.robots.sourccey_v3beta.sourccey_v3beta.config_sourccey_v3beta import SourcceyV3BetaClientConfig
+from lerobot.robots.sourccey_v3beta.sourccey_v3beta.sourccey_v3beta_client import SourcceyV3BetaClient
+from lerobot.utils.control_utils import init_keyboard_listener
+from lerobot.utils.utils import log_say
+from lerobot.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 3
+NUM_EPISODES = 10
 FPS = 30
-EPISODE_TIME_SEC = 30
-RESET_TIME_SEC = 10
+EPISODE_TIME_SEC = 60
 TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
-robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
-teleop_arm_config = SourcceyV2BetaTeleopConfig(left_arm_port="COM28", right_arm_port="COM29", id="sourccey_v2beta_teleop")
-keyboard_config = KeyboardTeleopConfig()
+robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v3beta")
+robot = SourcceyV3BetaClient(robot_config)
 
-robot = SourcceyV2BetaClient(robot_config)
-leader_arm = SourcceyV2BetaTeleop(teleop_arm_config)
-keyboard = KeyboardTeleop(keyboard_config)
+policy = ACTPolicy.from_pretrained("outputs/train/act__sourccey_v2beta-001__tape-a__set000/checkpoints/020000/pretrained_model")
 
 # Configure the dataset features
 action_features = hw_to_dataset_features(robot.action_features, "action")
@@ -32,7 +26,7 @@ dataset_features = {**action_features, **obs_features}
 
 # Create the dataset
 dataset = LeRobotDataset.create(
-    repo_id="local/sourccey_v2beta-001__tape-a__set000",
+    repo_id="local/eval__sourccey_v2beta-001__tape-a__set000",
     fps=FPS,
     features=dataset_features,
     robot_type=robot.name,
@@ -42,27 +36,25 @@ dataset = LeRobotDataset.create(
 
 # To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
-leader_arm.connect()
-keyboard.connect()
 
-_init_rerun(session_name="sourccey_v2beta_record")
+_init_rerun(session_name="recording")
 
 listener, events = init_keyboard_listener()
 
-if not robot.is_connected or not leader_arm.is_connected or not keyboard.is_connected:
-    raise ValueError("Robot, leader arm of keyboard is not connected!")
+if not robot.is_connected:
+    raise ValueError("Robot is not connected!")
 
 recorded_episodes = 0
 while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
-    log_say(f"Recording episode {recorded_episodes}")
+    log_say(f"Running inference, recording eval episode {recorded_episodes} of {NUM_EPISODES}")
 
-    # Run the record loop
+    # Run the policy inference loop
     record_loop(
         robot=robot,
         events=events,
         fps=FPS,
+        policy=policy,
         dataset=dataset,
-        teleop=[leader_arm, keyboard],
         control_time_s=EPISODE_TIME_SEC,
         single_task=TASK_DESCRIPTION,
         display_data=True,
@@ -77,8 +69,7 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
             robot=robot,
             events=events,
             fps=FPS,
-            teleop=[leader_arm, keyboard],
-            control_time_s=RESET_TIME_SEC,
+            control_time_s=EPISODE_TIME_SEC,
             single_task=TASK_DESCRIPTION,
             display_data=True,
         )
@@ -97,6 +88,4 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
 # dataset.push_to_hub()
 
 robot.disconnect()
-leader_arm.disconnect()
-keyboard.disconnect()
 listener.stop()

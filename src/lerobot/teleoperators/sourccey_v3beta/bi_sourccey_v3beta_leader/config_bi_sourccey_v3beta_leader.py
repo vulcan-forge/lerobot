@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
+# Copyright 2025 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from dataclasses import dataclass
-
-from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
 
 from ...config import TeleoperatorConfig
 
 
-@TeleoperatorConfig.register_subclass("sourccey_v2beta_teleop")
+@TeleoperatorConfig.register_subclass("bi_sourccey_v3beta_leader")
 @dataclass
-class SourcceyV2BetaTeleopConfig(TeleoperatorConfig):
-    # Port to connect to the arm
+class BiSourcceyV3BetaLeaderConfig(TeleoperatorConfig):
     left_arm_port: str
     right_arm_port: str
