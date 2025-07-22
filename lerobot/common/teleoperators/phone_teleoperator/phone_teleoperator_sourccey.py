@@ -626,15 +626,15 @@ class PhoneTeleoperatorSourccey(Teleoperator):
             
             # shoulder_lift (index 1): direction reversal + 90° offset
             if len(solution_final) > 1:
-                solution_final[1] = -(solution_final[1] - 90)
+                solution_final[1] = -(solution_final[1])
             
             # elbow_flex (index 2): direction reversal + 90° offset
             if len(solution_final) > 2:
-                solution_final[2] = -(solution_final[2] - 90)
+                solution_final[2] = -(solution_final[2] + 90)
             
             # wrist_flex (index 3): direction reversal
             if len(solution_final) > 3:
-                solution_final[3] = -solution_final[3]
+                solution_final[3] = solution_final[3]
             
             # wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_final) > 4:

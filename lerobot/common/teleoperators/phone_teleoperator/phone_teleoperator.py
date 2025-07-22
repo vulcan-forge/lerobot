@@ -468,11 +468,15 @@ class PhoneTeleoperator(Teleoperator):
             # For SO100/SO101 backward compatibility (applied in degrees):
             # shoulder_lift (index 1): direction reversal + 90° offset
             if len(solution_final) > 1:
-                solution_final[1] = -(solution_final[1] - 90)
+                solution_final[1] = (solution_final[1] + 90)
             
-            # elbow_flex (index 2): 90° offset
-            if len(solution_final) > 2:
-                solution_final[2] -= 90
+            # # elbow_flex (index 2): 90° offset
+            # if len(solution_final) > 2:
+            #     solution_final[2] = solution_final[2]
+
+            # # wrist_flex (index 3): direction reversal
+            # if len(solution_final) > 3:
+            #     solution_final[3] = solution_final[3] + 90
             
            # wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_final) > 4:
