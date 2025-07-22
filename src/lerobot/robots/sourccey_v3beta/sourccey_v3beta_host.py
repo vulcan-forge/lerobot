@@ -22,12 +22,12 @@ import time
 import cv2
 import zmq
 
-from .config_sourccey_v2beta import SourcceyV2BetaConfig, SourcceyV2BetaHostConfig
-from .sourccey_v2beta import SourcceyV2Beta
+from .config_sourccey_v3beta import SourcceyV3BetaConfig, SourcceyV3BetaHostConfig
+from .sourccey_v3beta import SourcceyV3Beta
 
 
-class SourcceyV2BetaHost:
-    def __init__(self, config: SourcceyV2BetaHostConfig):
+class SourcceyV3BetaHost:
+    def __init__(self, config: SourcceyV3BetaHostConfig):
         self.zmq_context = zmq.Context()
         self.zmq_cmd_socket = self.zmq_context.socket(zmq.PULL)
         self.zmq_cmd_socket.setsockopt(zmq.CONFLATE, 1)
@@ -48,16 +48,16 @@ class SourcceyV2BetaHost:
 
 
 def main():
-    logging.info("Configuring Sourccey V2 Beta")
-    robot_config = SourcceyV2BetaConfig()
-    robot = SourcceyV2Beta(robot_config)
+    logging.info("Configuring Sourccey V3 Beta")
+    robot_config = SourcceyV3BetaConfig()
+    robot = SourcceyV3Beta(robot_config)
 
-    logging.info("Connecting Sourccey V2 Beta")
+    logging.info("Connecting Sourccey V3 Beta")
     robot.connect()
 
     logging.info("Starting HostAgent")
-    host_config = SourcceyV2BetaHostConfig()
-    host = SourcceyV2BetaHost(host_config)
+    host_config = SourcceyV3BetaHostConfig()
+    host = SourcceyV3BetaHost(host_config)
 
     last_cmd_time = time.time()
     watchdog_active = False
@@ -116,11 +116,11 @@ def main():
     except KeyboardInterrupt:
         print("Keyboard interrupt received. Exiting...")
     finally:
-        print("Shutting down SourcceyV2Beta Host.")
+        print("Shutting down SourcceyV3Beta Host.")
         robot.disconnect()
         host.disconnect()
 
-    logging.info("Finished SourcceyV2Beta cleanly")
+    logging.info("Finished SourcceyV3Beta cleanly")
 
 
 if __name__ == "__main__":

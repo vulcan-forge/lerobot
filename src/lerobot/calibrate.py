@@ -39,7 +39,7 @@ from lerobot.robots import (  # noqa: F401
     hope_jr,
     koch_follower,
     lekiwi,
-    sourccey_v2beta,
+    sourccey_v3beta,
     make_robot_from_config,
     so100_double_follower,
     so100_follower,

@@ -14,14 +14,14 @@
 
 from dataclasses import dataclass, field
 
-from lerobot.common.cameras.configs import CameraConfig, Cv2Rotation
-from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.cameras.configs import CameraConfig, Cv2Rotation
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
-from lerobot.common.robots.config import RobotConfig
-from lerobot.common.constants import HF_LEROBOT_CONFIGURATION
+from lerobot.robots.config import RobotConfig
+from lerobot.constants import HF_LEROBOT_CONFIGURATION
 
 
-def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
+def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
     config = {
         "front_left": OpenCVCameraConfig(
             index_or_path="/dev/video0", fps=30, width=640, height=480
@@ -36,29 +36,26 @@ def sourccey_v2beta_cameras_config() -> dict[str, CameraConfig]:
             index_or_path="/dev/video6", fps=30, width=640, height=480
         ),
     }
-    print("Loaded camera config: ", config)
     return config
 
-@RobotConfig.register_subclass("sourccey_v2beta")
+@RobotConfig.register_subclass("sourccey_v3beta")
 @dataclass
-class SourcceyV2BetaConfig(RobotConfig):
+class SourcceyV3BetaConfig(RobotConfig):
     left_arm_port: str = "/dev/ttyACM0"
     right_arm_port: str = "/dev/ttyACM1"
 
-    disable_torque_on_disconnect: bool = True
+    # Optional
+    left_arm_disable_torque_on_disconnect: bool = True
+    left_arm_max_relative_target: int | None = None
+    left_arm_use_degrees: bool = False
+    right_arm_disable_torque_on_disconnect: bool = True
+    right_arm_max_relative_target: int | None = None
+    right_arm_use_degrees: bool = False
 
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
-    max_relative_target: int | None = None
-
-    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
-
-    # Set to `True` for backward compatibility with previous policies/dataset
-    use_degrees: bool = False
+    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v3beta_cameras_config)
 
 @dataclass
-class SourcceyV2BetaHostConfig:
+class SourcceyV3BetaHostConfig:
     # Network Configuration
     port_zmq_cmd: int = 5555
     port_zmq_observations: int = 5556
@@ -73,9 +70,9 @@ class SourcceyV2BetaHostConfig:
     max_loop_freq_hz: int = 30
 
 
-@RobotConfig.register_subclass("sourccey_v2beta_client")
+@RobotConfig.register_subclass("sourccey_v3beta_client")
 @dataclass
-class SourcceyV2BetaClientConfig(RobotConfig):
+class SourcceyV3BetaClientConfig(RobotConfig):
     # Network Configuration
     remote_ip: str
     port_zmq_cmd: int = 5555
@@ -98,7 +95,7 @@ class SourcceyV2BetaClientConfig(RobotConfig):
         }
     )
 
-    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v2beta_cameras_config)
+    cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v3beta_cameras_config)
 
     polling_timeout_ms: int = 15
     connect_timeout_s: int = 5

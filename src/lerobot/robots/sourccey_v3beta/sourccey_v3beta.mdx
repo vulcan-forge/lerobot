@@ -2,22 +2,22 @@
 
 ```bash
 uv run -m lerobot.calibrate \
-    --robot.type=sourccey_v2beta \
+    --robot.type=sourccey_v3beta \
     --robot.port=/dev/ttyACM0
     --robot.id=sourccey_v3beta
 ```
 
 ```bash
 uv run -m lerobot.calibrate \
-    --teleop.type=sourccey_v2beta_teleop \
+    --teleop.type=sourccey_v3beta_teleop \
     --teleop.port=COM29 \
-    --teleop.id=sourccey_v2beta_teleop
+    --teleop.id=sourccey_v3beta_teleop
 ```
 
 To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
 
 ```
-uv run -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host
+uv run -m lerobot.common.robots.sourccey_v3beta.sourccey_v3beta_host
 ```
 
 Then on your computer run the below source command then the teleoperate command
@@ -27,19 +27,19 @@ source .venv/bin/activate
 ```
 
 ```
-python examples/sourccey_v2beta/teleoperate.py
+python examples/sourccey_v3beta/teleoperate.py
 ```
 
 ```
-python examples/sourccey_v2beta/record.py
+python examples/sourccey_v3beta/record.py
 ```
 
 ```
-python examples/sourccey_v2beta/replay.py
+python examples/sourccey_v3beta/replay.py
 ```
 
 ```
-python examples/sourccey_v2beta/evaluate.py
+python examples/sourccey_v3beta/evaluate.py
 ```
 
 --- ACT Training
@@ -184,5 +184,7 @@ python -m lerobot.record \
  --display_data=true
 
 ## -- Server SO100
+
+```
 
 ```

@@ -25,18 +25,18 @@ import numpy as np
 import torch
 import zmq
 
-from lerobot.common.constants import OBS_IMAGES, OBS_STATE
-from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+from lerobot.constants import OBS_IMAGES, OBS_STATE
+from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 
-from lerobot.common.robots.robot import Robot
-from .config_sourccey_v2beta import SourcceyV2BetaClientConfig, SourcceyV2BetaConfig
+from lerobot.robots.robot import Robot
+from .config_sourccey_v3beta import SourcceyV3BetaClientConfig, SourcceyV3BetaConfig
 
 
-class SourcceyV2BetaClient(Robot):
-    config_class = SourcceyV2BetaClientConfig
-    name = "sourccey_v2beta_client"
+class SourcceyV3BetaClient(Robot):
+    config_class = SourcceyV3BetaClientConfig
+    name = "sourccey_v3beta_client"
 
-    def __init__(self, config: SourcceyV2BetaClientConfig):
+    def __init__(self, config: SourcceyV3BetaClientConfig):
         super().__init__(config)
         self.config = config
         self.id = config.id
@@ -119,7 +119,7 @@ class SourcceyV2BetaClient(Robot):
 
         if self._is_connected:
             raise DeviceAlreadyConnectedError(
-                "SourcceyV2BetaClient is already connected. Do not run `robot.connect()` twice."
+                "SourcceyV3BetaClient is already connected. Do not run `robot.connect()` twice."
             )
 
         self.zmq_context = zmq.Context()
@@ -137,7 +137,7 @@ class SourcceyV2BetaClient(Robot):
         poller.register(self.zmq_observation_socket, zmq.POLLIN)
         socks = dict(poller.poll(self.connect_timeout_s * 1000))
         if self.zmq_observation_socket not in socks or socks[self.zmq_observation_socket] != zmq.POLLIN:
-            raise DeviceNotConnectedError("Timeout waiting for SourcceyV2Beta Host to connect expired.")
+            raise DeviceNotConnectedError("Timeout waiting for SourcceyV3Beta Host to connect expired.")
 
         self._is_connected = True
 
@@ -258,7 +258,7 @@ class SourcceyV2BetaClient(Robot):
         and a camera frame. Receives over ZMQ, translate to body-frame vel
         """
         if not self._is_connected:
-            raise DeviceNotConnectedError("SourcceyV2BetaClient is not connected. You need to run `robot.connect()`.")
+            raise DeviceNotConnectedError("SourcceyV3BetaClient is not connected. You need to run `robot.connect()`.")
 
         frames, obs_dict = self._get_data()
 
@@ -307,7 +307,7 @@ class SourcceyV2BetaClient(Robot):
         pass
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        """Command sourccey v2beta to move to a target joint configuration. Translates to motor space + sends over ZMQ
+        """Command sourccey v3beta to move to a target joint configuration. Translates to motor space + sends over ZMQ
 
         Args:
             action (np.ndarray): array containing the goal positions for the motors.
@@ -337,7 +337,7 @@ class SourcceyV2BetaClient(Robot):
 
         if not self._is_connected:
             raise DeviceNotConnectedError(
-                "SourcceyV2BetaClient is not connected. You need to run `robot.connect()` before disconnecting."
+                "SourcceyV3BetaClient is not connected. You need to run `robot.connect()` before disconnecting."
             )
         self.zmq_observation_socket.close()
         self.zmq_cmd_socket.close()

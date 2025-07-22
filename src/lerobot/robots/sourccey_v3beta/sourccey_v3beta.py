@@ -22,23 +22,23 @@ from typing import Any
 
 import numpy as np
 
-from lerobot.common.cameras.utils import make_cameras_from_configs
-from lerobot.common.constants import OBS_IMAGES, OBS_STATE
-from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
-from lerobot.common.motors import Motor, MotorCalibration, MotorNormMode
-from lerobot.common.motors.feetech import (
+from lerobot.cameras.utils import make_cameras_from_configs
+from lerobot.constants import OBS_IMAGES, OBS_STATE
+from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+from lerobot.motors.feetech import (
     FeetechMotorsBus,
     OperatingMode,
 )
 
-from lerobot.common.robots.robot import Robot
-from lerobot.common.robots.utils import ensure_safe_goal_position
-from .config_sourccey_v2beta import SourcceyV2BetaConfig
+from lerobot.robots.robot import Robot
+from lerobot.robots.utils import ensure_safe_goal_position
+from .config_sourccey_v3beta import SourcceyV3BetaConfig
 
 logger = logging.getLogger(__name__)
 
 
-class SourcceyV2Beta(Robot):
+class SourcceyV3Beta(Robot):
     """
     The robot includes a four mecanum wheel mobile base and 2 remote follower arms.
     The leader arm is connected locally (on the laptop) and its joint positions are recorded and then
@@ -46,14 +46,15 @@ class SourcceyV2Beta(Robot):
     In parallel, keyboard teleoperation is used to generate raw velocity commands for the wheels.
     """
 
-    config_class = SourcceyV2BetaConfig
-    name = "sourccey_v2beta"
+    config_class = SourcceyV3BetaConfig
+    name = "sourccey_v3beta"
 
-    def __init__(self, config: SourcceyV2BetaConfig):
+    def __init__(self, config: SourcceyV3BetaConfig):
         super().__init__(config)
         self.config = config
         norm_mode_body = MotorNormMode.DEGREES if config.use_degrees else MotorNormMode.RANGE_M100_100
         self.left_arm_bus = FeetechMotorsBus(
+            calibration_dir=self.config.calibration_dir,
             port=self.config.left_arm_port,
             motors={
                 "left_arm_shoulder_pan": Motor(1, "sts3215", norm_mode_body),
@@ -63,9 +64,10 @@ class SourcceyV2Beta(Robot):
                 "left_arm_wrist_roll": Motor(5, "sts3215", norm_mode_body),
                 "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
             },
-            calibration={k: v for k, v in self.calibration.items() if k.startswith("left_arm")},
+
         )
         self.right_arm_bus = FeetechMotorsBus(
+            calibration_dir=self.config.calibration_dir,
             port=config.right_arm_port,
             motors={
                 "right_arm_shoulder_pan": Motor(7, "sts3215", norm_mode_body),
@@ -75,31 +77,14 @@ class SourcceyV2Beta(Robot):
                 "right_arm_wrist_roll": Motor(11, "sts3215", norm_mode_body),
                 "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
             },
-            calibration={k: v for k, v in self.calibration.items() if k.startswith("right_arm")},
         )
-        self.left_arm_motors = [motor for motor in self.left_arm_bus.motors]
-        self.right_arm_motors = [motor for motor in self.right_arm_bus.motors]
         self.cameras = make_cameras_from_configs(config.cameras)
 
     @property
     def _state_ft(self) -> dict[str, type]:
-        return dict.fromkeys(
-            (
-                "left_arm_shoulder_pan.pos",
-                "left_arm_shoulder_lift.pos",
-                "left_arm_elbow_flex.pos",
-                "left_arm_wrist_flex.pos",
-                "left_arm_wrist_roll.pos",
-                "left_arm_gripper.pos",
-                "right_arm_shoulder_pan.pos",
-                "right_arm_shoulder_lift.pos",
-                "right_arm_elbow_flex.pos",
-                "right_arm_wrist_flex.pos",
-                "right_arm_wrist_roll.pos",
-                "right_arm_gripper.pos",
-            ),
-            float,
-        )
+        return {f"{motor}.pos": float for motor in self.left_arm_bus.motors} | {
+            f"{motor}.pos": float for motor in self.right_arm_bus.motors
+        }
 
     @property
     def _cameras_ft(self) -> dict[str, tuple]:
@@ -279,7 +264,7 @@ class SourcceyV2Beta(Robot):
         return obs_dict
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        """Command SourcceyV2Beta to move to a target joint configuration.
+        """Command SourcceyV3Beta to move to a target joint configuration.
 
         The relative action magnitude may be clipped depending on the configuration parameter
         `max_relative_target`. In this case, the action sent differs from original action.
@@ -313,7 +298,7 @@ class SourcceyV2Beta(Robot):
 
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
-        
+
         if self.config.max_relative_target is not None:
             left_arm_goal_present_pos = {key: (g_pos, left_arm_present_pos[key]) for key, g_pos in left_arm_goal_pos.items()}
             left_arm_adjusted_goal_present_pos = self._apply_minimum_action(left_arm_goal_present_pos)

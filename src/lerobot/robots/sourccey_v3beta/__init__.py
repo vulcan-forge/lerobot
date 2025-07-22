@@ -1,3 +1,3 @@
-from .config_sourccey_v2beta import SourcceyV2BetaClientConfig, SourcceyV2BetaConfig
-from .sourccey_v2beta import SourcceyV2Beta
-from .sourccey_v2beta_client import SourcceyV2BetaClient
+from .config_sourccey_v3beta import SourcceyV2BetaClientConfig, SourcceyV2BetaConfig
+from .sourccey_v3beta import SourcceyV2Beta
+from .sourccey_v3beta_client import SourcceyV2BetaClient
