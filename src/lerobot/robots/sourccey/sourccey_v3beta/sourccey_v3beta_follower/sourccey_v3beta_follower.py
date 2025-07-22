@@ -9,7 +9,7 @@ from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.motors.feetech.feetech import FeetechMotorsBus, OperatingMode
 from lerobot.motors.motors_bus import Motor, MotorCalibration, MotorNormMode
 from lerobot.robots.robot import Robot
-from lerobot.robots.sourccey_v3beta.sourccey_v3beta_follower.config_sourccey_v3beta_follower import SourcceyV3BetaFollowerConfig
+from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta_follower.config_sourccey_v3beta_follower import SourcceyV3BetaFollowerConfig
 from lerobot.robots.utils import ensure_safe_goal_position
 
 class SourcceyV3BetaFollower(Robot):
