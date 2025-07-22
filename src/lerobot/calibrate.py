@@ -39,12 +39,12 @@ from lerobot.robots import (  # noqa: F401
     hope_jr,
     koch_follower,
     lekiwi,
-    sourccey_v3beta,
     make_robot_from_config,
     so100_double_follower,
     so100_follower,
     so101_follower,
 )
+from lerobot.robots.sourccey_v3beta import sourccey_v3beta
 from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
