@@ -33,10 +33,6 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .so100_follower import SO100FollowerEndEffector
 
         return SO100FollowerEndEffector(config)
-    elif config.type == "so100_double_follower":
-        from .so100_double_follower import SO100DoubleFollower
-
-        return SO100DoubleFollower(config)
     elif config.type == "so101_follower":
         from .so101_follower import SO101Follower
 
@@ -45,10 +41,6 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .lekiwi import LeKiwi
 
         return LeKiwi(config)
-    elif config.type == "sourccey_v2beta":
-        from .sourccey_v2beta import SourcceyV2Beta
-
-        return SourcceyV2Beta(config)
     elif config.type == "stretch3":
         from .stretch3 import Stretch3Robot
 
@@ -69,6 +61,10 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .bi_so100_follower import BiSO100Follower
 
         return BiSO100Follower(config)
+    elif config.type == "sourccey_v3beta":
+        from .sourccey_v3beta import SourcceyV2Beta
+
+        return SourcceyV2Beta(config)
     elif config.type == "mock_robot":
         from tests.mocks.mock_robot import MockRobot
 
