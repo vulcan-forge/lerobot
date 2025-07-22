@@ -1,7 +1,6 @@
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.utils import hw_to_dataset_features
-from lerobot.robots.sourccey_v3beta.sourccey_v3beta.config_sourccey_v3beta import SourcceyV3BetaClientConfig
-from lerobot.robots.sourccey_v3beta.sourccey_v3beta.sourccey_v3beta_client import SourcceyV3BetaClient
+from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta import SourcceyV3Beta, SourcceyV3BetaClientConfig, SourcceyV3BetaClient
 from lerobot.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.teleoperators.sourccey_v3beta.sourccey_v3beta_leader.config_sourccey_v3beta_leader import SourcceyV3BetaLeaderConfig
 from lerobot.teleoperators.sourccey_v3beta.sourccey_v3beta_leader.sourccey_v3beta_leader import SourcceyV3BetaLeader
@@ -17,12 +16,12 @@ RESET_TIME_SEC = 10
 TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
-robot_config = SourcceyV2BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v2beta")
-teleop_arm_config = SourcceyV2BetaTeleopConfig(left_arm_port="COM28", right_arm_port="COM29", id="sourccey_v2beta_teleop")
+robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v3beta")
+teleop_arm_config = SourcceyV3BetaLeaderConfig(left_arm_port="COM28", right_arm_port="COM29", id="sourccey_v3beta_teleop")
 keyboard_config = KeyboardTeleopConfig()
 
-robot = SourcceyV2BetaClient(robot_config)
-leader_arm = SourcceyV2BetaTeleop(teleop_arm_config)
+robot = SourcceyV3BetaClient(robot_config)
+leader_arm = SourcceyV3BetaLeader(teleop_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
 # Configure the dataset features
