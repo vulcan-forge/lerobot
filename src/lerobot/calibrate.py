@@ -40,21 +40,20 @@ from lerobot.robots import (  # noqa: F401
     koch_follower,
     lekiwi,
     make_robot_from_config,
-    so100_double_follower,
     so100_follower,
     so101_follower,
+    SourcceyV3BetaFollower,
+    SourcceyV3Beta,
 )
-from lerobot.robots.sourccey_v3beta import sourccey_v3beta
 from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
     homunculus,
     koch_leader,
-    sourccey_v2beta_teleop,
     make_teleoperator_from_config,
-    so100_double_leader,
     so100_leader,
     so101_leader,
+    BiSourcceyV3BetaLeader,
 )
 from lerobot.utils.utils import init_logging
 

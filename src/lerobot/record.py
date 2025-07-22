@@ -84,8 +84,9 @@ from lerobot.robots import (  # noqa: F401
     koch_follower,
     make_robot_from_config,
     so100_follower,
-    so100_double_follower,
     so101_follower,
+    SourcceyV3BetaFollower,
+    SourcceyV3Beta,
 )
 from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
@@ -95,8 +96,8 @@ from lerobot.teleoperators import (  # noqa: F401
     koch_leader,
     make_teleoperator_from_config,
     so100_leader,
-    so100_double_leader,
     so101_leader,
+    BiSourcceyV3BetaLeader,
 )
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop
 from lerobot.utils.control_utils import (
