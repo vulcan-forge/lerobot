@@ -484,18 +484,18 @@ class PhoneTeleoperator(Teleoperator):
             # Sourccey Math Additions 
 
             # shoulder_pan (index 0): direction reversal
-            if len(solution_final) > 0:
-                solution_final[0] = -solution_final[0]
+            # if len(solution_final) > 0:
+                # solution_final[0] = -solution_final[0]
             
            # shoulder_lift (index 1): direction reversal + 90° offset
             if len(solution_final) > 1:
-                # solution_final[1] = (solution_final[1]) + 180
-                solution_final[1] = solution_final[1]
+                solution_final[1] = (solution_final[1])
+                # solution_final[1] = solution_final[1]
 
             # elbow_flex (index 2): direction reversal + 90° offset
             if len(solution_final) > 2:
-                # solution_final[2] = -solution_final[2] - 180
                 solution_final[2] = -solution_final[2]
+                # solution_final[2] = -solution_final[2]
             
             # wrist_flex (index 3): direction reversal
             if len(solution_final) > 3:

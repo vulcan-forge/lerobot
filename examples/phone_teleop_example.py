@@ -45,12 +45,12 @@ def main():
     # Get the path to the SO100 model directory
     current_file = Path(__file__)
     # Use the new SO100 model located in `model_2`
-    so100_model_path = current_file.parent.parent / "lerobot" / "common" / "robots" / "so100_follower" / "model_2"
+    so100_model_path = current_file.parent.parent / "lerobot" / "common" / "robots" / "sourccey_v2beta" / "model"
     
     if so100_model_path.exists():
-        urdf_path = str(so100_model_path / "so100.urdf")
+        urdf_path = str(so100_model_path / "Arm.urdf")
         # The new URDF references STL files inside the `assets` folder
-        mesh_path = str(so100_model_path / "assets")
+        mesh_path = str(so100_model_path / "meshes")
         print(f"Using URDF: {urdf_path}")
         print(f"Using meshes: {mesh_path}")
     else:
@@ -83,7 +83,7 @@ def main():
         urdf_path=urdf_path,
         mesh_path=mesh_path,
         # In the new URDF the end-effector link is named "jaw"
-        target_link_name="gripper",
+        target_link_name="Feetech-Servo-Motor-v1-5",
         sensitivity_normal=0.5,
         sensitivity_precision=0.2,
         rotation_sensitivity=1.0,
