@@ -484,26 +484,40 @@ class PhoneTeleoperator(Teleoperator):
             # Sourccey Math Additions 
 
             # shoulder_pan (index 0): direction reversal
-            if len(solution_final) > 0:
-                solution_final[0] = -solution_final[0]
+        #     if len(solution_final) > 0:
+        #         solution_final[0] = solution_final[0]
             
-           # shoulder_lift (index 1): direction reversal + 90° offset
+        #    # shoulder_lift (index 1): direction reversal + 90° offset
+        #     if len(solution_final) > 1:
+        #         # solution_final[1] = (solution_final[1]) + 180
+        #         solution_final[1] = (solution_final[1] + 180)
+
+        #     # elbow_flex (index 2): direction reversal + 90° offset
+        #     if len(solution_final) > 2:
+        #         # solution_final[2] = -solution_final[2] - 180
+        #         solution_final[2] = (solution_final[2] - 90)
+            
+        #     # wrist_flex (index 3): direction reversal
+        #     if len(solution_final) > 3:
+        #         solution_final[3] = solution_final[3]
+
+        #     # wrist_roll (index 4): direction reversal + 90° offset
+        #     if len(solution_final) > 4:
+        #         solution_final[4] = -(solution_final[4] - 90)
+
+            # CHATGPT's advice
+
+            # shoulder_lift (index 1): sign flip only
             if len(solution_final) > 1:
-                # solution_final[1] = (solution_final[1]) + 180
-                solution_final[1] = solution_final[1]
+                solution_final[1] = -solution_final[1]
 
-            # elbow_flex (index 2): direction reversal + 90° offset
-            if len(solution_final) > 2:
-                # solution_final[2] = -solution_final[2] - 180
-                solution_final[2] = solution_final[2]
-            
-            # wrist_flex (index 3): direction reversal
-            if len(solution_final) > 3:
-                solution_final[3] = -solution_final[3]
+            # elbow_flex (index 2): no fixed offset or sign change
+            #   (axis is +X and rpy now embeds the old –90° roll)
 
-            # wrist_roll (index 4): direction reversal + 90° offset
+            # wrist_roll (index 4): sign flip only
             if len(solution_final) > 4:
-                solution_final[4] = -(solution_final[4])
+                solution_final[4] = -solution_final[4]
+
 
             # Update gripper state - convert percentage (0-100) to gripper position
             # gripper_value is 0-100, we need to map it to configured range
