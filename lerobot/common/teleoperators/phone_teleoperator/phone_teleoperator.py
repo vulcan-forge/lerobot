@@ -466,21 +466,44 @@ class PhoneTeleoperator(Teleoperator):
             # Based on PR #777 backward compatibility documentation
             
             # For SO100/SO101 backward compatibility (applied in degrees):
-            # shoulder_lift (index 1): direction reversal + 90° offset
-            if len(solution_final) > 1:
-                solution_final[1] = (solution_final[1] + 90)
-            
-            # # elbow_flex (index 2): 90° offset
-            # if len(solution_final) > 2:
-            #     solution_final[2] = solution_final[2]
 
-            # # wrist_flex (index 3): direction reversal
-            # if len(solution_final) > 3:
-            #     solution_final[3] = solution_final[3] + 90
+            # ORIGINAL SO100 CALIBRATIONS
+
+            # shoulder_lift (index 1): direction reversal + 90° offset
+        #     if len(solution_final) > 1:
+        #         solution_final[1] = -(solution_final[1] - 90)
             
-           # wrist_roll (index 4): direction reversal + 90° offset
+        #     # elbow_flex (index 2): 90° offset
+        #     if len(solution_final) > 2:
+        #         solution_final[2] -= 90
+            
+        #    # wrist_roll (index 4): direction reversal + 90° offset
+        #     if len(solution_final) > 4:
+        #         solution_final[4] = -(solution_final[4] + 90)
+
+            # Sourccey Math Additions 
+
+            # shoulder_pan (index 0): direction reversal
+            if len(solution_final) > 0:
+                solution_final[0] = -solution_final[0]
+            
+           # shoulder_lift (index 1): direction reversal + 90° offset
+            if len(solution_final) > 1:
+                # solution_final[1] = (solution_final[1]) + 180
+                solution_final[1] = solution_final[1]
+
+            # elbow_flex (index 2): direction reversal + 90° offset
+            if len(solution_final) > 2:
+                # solution_final[2] = -solution_final[2] - 180
+                solution_final[2] = -solution_final[2]
+            
+            # wrist_flex (index 3): direction reversal
+            if len(solution_final) > 3:
+                solution_final[3] = -solution_final[3]
+
+            # wrist_roll (index 4): direction reversal + 90° offset
             if len(solution_final) > 4:
-                solution_final[4] = -(solution_final[4])
+                solution_final[4] = -(solution_final[4] + 90)
 
             # Update gripper state - convert percentage (0-100) to gripper position
             # gripper_value is 0-100, we need to map it to configured range
