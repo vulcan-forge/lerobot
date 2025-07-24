@@ -84,178 +84,24 @@ except ImportError as e:
 from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.common.teleoperators.teleoperator import Teleoperator
 
-from .config_phone_teleoperator_sourccey import PhoneTeleoperatorSourcceyConfig
+from .config_phone_teleoperator import PhoneTeleoperatorConfig
 
 logger = logging.getLogger(__name__)
 
 
-# Custom SO100Follower that uses motors 7-12 instead of 1-6
-class SO100FollowerMotors7to12:
-    """Custom SO100Follower that uses motors 7-12 instead of 1-6."""
-    
-    def __init__(self, config):
-        from lerobot.common.robots.so100_follower import SO100Follower
-        from lerobot.common.motors import Motor, MotorNormMode
-        from lerobot.common.motors.feetech import FeetechMotorsBus
-        
-        # Create a modified config with motors 7-12
-        norm_mode_body = MotorNormMode.DEGREES if config.use_degrees else MotorNormMode.RANGE_M100_100
-        
-        # Override the bus creation to use motors 7-12
-        self.bus = FeetechMotorsBus(
-            port=config.port,
-            motors={
-                "shoulder_pan": Motor(7, "sts3215", norm_mode_body),
-                "shoulder_lift": Motor(8, "sts3215", norm_mode_body),
-                "elbow_flex": Motor(9, "sts3215", norm_mode_body),
-                "wrist_flex": Motor(10, "sts3215", norm_mode_body),
-                "wrist_roll": Motor(11, "sts3215", norm_mode_body),
-                "gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
-            },
-            calibration=config.calibration,
-        )
-        
-        # Copy all other attributes from the original SO100Follower
-        self.config = config
-        self.cameras = config.cameras
-        self._is_connected = False
-        
-    def connect(self, calibrate: bool = True) -> None:
-        """Connect to the robot with motors 7-12."""
-        if self._is_connected:
-            raise DeviceAlreadyConnectedError(f"{self} already connected")
-
-        self.bus.connect()
-        if not self.is_calibrated and calibrate:
-            self.calibrate()
-
-        for cam in self.cameras.values():
-            cam.connect()
-
-        self.configure()
-        self._is_connected = True
-        logger.info(f"{self} connected.")
-
-    @property
-    def is_connected(self) -> bool:
-        return self.bus.is_connected and all(cam.is_connected for cam in self.cameras.values())
-
-    @property
-    def is_calibrated(self) -> bool:
-        return self.bus.is_calibrated
-
-    def calibrate(self) -> None:
-        logger.info(f"\nRunning calibration of {self}")
-        self.bus.disable_torque()
-        for motor in self.bus.motors:
-            from lerobot.common.motors.feetech import OperatingMode
-            self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
-
-        input(f"Move {self} to the middle of its range of motion and press ENTER....")
-        homing_offsets = self.bus.set_half_turn_homings()
-
-        full_turn_motor = "wrist_roll"
-        unknown_range_motors = [motor for motor in self.bus.motors if motor != full_turn_motor]
-        print(
-            f"Move all joints except '{full_turn_motor}' sequentially through their "
-            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
-        )
-        range_mins, range_maxes = self.bus.record_ranges_of_motion(unknown_range_motors)
-        range_mins[full_turn_motor] = 0
-        range_maxes[full_turn_motor] = 4095
-
-        self.calibration = {}
-        for motor, m in self.bus.motors.items():
-            from lerobot.common.motors import MotorCalibration
-            self.calibration[motor] = MotorCalibration(
-                id=m.id,
-                drive_mode=0,
-                homing_offset=homing_offsets[motor],
-                range_min=range_mins[motor],
-                range_max=range_maxes[motor],
-            )
-
-        self.bus.write_calibration(self.calibration)
-        self._save_calibration()
-        print("Calibration saved to", self.calibration_fpath)
-
-    def configure(self) -> None:
-        with self.bus.torque_disabled():
-            self.bus.configure_motors()
-            for motor in self.bus.motors:
-                from lerobot.common.motors.feetech import OperatingMode
-                self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
-                # Set P_Coefficient to lower value to avoid shakiness (Default is 32)
-                self.bus.write("P_Coefficient", motor, 16)
-                # Set I_Coefficient and D_Coefficient to default value 0 and 32
-                self.bus.write("I_Coefficient", motor, 0)
-                self.bus.write("D_Coefficient", motor, 32)
-
-    def get_observation(self) -> dict[str, Any]:
-        if not self.is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected.")
-
-        # Read arm position
-        start = time.perf_counter()
-        obs_dict = self.bus.sync_read("Present_Position")
-        obs_dict = {f"{motor}.pos": val for motor, val in obs_dict.items()}
-        dt_ms = (time.perf_counter() - start) * 1e3
-        logger.debug(f"{self} read state: {dt_ms:.1f}ms")
-
-        # Capture images from cameras
-        for cam_key, cam in self.cameras.items():
-            start = time.perf_counter()
-            obs_dict[cam_key] = cam.async_read()
-            dt_ms = (time.perf_counter() - start) * 1e3
-            logger.debug(f"{self} read {cam_key}: {dt_ms:.1f}ms")
-
-        return obs_dict
-
-    def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        """Command arm to move to a target joint configuration."""
-        if not self.is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected.")
-
-        goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
-
-        # Cap goal position when too far away from present position.
-        if self.config.max_relative_target is not None:
-            from lerobot.common.robots.utils import ensure_safe_goal_position
-            present_pos = self.bus.sync_read("Present_Position")
-            goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
-            goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
-
-        # Send goal position to the arm
-        self.bus.sync_write("Goal_Position", goal_pos)
-        return {f"{motor}.pos": val for motor, val in goal_pos.items()}
-
-    def disconnect(self):
-        if not self.is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected.")
-
-        self.bus.disconnect(self.config.disable_torque_on_disconnect)
-        for cam in self.cameras.values():
-            cam.disconnect()
-
-        logger.info(f"{self} disconnected.")
-
-    def __str__(self) -> str:
-        return f"{self.config.id} SO100FollowerMotors7to12"
-
-
-class PhoneTeleoperatorSourccey(Teleoperator):
+class PhoneTeleoperator(Teleoperator):
     """
-    Phone-based teleoperator for Sourccey that receives pose data from mobile phone via gRPC
+    Phone-based teleoperator that receives pose data from mobile phone via gRPC
     and converts it to robot control commands using inverse kinematics.
     
     This teleoperator integrates with the VirtualManipulator system from the daxie package
-    to provide phone-based robot control for Sourccey arms.
+    to provide phone-based robot control.
     """
 
-    config_class = PhoneTeleoperatorSourcceyConfig
-    name = "sourccey_teleop"
+    config_class = PhoneTeleoperatorConfig
+    name = "phone_teleoperator"
 
-    def __init__(self, config: PhoneTeleoperatorSourcceyConfig, **kwargs):
+    def __init__(self, config: PhoneTeleoperatorConfig, **kwargs):
         super().__init__(config, **kwargs)
         self.config = config
         
@@ -613,32 +459,65 @@ class PhoneTeleoperatorSourccey(Teleoperator):
             if self.config.enable_visualization and self.urdf_vis:
                 self.urdf_vis.update_cfg(solution_rad)
 
-            # Convert to degrees (phone teleoperator always works in degrees, robot is auto-configured)
+            # Convert to degrees (phone teleoperator always uses degrees, robot is auto-configured)
             solution_final = np.rad2deg(solution_rad)
 
             # Apply backward compatibility transformations for old calibration system
             # Based on PR #777 backward compatibility documentation
             
             # For SO100/SO101 backward compatibility (applied in degrees):
-            # shoulder_pan (index 0): direction reversal
-            if len(solution_final) > 0:
-                solution_final[0] = -solution_final[0]
-            
+
+            # ORIGINAL SO100 CALIBRATIONS
+
             # shoulder_lift (index 1): direction reversal + 90° offset
+        #     if len(solution_final) > 1:
+        #         solution_final[1] = -(solution_final[1] - 90)
+            
+        #     # elbow_flex (index 2): 90° offset
+        #     if len(solution_final) > 2:
+        #         solution_final[2] -= 90
+            
+        #    # wrist_roll (index 4): direction reversal + 90° offset
+        #     if len(solution_final) > 4:
+        #         solution_final[4] = -(solution_final[4] + 90)
+
+            # Sourccey Math Additions 
+
+            # shoulder_pan (index 0): direction reversal
+        #     if len(solution_final) > 0:
+        #         solution_final[0] = solution_final[0]
+            
+        #    # shoulder_lift (index 1): direction reversal + 90° offset
+        #     if len(solution_final) > 1:
+        #         # solution_final[1] = (solution_final[1]) + 180
+        #         solution_final[1] = (solution_final[1] + 180)
+
+        #     # elbow_flex (index 2): direction reversal + 90° offset
+        #     if len(solution_final) > 2:
+        #         # solution_final[2] = -solution_final[2] - 180
+        #         solution_final[2] = (solution_final[2] - 90)
+            
+        #     # wrist_flex (index 3): direction reversal
+        #     if len(solution_final) > 3:
+        #         solution_final[3] = solution_final[3]
+
+        #     # wrist_roll (index 4): direction reversal + 90° offset
+        #     if len(solution_final) > 4:
+        #         solution_final[4] = -(solution_final[4] - 90)
+
+            # CHATGPT's advice
+
+            # shoulder_lift (index 1): sign flip only
             if len(solution_final) > 1:
-                solution_final[1] = -(solution_final[1])
-            
-            # elbow_flex (index 2): direction reversal + 90° offset
-            if len(solution_final) > 2:
-                solution_final[2] = -(solution_final[2] + 90)
-            
-            # wrist_flex (index 3): direction reversal
-            if len(solution_final) > 3:
-                solution_final[3] = solution_final[3]
-            
-            # wrist_roll (index 4): direction reversal + 90° offset
+                solution_final[1] = -solution_final[1]
+
+            # elbow_flex (index 2): no fixed offset or sign change
+            #   (axis is +X and rpy now embeds the old –90° roll)
+
+            # wrist_roll (index 4): sign flip only
             if len(solution_final) > 4:
-                solution_final[4] = -(solution_final[4] + 90)
+                solution_final[4] = -solution_final[4]
+
 
             # Update gripper state - convert percentage (0-100) to gripper position
             # gripper_value is 0-100, we need to map it to configured range
