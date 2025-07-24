@@ -205,6 +205,7 @@ def record_loop(
     if dataset is not None and dataset.fps != fps:
         raise ValueError(f"The dataset fps should be equal to requested fps ({dataset.fps} != {fps}).")
 
+    # --- Handle multi-teleop (keyboard + arm) like the new version expects ---
     teleop_arm = teleop_keyboard = None
     if isinstance(teleop, list):
         teleop_keyboard = next((t for t in teleop if isinstance(t, KeyboardTeleop)), None)
@@ -217,12 +218,14 @@ def record_loop(
             None,
         )
 
-        if not (teleop_arm and teleop_keyboard and len(teleop) == 2 and robot.name == "lekiwi_client"):
-            raise ValueError(
-                "For multi-teleop, the list must contain exactly one KeyboardTeleop and one arm teleoperator. Currently only supported for LeKiwi robot."
-            )
+        # Keep the stricter check for LeKiwi, but don't block other robots
+        if robot.name == "lekiwi_client":
+            if not (teleop_arm and teleop_keyboard and len(teleop) == 2):
+                raise ValueError(
+                    "For multi-teleop on LeKiwi, provide exactly one KeyboardTeleop and one arm teleoperator."
+                )
 
-    # if policy is given it needs cleaning up
+    # Reset policy if provided
     if policy is not None:
         policy.reset()
 
@@ -243,6 +246,7 @@ def record_loop(
         if policy is not None or dataset is not None:
             observation_frame = build_dataset_frame(dataset.features, observation, prefix="observation")
 
+        # --------- ACTION SELECTION ---------
         if policy is not None:
             action_values = predict_action(
                 observation_frame,
@@ -253,27 +257,37 @@ def record_loop(
                 robot_type=robot.robot_type,
             )
             action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
-        elif policy is None and isinstance(teleop, Teleoperator):
-            action = teleop.get_action()
-        elif policy is None and isinstance(teleop, list):
-            # TODO(pepijn, steven): clean the record loop for use of multiple robots (possibly with pipeline)
-            arm_action = teleop_arm.get_action()
-            arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
 
-            keyboard_action = teleop_keyboard.get_action()
-            base_action = robot._from_keyboard_to_base_action(keyboard_action)
+        elif isinstance(teleop, Teleoperator):
+            # --- Phone teleoperator needs observation for reset functionality (from OLD version) ---
+            teleop_type = getattr(getattr(teleop, "config", None), "type", None)
+            if teleop_type == "phone":
+                action = teleop.get_action(observation)
+            else:
+                action = teleop.get_action()
 
-            action = {**arm_action, **base_action} if len(base_action) > 0 else arm_action
+        elif isinstance(teleop, list):
+            # Multiple teleops (arm + keyboard). Supports LeKiwi (and reuse for others if needed)
+            arm_action = teleop_arm.get_action() if teleop_arm is not None else {}
+            # Old code prefixed arm actions for LeKiwi; keep that behavior
+            if arm_action and robot.name == "lekiwi_client":
+                arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
+
+            keyboard_action = teleop_keyboard.get_action() if teleop_keyboard is not None else {}
+            base_action = robot._from_keyboard_to_base_action(keyboard_action) if keyboard_action else {}
+
+            action = {**arm_action, **base_action} if base_action else arm_action
+
         else:
             logging.info(
-                "No policy or teleoperator provided, skipping action generation."
-                "This is likely to happen when resetting the environment without a teleop device."
+                "No policy or teleoperator provided, skipping action generation. "
+                "This is likely to happen when resetting the environment without a teleop device. "
                 "The robot won't be at its rest position at the start of the next episode."
             )
             continue
+        # ------------------------------------
 
-        # Action can eventually be clipped using `max_relative_target`,
-        # so action actually sent is saved in the dataset.
+        # Action can be clipped using `max_relative_target`, so save the actually sent action
         sent_action = robot.send_action(action)
 
         if dataset is not None:
