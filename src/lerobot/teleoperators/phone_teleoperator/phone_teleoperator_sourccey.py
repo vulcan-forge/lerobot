@@ -84,24 +84,24 @@ except ImportError as e:
 from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.teleoperators.teleoperator import Teleoperator
 
-from .config_phone_teleoperator import PhoneTeleoperatorConfig
+from .config_phone_teleoperator_sourccey import PhoneTeleoperatorSourcceyConfig
 
 logger = logging.getLogger(__name__)
 
 
-class PhoneTeleoperator(Teleoperator):
+class PhoneTeleoperatorSourccey(Teleoperator):
     """
     Phone-based teleoperator that receives pose data from mobile phone via gRPC
     and converts it to robot control commands using inverse kinematics.
     
     This teleoperator integrates with the VirtualManipulator system from the daxie package
-    to provide phone-based robot control.
+    to provide phone-based robot control for Sourccey robots.
     """
 
-    config_class = PhoneTeleoperatorConfig
-    name = "phone_teleoperator"
+    config_class = PhoneTeleoperatorSourcceyConfig
+    name = "phone_teleoperator_sourccey"
 
-    def __init__(self, config: PhoneTeleoperatorConfig, **kwargs):
+    def __init__(self, config: PhoneTeleoperatorSourcceyConfig, **kwargs):
         super().__init__(config, **kwargs)
         self.config = config
         
@@ -196,7 +196,7 @@ class PhoneTeleoperator(Teleoperator):
                 if not Path(mesh_path).is_absolute():
                     mesh_path = str(lerobot_root / mesh_path)
                 
-                logger.info(f"Using SO100 paths - URDF: {urdf_path}, Mesh: {mesh_path}")
+                logger.info(f"Using Sourccey paths - URDF: {urdf_path}, Mesh: {mesh_path}")
             else:
                 # Fallback auto-detection if paths are empty
                 try:
@@ -205,20 +205,20 @@ class PhoneTeleoperator(Teleoperator):
                     
                     # Get the lerobot package root directory
                     lerobot_root = Path(lerobot.__file__).parent.parent
-                    so100_model_path = lerobot_root / "lerobot" / "common" / "robots" / "so100_follower" / "model"
+                    sourccey_model_path = lerobot_root / "lerobot" / "robots" / "sourccey" / "sourccey_v2beta" / "model"
                     
-                    if so100_model_path.exists():
-                        auto_urdf_path = str(so100_model_path / "so100.urdf")
-                        auto_mesh_path = str(so100_model_path / "meshes")
+                    if sourccey_model_path.exists():
+                        auto_urdf_path = str(sourccey_model_path / "Arm.urdf")
+                        auto_mesh_path = str(sourccey_model_path / "meshes")
                         urdf_path = urdf_path or auto_urdf_path
                         mesh_path = mesh_path or auto_mesh_path
-                        logger.info(f"Auto-detected SO100 paths - URDF: {urdf_path}, Mesh: {mesh_path}")
+                        logger.info(f"Auto-detected Sourccey paths - URDF: {urdf_path}, Mesh: {mesh_path}")
                     else:
-                        raise FileNotFoundError(f"Could not find SO100 model directory at {so100_model_path}")
+                        raise FileNotFoundError(f"Could not find Sourccey model directory at {sourccey_model_path}")
                 except Exception as e:
-                    logger.warning(f"Could not auto-detect SO100 paths: {e}")
+                    logger.warning(f"Could not auto-detect Sourccey paths: {e}")
                     if not urdf_path or not mesh_path:
-                        raise ValueError("URDF path and mesh path must be provided in config or SO100 model must be available in lerobot/common/robots/so100_follower/model/")
+                        raise ValueError("URDF path and mesh path must be provided in config or Sourccey model must be available in lerobot/robots/sourccey/sourccey_v2beta/model/")
                 
             self.urdf = yourdfpy.URDF.load(urdf_path, mesh_dir=mesh_path)
             self.robot = pk.Robot.from_urdf(self.urdf)
@@ -462,50 +462,10 @@ class PhoneTeleoperator(Teleoperator):
             # Convert to degrees (phone teleoperator always uses degrees, robot is auto-configured)
             solution_final = np.rad2deg(solution_rad)
 
-            # Apply backward compatibility transformations for old calibration system
-            # Based on PR #777 backward compatibility documentation
+            # Apply Sourccey-specific transformations for calibration system
+            # Based on Sourccey V2 Beta robot configuration
             
-            # For SO100/SO101 backward compatibility (applied in degrees):
-
-            # ORIGINAL SO100 CALIBRATIONS
-
-            # shoulder_lift (index 1): direction reversal + 90° offset
-        #     if len(solution_final) > 1:
-        #         solution_final[1] = -(solution_final[1] - 90)
-            
-        #     # elbow_flex (index 2): 90° offset
-        #     if len(solution_final) > 2:
-        #         solution_final[2] -= 90
-            
-        #    # wrist_roll (index 4): direction reversal + 90° offset
-        #     if len(solution_final) > 4:
-        #         solution_final[4] = -(solution_final[4] + 90)
-
-            # Sourccey Math Additions 
-
-            # shoulder_pan (index 0): direction reversal
-        #     if len(solution_final) > 0:
-        #         solution_final[0] = solution_final[0]
-            
-        #    # shoulder_lift (index 1): direction reversal + 90° offset
-        #     if len(solution_final) > 1:
-        #         # solution_final[1] = (solution_final[1]) + 180
-        #         solution_final[1] = (solution_final[1] + 180)
-
-        #     # elbow_flex (index 2): direction reversal + 90° offset
-        #     if len(solution_final) > 2:
-        #         # solution_final[2] = -solution_final[2] - 180
-        #         solution_final[2] = (solution_final[2] - 90)
-            
-        #     # wrist_flex (index 3): direction reversal
-        #     if len(solution_final) > 3:
-        #         solution_final[3] = solution_final[3]
-
-        #     # wrist_roll (index 4): direction reversal + 90° offset
-        #     if len(solution_final) > 4:
-        #         solution_final[4] = -(solution_final[4] - 90)
-
-            # CHATGPT's advice
+            # For Sourccey V2 Beta compatibility (applied in degrees):
 
             # shoulder_lift (index 1): sign flip only
             if len(solution_final) > 1:

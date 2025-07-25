@@ -19,31 +19,30 @@ import time
 from functools import cached_property
 from typing import Any
 
-from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
-from lerobot.common.motors import Motor, MotorCalibration, MotorNormMode
-from lerobot.common.motors.feetech import (
+from lerobot.cameras.utils import make_cameras_from_configs
+from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+from lerobot.motors.feetech import (
     FeetechMotorsBus,
     OperatingMode,
 )
 
-from ..robot import Robot
-from ..utils import ensure_safe_goal_position
-from .config_sourccey_v2beta_phone import SourcceyV2BetaPhoneConfig
+from ...robot import Robot
+from ...utils import ensure_safe_goal_position
+from .config_sourccey_v2beta_follower import SourcceyV2BetaFollowerConfig
 
 logger = logging.getLogger(__name__)
 
 
-class SourcceyV2BetaPhone(Robot):
+class SourcceyV2BetaFollower(Robot):
     """
-    Sourccey V2Beta Phone Teleoperation Robot
-    Direct connection to Sourccey arm for phone teleoperation
-    Uses motors 7-12
+    Sourccey V2 Beta Follower Arm
     """
 
-    config_class = SourcceyV2BetaPhoneConfig
-    name = "sourccey_v2beta"
+    config_class = SourcceyV2BetaFollowerConfig
+    name = "sourccey_v2beta_follower"
 
-    def __init__(self, config: SourcceyV2BetaPhoneConfig):
+    def __init__(self, config: SourcceyV2BetaFollowerConfig):
         super().__init__(config)
         self.config = config
         norm_mode_body = MotorNormMode.DEGREES if config.use_degrees else MotorNormMode.RANGE_M100_100
@@ -59,14 +58,21 @@ class SourcceyV2BetaPhone(Robot):
             },
             calibration=self.calibration,
         )
+        self.cameras = make_cameras_from_configs(config.cameras)
 
     @property
     def _motors_ft(self) -> dict[str, type]:
         return {f"{motor}.pos": float for motor in self.bus.motors}
 
+    @property
+    def _cameras_ft(self) -> dict[str, tuple]:
+        return {
+            cam: (self.config.cameras[cam].height, self.config.cameras[cam].width, 3) for cam in self.cameras
+        }
+
     @cached_property
-    def observation_features(self) -> dict[str, type]:
-        return self._motors_ft
+    def observation_features(self) -> dict[str, type | tuple]:
+        return {**self._motors_ft, **self._cameras_ft}
 
     @cached_property
     def action_features(self) -> dict[str, type]:
@@ -74,7 +80,7 @@ class SourcceyV2BetaPhone(Robot):
 
     @property
     def is_connected(self) -> bool:
-        return self.bus.is_connected
+        return self.bus.is_connected and all(cam.is_connected for cam in self.cameras.values())
 
     def connect(self, calibrate: bool = True) -> None:
         """
@@ -86,13 +92,15 @@ class SourcceyV2BetaPhone(Robot):
 
         self.bus.connect()
         if not self.is_calibrated and calibrate:
+            logger.info(
+                "Mismatch between calibration values in the motor and the calibration file or no calibration file found"
+            )
             self.calibrate()
 
+        for cam in self.cameras.values():
+            cam.connect()
+
         self.configure()
-        
-        # Safety check: Move motors to midpoint if they're outside calibration range
-        self._safety_move_to_midpoint()
-        
         logger.info(f"{self} connected.")
 
     @property
@@ -100,6 +108,16 @@ class SourcceyV2BetaPhone(Robot):
         return self.bus.is_calibrated
 
     def calibrate(self) -> None:
+        if self.calibration:
+            # Calibration file exists, ask user whether to use it or run new calibration
+            user_input = input(
+                f"Press ENTER to use provided calibration file associated with the id {self.id}, or type 'c' and press ENTER to run calibration: "
+            )
+            if user_input.strip().lower() != "c":
+                logger.info(f"Writing calibration file associated with the id {self.id} to the motors")
+                self.bus.write_calibration(self.calibration)
+                return
+
         logger.info(f"\nRunning calibration of {self}")
         self.bus.disable_torque()
         for motor in self.bus.motors:
@@ -149,6 +167,32 @@ class SourcceyV2BetaPhone(Robot):
             self.bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
 
+    def setup_single_motor(self, motor_name: str) -> None:
+        """Set up a single motor by name."""
+        if motor_name not in self.bus.motors:
+            raise ValueError(f"Motor '{motor_name}' not found. Available motors: {list(self.bus.motors.keys())}")
+        
+        input(f"Connect the controller board to the '{motor_name}' motor only and press enter.")
+        self.bus.setup_motor(motor_name)
+        print(f"'{motor_name}' motor id set to {self.bus.motors[motor_name].id}")
+
+    def setup_motor_by_id(self, motor_id: int) -> None:
+        """Set up a single motor by ID (7-12 for Sourccey V2 Beta)."""
+        motor_names = {
+            7: "shoulder_pan",
+            8: "shoulder_lift", 
+            9: "elbow_flex",
+            10: "wrist_flex",
+            11: "wrist_roll",
+            12: "gripper"
+        }
+        
+        if motor_id not in motor_names:
+            raise ValueError(f"Motor ID {motor_id} not valid. Valid IDs: {list(motor_names.keys())}")
+        
+        motor_name = motor_names[motor_id]
+        self.setup_single_motor(motor_name)
+
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
@@ -159,6 +203,13 @@ class SourcceyV2BetaPhone(Robot):
         obs_dict = {f"{motor}.pos": val for motor, val in obs_dict.items()}
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read state: {dt_ms:.1f}ms")
+
+        # Capture images from cameras
+        for cam_key, cam in self.cameras.items():
+            start = time.perf_counter()
+            obs_dict[cam_key] = cam.async_read()
+            dt_ms = (time.perf_counter() - start) * 1e3
+            logger.debug(f"{self} read {cam_key}: {dt_ms:.1f}ms")
 
         return obs_dict
 
@@ -180,23 +231,6 @@ class SourcceyV2BetaPhone(Robot):
 
         goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
 
-        # DEBUG: Log what we're trying to send
-        logger.info(f"🎯 Robot trying to send goal_pos: {goal_pos}")
-        
-        # DEBUG: Log calibration info
-        if hasattr(self, 'bus') and hasattr(self.bus, 'calibration'):
-            logger.info(f"🔧 Motor calibration ranges:")
-            for motor, cal in self.bus.calibration.items():
-                logger.info(f"  {motor}: min={cal.range_min}, max={cal.range_max}, mid={(cal.range_min + cal.range_max) / 2}")
-        
-        # DEBUG: Log raw present positions
-        if hasattr(self, 'bus'):
-            try:
-                raw_positions = self.bus.sync_read("Present_Position", normalize=False)
-                logger.info(f"🔧 Raw encoder positions: {raw_positions}")
-            except Exception as e:
-                logger.warning(f"Could not read raw positions: {e}")
-
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
@@ -204,102 +238,16 @@ class SourcceyV2BetaPhone(Robot):
             goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
             goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
 
-        # Send goal positions to motors
-        start = time.perf_counter()
+        # Send goal position to the arm
         self.bus.sync_write("Goal_Position", goal_pos)
-        dt_ms = (time.perf_counter() - start) * 1e3
-        logger.debug(f"{self} write state: {dt_ms:.1f}ms")
+        return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
-        # Return the action that was actually sent
-        return {f"{motor}.pos": goal_pos[motor] for motor in goal_pos}
+    def disconnect(self):
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected.")
 
-    def disconnect(self) -> None:
-        """Disconnect from the robot."""
-        if self.config.disable_torque_on_disconnect:
-            try:
-                self.bus.disable_torque()
-            except Exception as e:
-                logger.warning(f"Failed to disable torque on disconnect: {e}")
+        self.bus.disconnect(self.config.disable_torque_on_disconnect)
+        for cam in self.cameras.values():
+            cam.disconnect()
 
-        try:
-            self.bus.disconnect()
-        except Exception as e:
-            logger.warning(f"Failed to disconnect bus: {e}")
-
-        logger.info(f"{self} disconnected.")
-
-    def _safety_move_to_midpoint(self) -> None:
-        """Safety check: Move motors to midpoint if they're outside calibration range."""
-        if not hasattr(self, 'bus') or not hasattr(self.bus, 'calibration'):
-            logger.warning("No calibration available for safety check")
-            return
-        
-        logger.info("🔒 Running safety check: Moving motors to midpoint if out of range...")
-        
-        try:
-            # Read current raw positions
-            raw_positions = self.bus.sync_read("Present_Position", normalize=False)
-            
-            motors_to_move = []
-            midpoints = {}
-            
-            # Check each motor
-            for motor_name, motor in self.bus.motors.items():
-                if motor_name not in self.bus.calibration:
-                    logger.warning(f"No calibration for {motor_name}, skipping")
-                    continue
-                
-                cal = self.bus.calibration[motor_name]
-                current_pos = raw_positions.get(motor_name)
-                
-                if current_pos is None:
-                    logger.warning(f"Could not read position for {motor_name}")
-                    continue
-                
-                # Check if position is outside calibration range
-                if current_pos < cal.range_min or current_pos > cal.range_max:
-                    logger.warning(
-                        f"⚠️  {motor_name} is out of range: "
-                        f"position={current_pos}, range=[{cal.range_min}, {cal.range_max}]"
-                    )
-                    
-                    # Calculate midpoint
-                    midpoint = (cal.range_min + cal.range_max) // 2
-                    motors_to_move.append(motor_name)
-                    midpoints[motor_name] = midpoint
-                    
-                    logger.info(f"  → Will move {motor_name} to midpoint: {midpoint}")
-                else:
-                    logger.info(f"✅ {motor_name} is within range: {current_pos}")
-            
-            # Move out-of-range motors to midpoint
-            if motors_to_move:
-                logger.info(f"🔧 Moving {len(motors_to_move)} motors to midpoint...")
-                
-                # Create goal positions dict
-                goal_positions = {}
-                for motor_name in motors_to_move:
-                    goal_positions[motor_name] = midpoints[motor_name]
-                
-                # Move motors to midpoint
-                self.bus.sync_write("Goal_Position", goal_positions)
-                
-                # Wait a moment for motors to move
-                time.sleep(2.0)
-                
-                # Verify the move
-                new_positions = self.bus.sync_read("Present_Position", normalize=False)
-                for motor_name in motors_to_move:
-                    new_pos = new_positions.get(motor_name)
-                    if new_pos is not None:
-                        logger.info(f"✅ {motor_name} moved to: {new_pos}")
-                    else:
-                        logger.warning(f"❌ Could not verify position for {motor_name}")
-                
-                logger.info("🔒 Safety check complete!")
-            else:
-                logger.info("✅ All motors are within calibration range")
-                
-        except Exception as e:
-            logger.error(f"❌ Safety check failed: {e}")
-            logger.warning("Continuing without safety correction...") 
+        logger.info(f"{self} disconnected.") 

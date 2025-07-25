@@ -30,12 +30,12 @@ class PhoneTeleoperatorSourcceyConfig(TeleoperatorConfig):
     grpc_timeout: float = 100.0
     
     # Robot model paths - same as SO100
-    urdf_path: str = "lerobot/common/robots/so100_follower/model_2/so100.urdf"
-    mesh_path: str = "lerobot/common/robots/so100_follower/model_2/assets"
+    urdf_path: str = "lerobot/robots/sourccey/sourccey_v2beta/model/Arm.urdf"
+    mesh_path: str = "lerobot/robots/sourccey/sourccey_v2beta/model/meshes"
     
     # IK solver settings - same as SO100
-    target_link_name: str = "Fixed_Jaw"
-    rest_pose: tuple[float, ...] = (0.017499, -1.661131, 1.659391, 1.130985, 0.004688, 0.010240)  # Always in radians - initial robot positions for IK solver
+    target_link_name: str = "Feetech-Servo-Motor-v1-5"
+    rest_pose: tuple[float, ...] = (0.029920, 0.161107, 0.013042, -0.146531, 0.032989, 0.002921)   # Always in radians - initial robot positions for IK solver
 
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
