@@ -62,6 +62,7 @@ def main():
     last_cmd_time = time.time()
     watchdog_active = False
     logging.info("Waiting for commands...")
+    print("Waiting for commands...")
     try:
         # Business logic
         start = time.perf_counter()
