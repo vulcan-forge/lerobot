@@ -49,7 +49,7 @@ class SourcceyV3BetaHost:
 
 def main():
     logging.info("Configuring Sourccey V3 Beta")
-    robot_config = SourcceyV3BetaConfig()
+    robot_config = SourcceyV3BetaConfig(id="sourccey_v3beta")
     robot = SourcceyV3Beta(robot_config)
 
     logging.info("Connecting Sourccey V3 Beta")
