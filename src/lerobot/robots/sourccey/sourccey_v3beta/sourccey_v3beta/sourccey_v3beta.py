@@ -54,7 +54,6 @@ class SourcceyV3Beta(Robot):
     def __init__(self, config: SourcceyV3BetaConfig):
         super().__init__(config)
         self.config = config
-        self.left_arm
 
         left_arm_config = SourcceyV3BetaFollowerConfig(
             id=f"{config.id}_left" if config.id else None,
