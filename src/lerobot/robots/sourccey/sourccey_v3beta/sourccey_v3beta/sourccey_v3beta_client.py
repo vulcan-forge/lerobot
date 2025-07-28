@@ -72,10 +72,23 @@ class SourcceyV3BetaClient(Robot):
 
     @cached_property
     def _state_ft(self) -> dict[str, type]:
-        return {
-            **{f"left_{motor}.pos": float for motor in self.left_arm.bus.motors},
-            **{f"right_{motor}.pos": float for motor in self.right_arm.bus.motors},
-        }
+        return dict.fromkeys(
+            (
+                "left_arm_shoulder_pan.pos",
+                "left_arm_shoulder_lift.pos",
+                "left_arm_elbow_flex.pos",
+                "left_arm_wrist_flex.pos",
+                "left_arm_wrist_roll.pos",
+                "left_arm_gripper.pos",
+                "right_arm_shoulder_pan.pos",
+                "right_arm_shoulder_lift.pos",
+                "right_arm_elbow_flex.pos",
+                "right_arm_wrist_flex.pos",
+                "right_arm_wrist_roll.pos",
+                "right_arm_gripper.pos",
+            ),
+            float,
+        )
 
     @cached_property
     def _state_order(self) -> tuple[str, ...]:
