@@ -112,9 +112,10 @@ class SourcceyV3BetaFollower(Robot):
 
         self.calibration = {}
         for motor, m in self.bus.motors.items():
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
             self.calibration[motor] = MotorCalibration(
                 id=m.id,
-                drive_mode=0,
+                drive_mode=drive_mode,
                 homing_offset=homing_offsets[motor],
                 range_min=range_mins[motor],
                 range_max=range_maxes[motor],
