@@ -18,7 +18,6 @@ import base64
 import json
 import logging
 import time
-import traceback
 
 import cv2
 import zmq
@@ -82,9 +81,6 @@ def main():
                     pass
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
-                print(f"Error: {e}")
-                traceback.print_exc()
-                return
 
             now = time.time()
             if (now - last_cmd_time > host.watchdog_timeout_ms / 1000) and not watchdog_active:
