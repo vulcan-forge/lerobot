@@ -32,9 +32,9 @@ def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
         "wrist_left": OpenCVCameraConfig(
             index_or_path="/dev/video4", fps=30, width=640, height=360
         ),
-        "wrist_right": OpenCVCameraConfig(
-            index_or_path="/dev/video6", fps=30, width=640, height=360
-        ),
+        # "wrist_right": OpenCVCameraConfig(
+        #     index_or_path="/dev/video6", fps=30, width=640, height=360
+        # ),
     }
     return config
 
