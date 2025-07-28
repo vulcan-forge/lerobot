@@ -41,12 +41,14 @@ class BiSourcceyV3BetaLeader(Teleoperator):
             id=f"{config.id}_left" if config.id else None,
             calibration_dir=config.calibration_dir,
             port=config.left_arm_port,
+            orientation="left",
         )
 
         right_arm_config = SourcceyV3BetaLeaderConfig(
             id=f"{config.id}_right" if config.id else None,
             calibration_dir=config.calibration_dir,
             port=config.right_arm_port,
+            orientation="right",
         )
 
         self.left_arm = SourcceyV3BetaLeader(left_arm_config)

@@ -30,6 +30,7 @@ _init_rerun(session_name="sourccey_v3beta_teleop")
 if not robot.is_connected or not leader_arm.is_connected or not keyboard.is_connected:
     raise ValueError("Robot, leader arm of keyboard is not connected!")
 
+print("Teleoperating Sourccey V3 Beta")
 while True:
     t0 = time.perf_counter()
 
