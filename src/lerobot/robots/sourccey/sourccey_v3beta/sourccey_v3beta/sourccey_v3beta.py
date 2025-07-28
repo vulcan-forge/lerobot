@@ -74,7 +74,7 @@ class SourcceyV3Beta(Robot):
             cameras={},
         )
 
-        self.left_arm = SourcceyV3BetaFollower(left_arm_config)
+        # self.left_arm = SourcceyV3BetaFollower(left_arm_config)
         self.right_arm = SourcceyV3BetaFollower(right_arm_config)
         self.cameras = make_cameras_from_configs(config.cameras)
 
@@ -100,10 +100,11 @@ class SourcceyV3Beta(Robot):
 
     @property
     def is_connected(self) -> bool:
-        return self.left_arm.is_connected and self.right_arm.is_connected and all(cam.is_connected for cam in self.cameras.values())
+        #self.left_arm.is_connected and
+        return self.right_arm.is_connected and all(cam.is_connected for cam in self.cameras.values())
 
     def connect(self, calibrate: bool = True) -> None:
-        self.left_arm.connect(calibrate)
+        # self.left_arm.connect(calibrate)
         self.right_arm.connect(calibrate)
 
         for cam in self.cameras.values():
@@ -111,25 +112,26 @@ class SourcceyV3Beta(Robot):
 
     @property
     def is_calibrated(self) -> bool:
-        return self.left_arm.is_calibrated and self.right_arm.is_calibrated
+        #return self.left_arm.is_calibrated and
+        return self.right_arm.is_calibrated
 
     def calibrate(self) -> None:
-        self.left_arm.calibrate()
+        #self.left_arm.calibrate()
         self.right_arm.calibrate()
 
     def configure(self) -> None:
-        self.left_arm.configure()
+        #self.left_arm.configure()
         self.right_arm.configure()
 
     def setup_motors(self) -> None:
-        self.left_arm.setup_motors()
+        #self.left_arm.setup_motors()
         self.right_arm.setup_motors()
 
     def get_observation(self) -> dict[str, Any]:
         obs_dict = {}
 
-        left_obs = self.left_arm.get_observation()
-        obs_dict.update({f"left_{key}": value for key, value in left_obs.items()})
+        #left_obs = self.left_arm.get_observation()
+        #obs_dict.update({f"left_{key}": value for key, value in left_obs.items()})
 
         right_obs = self.right_arm.get_observation()
         obs_dict.update({f"right_{key}": value for key, value in right_obs.items()})
@@ -149,17 +151,18 @@ class SourcceyV3Beta(Robot):
             key.removeprefix("right_"): value for key, value in action.items() if key.startswith("right_")
         }
 
-        send_action_left = self.left_arm.send_action(left_action)
+        #send_action_left = self.left_arm.send_action(left_action)
         send_action_right = self.right_arm.send_action(right_action)
 
         # Add prefixes back
-        prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
+        #prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
         prefixed_send_action_right = {f"right_{key}": value for key, value in send_action_right.items()}
 
-        return {**prefixed_send_action_left, **prefixed_send_action_right}
+        #return {**prefixed_send_action_left, **prefixed_send_action_right}
+        return {**prefixed_send_action_right}
 
     def disconnect(self):
-        self.left_arm.disconnect()
+        #self.left_arm.disconnect()
         self.right_arm.disconnect()
 
         for cam in self.cameras.values():

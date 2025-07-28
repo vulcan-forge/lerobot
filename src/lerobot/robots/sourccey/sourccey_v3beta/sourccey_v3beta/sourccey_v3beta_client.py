@@ -74,12 +74,12 @@ class SourcceyV3BetaClient(Robot):
     def _state_ft(self) -> dict[str, type]:
         return dict.fromkeys(
             (
-                "left_arm_shoulder_pan.pos",
-                "left_arm_shoulder_lift.pos",
-                "left_arm_elbow_flex.pos",
-                "left_arm_wrist_flex.pos",
-                "left_arm_wrist_roll.pos",
-                "left_arm_gripper.pos",
+                # "left_arm_shoulder_pan.pos",
+                # "left_arm_shoulder_lift.pos",
+                # "left_arm_elbow_flex.pos",
+                # "left_arm_wrist_flex.pos",
+                # "left_arm_wrist_roll.pos",
+                # "left_arm_gripper.pos",
                 "right_arm_shoulder_pan.pos",
                 "right_arm_shoulder_lift.pos",
                 "right_arm_elbow_flex.pos",
