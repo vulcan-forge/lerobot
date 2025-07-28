@@ -195,10 +195,10 @@ class SourcceyV3BetaFollower(Robot):
         self.bus.sync_write("Goal_Position", goal_pos)
 
         # Check safety after sending goals
-        # overcurrent_motors = self._check_current_safety()
-        # if overcurrent_motors and len(overcurrent_motors) > 0:
-        #     logger.warning(f"Safety triggered: {overcurrent_motors} current > {self.config.max_current_safety_threshold}mA")
-        #     return self._handle_overcurrent_motors(overcurrent_motors, goal_pos, present_pos)
+        overcurrent_motors = self._check_current_safety()
+        if overcurrent_motors and len(overcurrent_motors) > 0:
+            logger.warning(f"Safety triggered: {overcurrent_motors} current > {self.config.max_current_safety_threshold}mA")
+            return self._handle_overcurrent_motors(overcurrent_motors, goal_pos, present_pos)
         return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
     def _apply_minimum_action(self, goal_present_pos: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
@@ -241,7 +241,7 @@ class SourcceyV3BetaFollower(Robot):
             - overcurrent_motors: List of motor names that are over current
         """
         # Read current from all motors
-        currents = self.bus.sync_read("Present_Current", self.bus.motors)
+        currents = self.bus.sync_read("Present_Current")
         overcurrent_motors = []
         for motor, current in currents.items():
             if current > self.config.max_current_safety_threshold:
