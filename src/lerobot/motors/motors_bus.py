@@ -794,8 +794,10 @@ class MotorsBus(abc.ABC):
                 move_cursor_up(len(motors) + 3)
 
         same_min_max = [motor for motor in motors if mins[motor] == maxes[motor]]
-        if same_min_max:
-            raise ValueError(f"Some motors have the same min and max values:\n{pformat(same_min_max)}")
+        # We just need the offsets for many calibrations, so we don't neccesary need range of motion to
+        # be different if we are manually settings ranges. 7-28-2025
+        # if same_min_max:
+        #     raise ValueError(f"Some motors have the same min and max values:\n{pformat(same_min_max)}")
 
         return mins, maxes
 
