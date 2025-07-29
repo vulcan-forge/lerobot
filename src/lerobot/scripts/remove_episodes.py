@@ -26,9 +26,9 @@ from pathlib import Path
 from huggingface_hub import HfApi
 from huggingface_hub.utils import RevisionNotFoundError
 
-from lerobot.common.datasets.compute_stats import aggregate_stats
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
-from lerobot.common.datasets.utils import (
+from lerobot.datasets.compute_stats import aggregate_stats
+from lerobot.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
+from lerobot.datasets.utils import (
     EPISODES_PATH,
     EPISODES_STATS_PATH,
     INFO_PATH,
@@ -39,7 +39,7 @@ from lerobot.common.datasets.utils import (
     write_episode_stats,
     write_info,
 )
-from lerobot.common.utils.utils import init_logging
+from lerobot.utils.utils import init_logging
 
 
 def remove_episodes(
