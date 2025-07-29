@@ -68,8 +68,8 @@ class BiSO100Follower(Robot):
 
     @property
     def _motors_ft(self) -> dict[str, type]:
-        return {f"left_arm_{motor}.pos": float for motor in self.left_arm.bus.motors} | {
-            f"right_arm_{motor}.pos": float for motor in self.right_arm.bus.motors
+        return {f"left_{motor}.pos": float for motor in self.left_arm.bus.motors} | {
+            f"right_{motor}.pos": float for motor in self.right_arm.bus.motors
         }
 
     @property
@@ -121,10 +121,10 @@ class BiSO100Follower(Robot):
         obs_dict = {}
 
         left_obs = self.left_arm.get_observation()
-        obs_dict.update({f"left_arm_{key}": value for key, value in left_obs.items()})
+        obs_dict.update({f"left_{key}": value for key, value in left_obs.items()})
 
         right_obs = self.right_arm.get_observation()
-        obs_dict.update({f"right_arm_{key}": value for key, value in right_obs.items()})
+        obs_dict.update({f"right_{key}": value for key, value in right_obs.items()})
 
         for cam_key, cam in self.cameras.items():
             start = time.perf_counter()
@@ -136,19 +136,19 @@ class BiSO100Follower(Robot):
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
         left_action = {
-            key.removeprefix("left_arm_"): value for key, value in action.items() if key.startswith("left_arm_")
+            key.removeprefix("left_"): value for key, value in action.items() if key.startswith("left_")
         }
 
         right_action = {
-            key.removeprefix("right_arm_"): value for key, value in action.items() if key.startswith("right_arm_")
+            key.removeprefix("right_"): value for key, value in action.items() if key.startswith("right_")
         }
 
         send_action_left = self.left_arm.send_action(left_action)
         send_action_right = self.right_arm.send_action(right_action)
 
         # Add prefixes back
-        prefixed_send_action_left = {f"left_arm_{key}": value for key, value in send_action_left.items()}
-        prefixed_send_action_right = {f"right_arm_{key}": value for key, value in send_action_right.items()}
+        prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
+        prefixed_send_action_right = {f"right_{key}": value for key, value in send_action_right.items()}
 
         return {**prefixed_send_action_left, **prefixed_send_action_right}
 
