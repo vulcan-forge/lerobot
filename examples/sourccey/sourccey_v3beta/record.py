@@ -2,6 +2,7 @@ from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.utils import hw_to_dataset_features
 from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta import SourcceyV3Beta, SourcceyV3BetaClientConfig, SourcceyV3BetaClient
 from lerobot.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
+from lerobot.teleoperators.sourccey_v3beta.bi_sourccey_v3beta_leader.bi_sourccey_v3beta_leader import BiSourcceyV3BetaLeader
 from lerobot.teleoperators.sourccey_v3beta.bi_sourccey_v3beta_leader.config_bi_sourccey_v3beta_leader import BiSourcceyV3BetaLeaderConfig
 from lerobot.teleoperators.sourccey_v3beta.sourccey_v3beta_leader.config_sourccey_v3beta_leader import SourcceyV3BetaLeaderConfig
 from lerobot.teleoperators.sourccey_v3beta.sourccey_v3beta_leader.sourccey_v3beta_leader import SourcceyV3BetaLeader
@@ -10,7 +11,7 @@ from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 10
+NUM_EPISODES = 1
 FPS = 30
 EPISODE_TIME_SEC = 30
 RESET_TIME_SEC = 10
@@ -22,7 +23,7 @@ teleop_arm_config = BiSourcceyV3BetaLeaderConfig(left_arm_port="COM41", right_ar
 keyboard_config = KeyboardTeleopConfig()
 
 robot = SourcceyV3BetaClient(robot_config)
-leader_arm = SourcceyV3BetaLeader(teleop_arm_config)
+leader_arm = BiSourcceyV3BetaLeader(teleop_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
 # Configure the dataset features
@@ -32,7 +33,7 @@ dataset_features = {**action_features, **obs_features}
 
 # Create the dataset
 dataset = LeRobotDataset.create(
-    repo_id="local/sourccey_v2beta-001__tape-a__set000",
+    repo_id="local/sourccey_v3beta-001__towel-a__set000__nickm",
     fps=FPS,
     features=dataset_features,
     robot_type=robot.name,
@@ -45,7 +46,7 @@ robot.connect()
 leader_arm.connect()
 keyboard.connect()
 
-_init_rerun(session_name="sourccey_v2beta_record")
+_init_rerun(session_name="sourccey_v3beta_record")
 
 listener, events = init_keyboard_listener()
 

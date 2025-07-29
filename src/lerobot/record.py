@@ -100,6 +100,7 @@ from lerobot.teleoperators import (  # noqa: F401
     BiSourcceyV3BetaLeader,
 )
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop
+from lerobot.teleoperators.sourccey_v3beta import bi_sourccey_v3beta_leader, sourccey_v3beta_leader
 from lerobot.utils.control_utils import (
     init_keyboard_listener,
     is_headless,
@@ -212,15 +213,15 @@ def record_loop(
             (
                 t
                 for t in teleop
-                if isinstance(t, (so100_leader.SO100Leader, so101_leader.SO101Leader, koch_leader.KochLeader))
+                if isinstance(t, (so100_leader.SO100Leader, so101_leader.SO101Leader, sourccey_v3beta_leader.SourcceyV3BetaLeader, bi_sourccey_v3beta_leader.BiSourcceyV3BetaLeader, koch_leader.KochLeader))
             ),
             None,
         )
 
-        if not (teleop_arm and teleop_keyboard and len(teleop) == 2 and robot.name == "lekiwi_client"):
-            raise ValueError(
-                "For multi-teleop, the list must contain exactly one KeyboardTeleop and one arm teleoperator. Currently only supported for LeKiwi robot."
-            )
+        # if not (teleop_arm and teleop_keyboard and len(teleop) == 2 and robot.name == "lekiwi_client"):
+        #     raise ValueError(
+        #         "For multi-teleop, the list must contain exactly one KeyboardTeleop and one arm teleoperator. Currently only supported for LeKiwi robot."
+        #     )
 
     # if policy is given it needs cleaning up
     if policy is not None:
@@ -256,9 +257,7 @@ def record_loop(
         elif policy is None and isinstance(teleop, Teleoperator):
             action = teleop.get_action()
         elif policy is None and isinstance(teleop, list):
-            # TODO(pepijn, steven): clean the record loop for use of multiple robots (possibly with pipeline)
             arm_action = teleop_arm.get_action()
-            arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
 
             keyboard_action = teleop_keyboard.get_action()
             base_action = robot._from_keyboard_to_base_action(keyboard_action)

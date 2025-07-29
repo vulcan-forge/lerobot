@@ -20,7 +20,6 @@ robot = SourcceyV3BetaClient(robot_config)
 leader_arm = BiSourcceyV3BetaLeader(teleop_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
-# To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
 leader_arm.connect()
 keyboard.connect()
