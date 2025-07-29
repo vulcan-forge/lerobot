@@ -18,15 +18,14 @@ robot.connect()
 if not robot.is_connected:
     raise ValueError("Robot is not connected!")
 
-#log_say(f"Replaying episode {EPISODE_IDX}")
+log_say(f"Replaying episode {EPISODE_IDX}")
 for idx in range(dataset.num_frames):
     t0 = time.perf_counter()
 
     action = {
         name: float(actions[idx]["action"][i]) for i, name in enumerate(dataset.features["action"]["names"])
     }
-    print(action)
-    # robot.send_action(action)
+    robot.send_action(action)
 
     busy_wait(max(1.0 / dataset.fps - (time.perf_counter() - t0), 0.0))
 

@@ -148,19 +148,19 @@ class SourcceyV3Beta(Robot):
         try:
             # Remove "left_" prefix
             left_action = {
-                key.removeprefix("left_"): value for key, value in action.items() if key.startswith("left_")
+                key.removeprefix("left_arm_"): value for key, value in action.items() if key.startswith("left_")
             }
             # Remove "right_" prefix
             right_action = {
-                key.removeprefix("right_"): value for key, value in action.items() if key.startswith("right_")
+                key.removeprefix("right_arm_"): value for key, value in action.items() if key.startswith("right_")
             }
 
             send_action_left = self.left_arm.send_action(left_action)
             send_action_right = self.right_arm.send_action(right_action)
 
             # Add prefixes back
-            prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
-            prefixed_send_action_right = {f"right_{key}": value for key, value in send_action_right.items()}
+            prefixed_send_action_left = {f"left_arm_{key}": value for key, value in send_action_left.items()}
+            prefixed_send_action_right = {f"right_arm_{key}": value for key, value in send_action_right.items()}
 
             return {**prefixed_send_action_left, **prefixed_send_action_right}
         except Exception as e:
