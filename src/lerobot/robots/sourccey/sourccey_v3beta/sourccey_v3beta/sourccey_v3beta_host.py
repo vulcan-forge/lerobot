@@ -105,8 +105,10 @@ def main():
 
             # Send the observation to the remote agent
             try:
-                if "front_left" not in last_observation:
-                    print(last_observation)
+                # Don't send an empty observation
+                # Maybe we send the last observation instead? Nick - 7/29/2025
+                if not last_observation:
+                    continue
                 host.zmq_observation_socket.send_string(json.dumps(last_observation), flags=zmq.NOBLOCK)
             except zmq.Again:
                 logging.info("Dropping observation, no client connected")
