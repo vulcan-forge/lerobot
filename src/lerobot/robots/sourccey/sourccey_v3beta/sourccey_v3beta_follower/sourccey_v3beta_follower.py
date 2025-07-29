@@ -252,7 +252,7 @@ class SourcceyV3BetaFollower(Robot):
         for motor, current in currents.items():
             if current > self.config.max_current_safety_threshold:
                 overcurrent_motors.append(motor)
-                logger.warning(f"Safety triggered: {motor} current {current}mA > {self.config.current_safety_threshold}mA")
+                logger.warning(f"Safety triggered: {motor} current {current}mA > {self.config.max_current_safety_threshold}mA")
         return overcurrent_motors
 
     def _handle_overcurrent_motors(
