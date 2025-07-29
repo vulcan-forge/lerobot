@@ -444,9 +444,9 @@ def build_dataset_frame(
                 frame[key] = values[key]
             else:
                 # Fall back to the old format with prefix removal
-                    frame[key] = values[key.removeprefix(f"{prefix}.images.")]
+                frame[key] = values[key.removeprefix(f"{prefix}.images.")]
 
-        return frame
+    return frame
 
 def dataset_to_policy_features(features: dict[str, dict]) -> dict[str, PolicyFeature]:
     # TODO(aliberts): Implement "type" in dataset features and simplify this

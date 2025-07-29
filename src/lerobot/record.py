@@ -243,7 +243,6 @@ def record_loop(
 
         if policy is not None or dataset is not None:
             observation_frame = build_dataset_frame(dataset.features, observation, prefix="observation")
-            print(observation_frame)
 
         if policy is not None:
             action_values = predict_action(

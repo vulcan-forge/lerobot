@@ -107,7 +107,6 @@ def main():
             try:
                 if "front_left" not in last_observation:
                     print(last_observation)
-
                 host.zmq_observation_socket.send_string(json.dumps(last_observation), flags=zmq.NOBLOCK)
             except zmq.Again:
                 logging.info("Dropping observation, no client connected")
