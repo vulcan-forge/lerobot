@@ -266,7 +266,7 @@ class SourcceyV3BetaClient(Robot):
         for cam_name, frame in frames.items():
             if frame is None:
                 logging.warning("Frame is None")
-                frame = np.zeros((320, 240, 3), dtype=np.uint8)
+                frame = np.zeros((640, 360, 3), dtype=np.uint8)
             obs_dict[cam_name] = frame
 
         return obs_dict
