@@ -9,8 +9,8 @@ from lerobot.record import record_loop
 
 NUM_EPISODES = 1
 FPS = 30
-EPISODE_TIME_SEC = 60
-TASK_DESCRIPTION = "Grab the towel and fold it"
+EPISODE_TIME_SEC = 30
+TASK_DESCRIPTION = "Grab the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
 robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.219", id="sourccey_v3beta")
