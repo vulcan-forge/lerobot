@@ -194,17 +194,17 @@ class SourcceyV3BetaFollower(Robot):
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
             goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
-            # goal_present_pos = self._apply_minimum_action(goal_present_pos)
+            goal_present_pos = self._apply_minimum_action(goal_present_pos)
             goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
 
         # Send goal position to the arm
         self.bus.sync_write("Goal_Position", goal_pos)
 
         # Check safety after sending goals
-        # overcurrent_motors = self._check_current_safety()
-        # if overcurrent_motors and len(overcurrent_motors) > 0:
-        #     logger.warning(f"Safety triggered: {overcurrent_motors} current > {self.config.max_current_safety_threshold}mA")
-        #     return self._handle_overcurrent_motors(overcurrent_motors, goal_pos, present_pos)
+        overcurrent_motors = self._check_current_safety()
+        if overcurrent_motors and len(overcurrent_motors) > 0:
+            logger.warning(f"Safety triggered: {overcurrent_motors} current > {self.config.max_current_safety_threshold}mA")
+            return self._handle_overcurrent_motors(overcurrent_motors, goal_pos, present_pos)
         return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
     def _apply_minimum_action(self, goal_present_pos: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
