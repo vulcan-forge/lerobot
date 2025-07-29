@@ -67,6 +67,9 @@ def main():
         # Business logic
         start = time.perf_counter()
         duration = 0
+
+        observation = None
+        previous_observation = None
         while duration < host.connection_time_s:
             loop_start_time = time.time()
             try:
@@ -90,27 +93,29 @@ def main():
                 watchdog_active = True
                 robot.stop_base()
 
-            last_observation = robot.get_observation()
+            if observation is not None and observation != {}:
+                previous_observation = observation
+            observation = robot.get_observation()
 
             # Encode ndarrays to base64 strings
             for cam_key, _ in robot.cameras.items():
-                if cam_key in last_observation:
+                if cam_key in observation:
                     ret, buffer = cv2.imencode(
-                        ".jpg", last_observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+                        ".jpg", observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
                     )
                     if ret:
-                        last_observation[cam_key] = base64.b64encode(buffer).decode("utf-8")
+                        observation[cam_key] = base64.b64encode(buffer).decode("utf-8")
                     else:
-                        last_observation[cam_key] = ""
+                        observation[cam_key] = ""
 
             # Send the observation to the remote agent
             try:
                 # Don't send an empty observation
                 # Maybe we send the last observation instead? Nick - 7/29/2025
-                if not last_observation:
-                    logging.warning("No observation received. Skipping.")
-                    continue
-                host.zmq_observation_socket.send_string(json.dumps(last_observation), flags=zmq.NOBLOCK)
+                if observation is None or observation == {}:
+                    observation = previous_observation
+                    logging.warning("No observation received. Sending previous observation.")
+                host.zmq_observation_socket.send_string(json.dumps(observation), flags=zmq.NOBLOCK)
             except zmq.Again:
                 logging.info("Dropping observation, no client connected")
 
