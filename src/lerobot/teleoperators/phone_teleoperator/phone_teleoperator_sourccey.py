@@ -141,6 +141,10 @@ class PhoneTeleoperatorSourccey(Teleoperator):
         
         # Flag to show initial motor positions on first get_action call
         self.initial_positions_shown = False
+        
+        # Connection timeout tracking
+        self.last_phone_data_time = None
+        self.phone_disconnection_timeout = 3.0  # seconds without data before considering disconnected
 
     @cached_property
     def action_features(self) -> dict[str, type]:
@@ -389,6 +393,47 @@ class PhoneTeleoperatorSourccey(Teleoperator):
             self.initial_positions_shown = True
 
         try:
+            # FIRST: Check for phone disconnection by trying to get fresh data with a short timeout
+            # This must happen before any other logic to ensure continuous rest position commands
+            current_time = time.time()
+            
+            # Try to get fresh data with a short timeout to detect disconnection
+            fresh_data = self.pose_service.get_latest_pose(block=True, timeout=0.1)
+            
+            if fresh_data is not None:
+                # We received fresh data - phone is connected
+                self.last_phone_data_time = current_time
+                data = fresh_data
+                
+                # Log reconnection if we were previously disconnected
+                if not self._phone_connected and not self.start_teleop:
+                    logger.info("Phone reconnected - resuming normal operation")
+            else:
+                # No fresh data received within timeout
+                if self.last_phone_data_time is None:
+                    # First time, initialize the timer
+                    self.last_phone_data_time = current_time
+                
+                # If we haven't received fresh data for the timeout period, consider phone disconnected
+                # Keep returning rest position continuously until we get fresh data again
+                if (current_time - self.last_phone_data_time > self.phone_disconnection_timeout):
+                    
+                    if self.start_teleop:  # Only log once when we first detect disconnection
+                        logger.info("Phone disconnected - continuously returning to rest position until reconnection")
+                    
+                    # Set start_teleop to False and reset connection state
+                    self.start_teleop = False
+                    self._phone_connected = False
+                    self.teleop_start_time = None
+                    self.motor_positions_read = False
+                    
+                    # Continuously return rest position until phone reconnects
+                    current_joint_pos_deg = list(np.rad2deg(self.config.rest_pose))
+                    return self._format_action_dict(current_joint_pos_deg)
+                
+                # Get the last known data (may be stale) for continued operation
+                data = self.pose_service.get_latest_pose(block=False)
+
             # Handle phone connection
             if not self._phone_connected:
                 # Pass current position to connection setup (IK solver always expects radians)
@@ -416,12 +461,9 @@ class PhoneTeleoperatorSourccey(Teleoperator):
                 self._read_and_display_motor_positions(current_joint_pos_deg)
                 self.motor_positions_read = True
 
-            # Get latest pose from gRPC
-            data = self.pose_service.get_latest_pose(block=False)
-
-            switch_state = data.get("switch", False)
-            reset_mapping_pressed = data.get("reset_mapping", False)
-            is_resetting_state = data.get("is_resetting", False)
+            switch_state = data.get("switch", False) if data is not None else False
+            reset_mapping_pressed = data.get("reset_mapping", False) if data is not None else False
+            is_resetting_state = data.get("is_resetting", False) if data is not None else False
 
             # Update reset state tracking - handle both is_resetting and reset_mapping
             current_is_resetting = is_resetting_state or reset_mapping_pressed
@@ -441,11 +483,17 @@ class PhoneTeleoperatorSourccey(Teleoperator):
 
             # Check for reset transition (prev=True, current=False) - reset just ended
             if self.prev_is_resetting == True and current_is_resetting == False:
-                pos, quat = data["position"], data["rotation"]
-                self._reset_mapping(pos, quat)
+                if data is not None:
+                    pos, quat = data["position"], data["rotation"]
+                    self._reset_mapping(pos, quat)
                 self.reset_hold_position = None  # Clear the hold position
 
             self.prev_is_resetting = current_is_resetting
+
+            # Ensure we have valid data before processing pose
+            if data is None:
+                # If no data available, return current position to maintain stability
+                return self._format_action_dict(current_joint_pos_deg)
 
             pos, quat, gripper_value = data["position"], data["rotation"], data["gripper_value"]
 
@@ -570,6 +618,11 @@ class PhoneTeleoperatorSourccey(Teleoperator):
                 
             self._is_connected = False
             self._phone_connected = False
+            self.start_teleop = False
+            
+            # Reset phone disconnection tracking
+            self.last_phone_data_time = None
+            
             logger.info(f"{self} disconnected")
             
         except Exception as e:

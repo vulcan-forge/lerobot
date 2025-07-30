@@ -35,7 +35,7 @@ class PhoneTeleoperatorSourcceyConfig(TeleoperatorConfig):
     
     # IK solver settings - same as SO100
     target_link_name: str = "Feetech-Servo-Motor-v1-5"
-    rest_pose: tuple[float, ...] = (0.029920, 0.161107, 0.013042, -0.146531, 0.032989, 0.002921)   # Always in radians - initial robot positions for IK solver
+    rest_pose: tuple[float, ...] = (-0.843128, 1.552000, 0.736491, 0.591494, 0.020714, 0.009441)   # Always in radians - initial robot positions for IK solver
 
     # Phone mapping settings
     rotation_sensitivity: float = 1.0
