@@ -145,6 +145,16 @@ class Robot(abc.ABC):
             draccus.dump(self.calibration, f, indent=4)
 
     @abc.abstractmethod
+    def auto_calibrate(self) -> None:
+        """
+        Automatically calibrate the robot.
+
+        This method should collect any necessary data (e.g., motor offsets) and update the
+        :pyattr:`calibration` dictionary accordingly. This method should be used when the robot is not connected.
+        """
+        pass
+
+    @abc.abstractmethod
     def configure(self) -> None:
         """
         Apply any one-time or runtime configuration to the robot.

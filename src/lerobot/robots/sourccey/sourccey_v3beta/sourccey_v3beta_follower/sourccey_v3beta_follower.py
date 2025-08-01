@@ -130,6 +130,50 @@ class SourcceyV3BetaFollower(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
+    def auto_calibrate(self) -> None:
+        """Automatically calibrate the robot using current monitoring to detect mechanical limits.
+
+        This method performs automatic calibration by:
+        1. Detecting mechanical limits using current monitoring
+        2. Setting homing offsets to center the range around the middle of detected limits
+        3. Writing calibration to motors and saving to file
+
+        WARNING: This process involves moving the robot to find limits.
+        Ensure the robot arm is clear of obstacles and people during calibration.
+        """
+        logger.info(f"Starting automatic calibration of {self}")
+        logger.warning("WARNING: Robot will move to detect mechanical limits. Ensure clear workspace!")
+
+        # Ensure torque is disabled for safety
+        self.bus.disable_torque()
+        for motor in self.bus.motors:
+            self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+
+        # Step 1: Detect actual mechanical limits using current monitoring
+        logger.info("Detecting mechanical limits using current monitoring...")
+        detected_ranges = self._detect_mechanical_limits()
+
+        # Step 2: Calculate homing offsets to center each range
+        logger.info("Calculating homing offsets to center detected ranges...")
+        homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
+
+        # Step 3: Create calibration dictionary
+        self.calibration = {}
+        for motor, m in self.bus.motors.items():
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+            self.calibration[motor] = MotorCalibration(
+                id=m.id,
+                drive_mode=drive_mode,
+                homing_offset=homing_offsets[motor],
+                range_min=detected_ranges[motor]["min"],
+                range_max=detected_ranges[motor]["max"],
+            )
+
+        # Step 4: Write calibration to motors and save
+        self.bus.write_calibration(self.calibration)
+        self._save_calibration()
+        logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
+
     def configure(self) -> None:
         self.bus.disable_torque()
         for motor in self.bus.motors:
@@ -297,3 +341,142 @@ class SourcceyV3BetaFollower(Robot):
             cam.disconnect()
 
         logger.info(f"{self} disconnected.")
+
+    # Auto Calibration Functions
+    def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
+        """Calculate homing offsets to center each motor's range around the middle of its detected limits.
+
+        Args:
+            detected_ranges: Dictionary of detected min/max ranges for each motor
+
+        Returns:
+            Dictionary mapping motor names to their calculated homing offsets
+        """
+        homing_offsets = {}
+
+        for motor, ranges in detected_ranges.items():
+            # Calculate the middle of the detected range
+            range_middle = (ranges["min"] + ranges["max"]) // 2
+
+            # Get the motor model to determine the encoder resolution
+            motor_model = self.bus._get_motor_model(motor)
+            max_resolution = self.bus.model_resolution_table[motor_model] - 1
+
+            # Calculate the target center position (half turn)
+            target_center = max_resolution // 2
+
+            # Calculate homing offset: offset = actual_middle - target_center
+            homing_offset = range_middle - target_center
+
+            homing_offsets[motor] = homing_offset
+
+            logger.info(f"  {motor}: range_middle={range_middle}, target_center={target_center}, homing_offset={homing_offset}")
+
+        return homing_offsets
+
+    def _detect_mechanical_limits(self) -> dict[str, dict[str, int]]:
+        """Detect mechanical limits for each motor using current monitoring.
+
+        This method moves each joint in small increments while monitoring current.
+        When current exceeds the safety threshold, it assumes a mechanical limit has been reached.
+
+        Returns:
+            Dictionary mapping motor names to their detected min/max ranges
+        """
+        # Get current positions as starting point
+        current_positions = self.bus.sync_read("Present_Position", normalize=False)
+        detected_ranges = {}
+
+        # Define search parameters
+        search_step = 50  # Small increment to move
+        max_search_distance = 2000  # Maximum distance to search from current position
+        current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
+
+        for motor in self.bus.motors:
+            logger.info(f"Detecting limits for {motor}...")
+
+            # Start from current position
+            start_pos = current_positions[motor]
+            min_pos = start_pos
+            max_pos = start_pos
+
+            # Search in positive direction
+            logger.info(f"  Searching positive direction from {start_pos}")
+            for step in range(0, max_search_distance, search_step):
+                test_pos = start_pos + step
+                if self._test_position_safe(motor, test_pos, current_threshold):
+                    max_pos = test_pos
+                else:
+                    logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
+                    break
+
+            # Search in negative direction
+            logger.info(f"  Searching negative direction from {start_pos}")
+            for step in range(0, max_search_distance, search_step):
+                test_pos = start_pos - step
+                if self._test_position_safe(motor, test_pos, current_threshold):
+                    min_pos = test_pos
+                else:
+                    logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
+                    break
+
+            # Add safety margins to detected ranges
+            safety_margin = 100  # Add 100 encoder units as safety margin
+            detected_ranges[motor] = {
+                "min": min_pos + safety_margin,
+                "max": max_pos - safety_margin
+            }
+
+            logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
+
+        return detected_ranges
+
+    def _test_position_safe(self, motor: str, position: int, current_threshold: int) -> bool:
+        """Test if a position is safe by monitoring current.
+
+        Args:
+            motor: Motor name to test
+            position: Position to test
+            current_threshold: Current threshold to consider safe
+
+        Returns:
+            True if position is safe (current below threshold), False otherwise
+        """
+        try:
+            # Move to test position
+            self.bus.write("Goal_Position", motor, position, normalize=False)
+
+            # Wait for movement to complete and check current
+            time.sleep(0.5)  # Allow time for movement
+
+            # Check current multiple times to ensure stability
+            for _ in range(3):
+                current = self.bus.read("Present_Current", motor, normalize=False)
+                if current > current_threshold:
+                    return False
+                time.sleep(0.1)
+
+            return True
+
+        except Exception as e:
+            logger.warning(f"Error testing position {position} for {motor}: {e}")
+            return False
+
+    def _get_safe_motor_ranges(self) -> dict[str, dict[str, int]]:
+        """Get predefined safe ranges for each motor to prevent damage during auto-calibration.
+
+        Returns:
+            Dictionary mapping motor names to their safe min/max ranges
+        """
+        # Define safe ranges based on motor specifications and mechanical limits
+        # These are conservative ranges to prevent damage
+        safe_ranges = {
+            "shoulder_pan": {"min": 500, "max": 3595},    # ~270° range
+            "shoulder_lift": {"min": 1000, "max": 3095},  # ~180° range
+            "elbow_flex": {"min": 500, "max": 3595},      # ~270° range
+            "wrist_flex": {"min": 500, "max": 3595},      # ~270° range
+            "wrist_roll": {"min": 0, "max": 4095},        # Full 360° range
+            "gripper": {"min": 1000, "max": 3000},        # 0-100% range
+        }
+
+        return safe_ranges
