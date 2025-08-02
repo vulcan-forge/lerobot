@@ -386,6 +386,7 @@ class SourcceyV3BetaFollower(Robot):
 
         This method moves each joint in small increments while monitoring current.
         When current exceeds the safety threshold, it assumes a mechanical limit has been reached.
+        After testing each joint, it resets to the middle position to avoid restricting other joints.
 
         Returns:
             Dictionary mapping motor names to their detected min/max ranges
@@ -432,6 +433,13 @@ class SourcceyV3BetaFollower(Robot):
                         logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
                         break
 
+                # Calculate the middle position of the detected range
+                middle_pos = (min_pos + max_pos) // 2
+
+                # Reset the joint to its middle position
+                logger.info(f"  Resetting {motor} to middle position {middle_pos}")
+                self._move_to_position_safe(motor, middle_pos)
+
                 # Add safety margins to detected ranges
                 safety_margin = 100  # Add 100 encoder units as safety margin
                 detected_ranges[motor] = {
@@ -440,6 +448,7 @@ class SourcceyV3BetaFollower(Robot):
                 }
 
                 logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
+                logger.info(f"  Reset {motor} to middle position: {middle_pos}")
 
         finally:
             # Always disable torque after limit detection for safety
@@ -447,6 +456,32 @@ class SourcceyV3BetaFollower(Robot):
             self.bus.disable_torque()
 
         return detected_ranges
+
+    def _move_to_position_safe(self, motor: str, position: int) -> None:
+        """Safely move a motor to a specific position with current monitoring.
+
+        Args:
+            motor: Motor name to move
+            position: Target position
+        """
+        try:
+            # Move to target position
+            self.bus.write("Goal_Position", motor, position, normalize=False)
+
+            # Wait for movement to complete
+            time.sleep(1.0)  # Allow more time for movement to middle position
+
+            # Verify we reached the position (with some tolerance)
+            actual_pos = self.bus.read("Present_Position", motor, normalize=False)
+            tolerance = 50  # Allow 50 encoder units of tolerance
+
+            if abs(actual_pos - position) > tolerance:
+                logger.warning(f"  {motor} did not reach target position {position}, actual: {actual_pos}")
+            else:
+                logger.info(f"  {motor} successfully moved to position {actual_pos}")
+
+        except Exception as e:
+            logger.warning(f"Error moving {motor} to position {position}: {e}")
 
     def _test_position_safe(self, motor: str, position: int, current_threshold: int) -> bool:
         """Test if a position is safe by monitoring current.
