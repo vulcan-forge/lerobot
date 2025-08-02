@@ -396,7 +396,7 @@ class SourcceyV3BetaFollower(Robot):
         detected_ranges = {}
 
         # Define search parameters - motor-specific search distances
-        search_step = 100  # Increased from 50 for faster search
+        search_step = 50  # Back to 50 for safety - prevents damage
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
 
         # Motor-specific search distances based on their expected ranges
@@ -564,7 +564,7 @@ class SourcceyV3BetaFollower(Robot):
             self.bus.write("Goal_Position", motor, position, normalize=False)
 
             # Wait for movement to complete and check current - reduced wait time
-            time.sleep(0.15)  # Reduced from 0.25 to 0.15 seconds
+            time.sleep(0.25)
 
             # Check current fewer times for speed - reduced from 2 to 1 check
             current = self.bus.read("Present_Current", motor, normalize=False)
