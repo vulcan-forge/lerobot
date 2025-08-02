@@ -437,6 +437,10 @@ class SourcceyV3BetaFollower(Robot):
                 max_search_distance = motor_search_distances.get(motor, 2048)  # Default to 2048
                 logger.info(f"  Using search distance: {max_search_distance}")
 
+                # Get drive mode for this motor
+                drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+                logger.info(f"  Drive mode for {motor}: {drive_mode}")
+
                 # Start from current position
                 start_pos = current_positions[motor]
                 min_pos = start_pos
@@ -446,7 +450,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"  Searching positive direction from {start_pos}")
                 for step in range(0, max_search_distance, search_step):
                     test_pos = start_pos + step
-                    if self._test_position_safe(motor, test_pos, current_threshold):
+                    if self._test_position_safe(motor, test_pos, current_threshold, drive_mode):
                         max_pos = test_pos
                     else:
                         logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
@@ -456,7 +460,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"  Searching negative direction from {start_pos}")
                 for step in range(0, max_search_distance, search_step):
                     test_pos = start_pos - step
-                    if self._test_position_safe(motor, test_pos, current_threshold):
+                    if self._test_position_safe(motor, test_pos, current_threshold, drive_mode):
                         min_pos = test_pos
                     else:
                         logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
@@ -467,13 +471,13 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Reset the joint to its middle position with verification
                 logger.info(f"  Resetting {motor} to middle position {middle_pos}")
-                success = self._move_to_position_safe_with_retry(motor, middle_pos)
+                success = self._move_to_position_safe_with_retry(motor, middle_pos, drive_mode)
 
                 if not success:
                     logger.warning(f"  Failed to move {motor} to middle position. Using fallback position.")
                     # Use a conservative middle position as fallback
                     fallback_middle = (min_pos + max_pos) // 2
-                    self._move_to_position_safe_with_retry(motor, fallback_middle)
+                    self._move_to_position_safe_with_retry(motor, fallback_middle, drive_mode)
 
                 # Add safety margins to detected ranges
                 safety_margin = 100  # Add 100 encoder units as safety margin
@@ -495,12 +499,13 @@ class SourcceyV3BetaFollower(Robot):
 
         return detected_ranges
 
-    def _move_to_position_safe_with_retry(self, motor: str, position: int, max_retries: int = 2) -> bool:
+    def _move_to_position_safe_with_retry(self, motor: str, position: int, drive_mode: int = 0, max_retries: int = 2) -> bool:
         """Safely move a motor to a specific position with retry mechanism and verification.
 
         Args:
             motor: Motor name to move
             position: Target position
+            drive_mode: Drive mode of the motor (0 or 1)
             max_retries: Maximum number of retry attempts
 
         Returns:
@@ -538,12 +543,13 @@ class SourcceyV3BetaFollower(Robot):
         logger.error(f"    Failed to move {motor} to position {position} after {max_retries} attempts")
         return False
 
-    def _move_to_position_safe(self, motor: str, position: int) -> None:
+    def _move_to_position_safe(self, motor: str, position: int, drive_mode: int = 0) -> None:
         """Safely move a motor to a specific position with current monitoring.
 
         Args:
             motor: Motor name to move
             position: Target position
+            drive_mode: Drive mode of the motor (0 or 1)
         """
         try:
             # Move to target position
@@ -564,13 +570,14 @@ class SourcceyV3BetaFollower(Robot):
         except Exception as e:
             logger.warning(f"Error moving {motor} to position {position}: {e}")
 
-    def _test_position_safe(self, motor: str, position: int, current_threshold: int) -> bool:
+    def _test_position_safe(self, motor: str, position: int, current_threshold: int, drive_mode: int = 0) -> bool:
         """Test if a position is safe by monitoring current.
 
         Args:
             motor: Motor name to test
             position: Position to test
             current_threshold: Current threshold to consider safe
+            drive_mode: Drive mode of the motor (0 or 1)
 
         Returns:
             True if position is safe (current below threshold), False otherwise
@@ -662,8 +669,11 @@ class SourcceyV3BetaFollower(Robot):
         """Reset homing offsets so that current physical positions align with expected logical positions.
 
         This ensures that:
-        - shoulder_lift at current position = 0 (arm down)
-        - All other motors at current position = 2048 (middle)
+        - shoulder_lift at current position = 0 (arm down) - accounting for drive_mode=1
+        - All other motors at current position = 2048 (middle) - accounting for drive_mode=0
+
+        Note: drive_mode=1 inverts the direction of motion, so we need to account for this
+        when calculating homing offsets.
         """
         logger.info("Resetting homing offsets to current positions...")
 
@@ -671,6 +681,9 @@ class SourcceyV3BetaFollower(Robot):
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
 
         for motor, current_pos in current_positions.items():
+            # Determine drive mode for this motor
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+
             # Determine target position based on motor type
             if motor == "shoulder_lift":
                 target_pos = 0  # shoulder_lift should be at 0 when arm is down
@@ -678,9 +691,12 @@ class SourcceyV3BetaFollower(Robot):
                 target_pos = 2048  # All other motors should be at middle position
 
             # Calculate homing offset: offset = current_position - target_position
+            # For drive_mode=1, the direction is inverted, so we need to flip the offset
             homing_offset = current_pos - target_pos
+            if drive_mode == 1:
+                homing_offset = -homing_offset  # Flip the offset for inverted direction
 
-            logger.info(f"  {motor}: current_pos={current_pos}, target_pos={target_pos}, homing_offset={homing_offset}")
+            logger.info(f"  {motor}: current_pos={current_pos}, target_pos={target_pos}, drive_mode={drive_mode}, homing_offset={homing_offset}")
 
             # Write the homing offset to the motor
             try:
