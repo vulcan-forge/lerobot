@@ -135,9 +135,10 @@ class SourcceyV3BetaFollower(Robot):
 
         This method performs automatic calibration by:
         1. Loading and applying initial calibration to set known starting positions
-        2. Detecting mechanical limits using current monitoring
-        3. Setting homing offsets to center the range around the middle of detected limits
-        4. Writing calibration to motors and saving to file
+        2. Resetting homing offsets to align current positions with expected positions
+        3. Detecting mechanical limits using current monitoring
+        4. Setting homing offsets to center the range around the middle of detected limits
+        5. Writing calibration to motors and saving to file
 
         WARNING: This process involves moving the robot to find limits.
         Ensure the robot arm is clear of obstacles and people during calibration.
@@ -155,25 +156,29 @@ class SourcceyV3BetaFollower(Robot):
         else:
             logger.warning("No initial calibration found, proceeding with current motor state")
 
-        # Step 2: Set up motors for calibration
+        # Step 2: Reset homing offsets to align current positions with expected positions
+        logger.info("Resetting homing offsets to align current positions...")
+        self._reset_homing_offsets_to_current_positions()
+
+        # Step 3: Set up motors for calibration
         logger.info("Setting up motors for calibration...")
         for motor in self.bus.motors:
             self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        # Step 3: Detect actual mechanical limits using current monitoring
+        # Step 4: Detect actual mechanical limits using current monitoring
         # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
         detected_ranges = self._detect_mechanical_limits()
 
-        # Step 4: Disable torque for safety before setting homing offsets
+        # Step 5: Disable torque for safety before setting homing offsets
         logger.info("Disabling torque for safety...")
         self.bus.disable_torque()
 
-        # Step 5: Calculate homing offsets to center each range
+        # Step 6: Calculate homing offsets to center each range
         logger.info("Calculating homing offsets to center detected ranges...")
         homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
 
-        # Step 6: Create calibration dictionary
+        # Step 7: Create calibration dictionary
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -185,7 +190,7 @@ class SourcceyV3BetaFollower(Robot):
                 range_max=detected_ranges[motor]["max"],
             )
 
-        # Step 7: Write calibration to motors and save
+        # Step 8: Write calibration to motors and save
         self.bus.write_calibration(self.calibration)
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
@@ -652,3 +657,36 @@ class SourcceyV3BetaFollower(Robot):
         except Exception as e:
             logger.error(f"Failed to load initial calibration from {config_path}: {e}")
             return None
+
+    def _reset_homing_offsets_to_current_positions(self) -> None:
+        """Reset homing offsets so that current physical positions align with expected logical positions.
+
+        This ensures that:
+        - shoulder_lift at current position = 0 (arm down)
+        - All other motors at current position = 2048 (middle)
+        """
+        logger.info("Resetting homing offsets to current positions...")
+
+        # Get current positions
+        current_positions = self.bus.sync_read("Present_Position", normalize=False)
+
+        for motor, current_pos in current_positions.items():
+            # Determine target position based on motor type
+            if motor == "shoulder_lift":
+                target_pos = 0  # shoulder_lift should be at 0 when arm is down
+            else:
+                target_pos = 2048  # All other motors should be at middle position
+
+            # Calculate homing offset: offset = current_position - target_position
+            homing_offset = current_pos - target_pos
+
+            logger.info(f"  {motor}: current_pos={current_pos}, target_pos={target_pos}, homing_offset={homing_offset}")
+
+            # Write the homing offset to the motor
+            try:
+                self.bus.write("Homing_Offset", motor, homing_offset, normalize=False)
+                logger.info(f"  Set {motor} homing offset to {homing_offset}")
+            except Exception as e:
+                logger.warning(f"  Failed to set homing offset for {motor}: {e}")
+
+        logger.info("Homing offsets reset successfully")
