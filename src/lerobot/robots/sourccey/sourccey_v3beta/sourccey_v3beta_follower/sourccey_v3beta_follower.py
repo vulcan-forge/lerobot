@@ -395,10 +395,19 @@ class SourcceyV3BetaFollower(Robot):
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
         detected_ranges = {}
 
-        # Define search parameters - optimized for speed
+        # Define search parameters - motor-specific search distances
         search_step = 50
-        max_search_distance = 2000  # Maximum distance to search from current position
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
+
+        # Motor-specific search distances based on their expected ranges
+        motor_search_distances = {
+            "shoulder_pan": 2048,    # ~270° range
+            "shoulder_lift": 4096,   # Full range for shoulder lift
+            "elbow_flex": 2048,      # ~270° range
+            "wrist_flex": 2048,      # ~270° range
+            "wrist_roll": 4096,      # Full 360° range
+            "gripper": 2048,         # Gripper range
+        }
 
         # Enable torque for limit detection
         logger.info("Enabling torque for mechanical limit detection...")
@@ -407,6 +416,10 @@ class SourcceyV3BetaFollower(Robot):
         try:
             for motor in self.bus.motors:
                 logger.info(f"Detecting limits for {motor}...")
+
+                # Get motor-specific search distance
+                max_search_distance = motor_search_distances.get(motor, 2048)  # Default to 2048
+                logger.info(f"  Using search distance: {max_search_distance}")
 
                 # Start from current position
                 start_pos = current_positions[motor]
