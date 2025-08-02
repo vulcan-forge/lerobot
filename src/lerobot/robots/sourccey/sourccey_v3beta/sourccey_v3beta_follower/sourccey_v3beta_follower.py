@@ -425,8 +425,8 @@ class SourcceyV3BetaFollower(Robot):
             },
             "shoulder_lift": {
                 "max_search_distance": 4096,
-                "search_positive": True,
-                "search_negative": False,  # Only search positive (upward)
+                "search_positive": False,
+                "search_negative": True,  # Only search positive (upward)
                 "current_threshold_multiplier": 1.5  # Higher current threshold for lifting
             },
             "elbow_flex": {
