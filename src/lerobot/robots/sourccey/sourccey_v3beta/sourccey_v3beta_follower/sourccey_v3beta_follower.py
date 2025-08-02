@@ -144,20 +144,25 @@ class SourcceyV3BetaFollower(Robot):
         logger.info(f"Starting automatic calibration of {self}")
         logger.warning("WARNING: Robot will move to detect mechanical limits. Ensure clear workspace!")
 
-        # Ensure torque is disabled for safety
-        self.bus.disable_torque()
+        # Step 1: Set up motors for calibration
+        logger.info("Setting up motors for calibration...")
         for motor in self.bus.motors:
             self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        # Step 1: Detect actual mechanical limits using current monitoring
+        # Step 2: Detect actual mechanical limits using current monitoring
+        # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
         detected_ranges = self._detect_mechanical_limits()
 
-        # Step 2: Calculate homing offsets to center each range
+        # Step 3: Disable torque for safety before setting homing offsets
+        logger.info("Disabling torque for safety...")
+        self.bus.disable_torque()
+
+        # Step 4: Calculate homing offsets to center each range
         logger.info("Calculating homing offsets to center detected ranges...")
         homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
 
-        # Step 3: Create calibration dictionary
+        # Step 5: Create calibration dictionary
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -169,7 +174,7 @@ class SourcceyV3BetaFollower(Robot):
                 range_max=detected_ranges[motor]["max"],
             )
 
-        # Step 4: Write calibration to motors and save
+        # Step 6: Write calibration to motors and save
         self.bus.write_calibration(self.calibration)
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
@@ -342,7 +347,9 @@ class SourcceyV3BetaFollower(Robot):
 
         logger.info(f"{self} disconnected.")
 
+    ############################
     # Auto Calibration Functions
+    ############################
     def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
         """Calculate homing offsets to center each motor's range around the middle of its detected limits.
 
@@ -392,42 +399,52 @@ class SourcceyV3BetaFollower(Robot):
         max_search_distance = 2000  # Maximum distance to search from current position
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
 
-        for motor in self.bus.motors:
-            logger.info(f"Detecting limits for {motor}...")
+        # Enable torque for limit detection
+        logger.info("Enabling torque for mechanical limit detection...")
+        self.bus.enable_torque()
 
-            # Start from current position
-            start_pos = current_positions[motor]
-            min_pos = start_pos
-            max_pos = start_pos
+        try:
+            for motor in self.bus.motors:
+                logger.info(f"Detecting limits for {motor}...")
 
-            # Search in positive direction
-            logger.info(f"  Searching positive direction from {start_pos}")
-            for step in range(0, max_search_distance, search_step):
-                test_pos = start_pos + step
-                if self._test_position_safe(motor, test_pos, current_threshold):
-                    max_pos = test_pos
-                else:
-                    logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
-                    break
+                # Start from current position
+                start_pos = current_positions[motor]
+                min_pos = start_pos
+                max_pos = start_pos
 
-            # Search in negative direction
-            logger.info(f"  Searching negative direction from {start_pos}")
-            for step in range(0, max_search_distance, search_step):
-                test_pos = start_pos - step
-                if self._test_position_safe(motor, test_pos, current_threshold):
-                    min_pos = test_pos
-                else:
-                    logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
-                    break
+                # Search in positive direction
+                logger.info(f"  Searching positive direction from {start_pos}")
+                for step in range(0, max_search_distance, search_step):
+                    test_pos = start_pos + step
+                    if self._test_position_safe(motor, test_pos, current_threshold):
+                        max_pos = test_pos
+                    else:
+                        logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
+                        break
 
-            # Add safety margins to detected ranges
-            safety_margin = 100  # Add 100 encoder units as safety margin
-            detected_ranges[motor] = {
-                "min": min_pos + safety_margin,
-                "max": max_pos - safety_margin
-            }
+                # Search in negative direction
+                logger.info(f"  Searching negative direction from {start_pos}")
+                for step in range(0, max_search_distance, search_step):
+                    test_pos = start_pos - step
+                    if self._test_position_safe(motor, test_pos, current_threshold):
+                        min_pos = test_pos
+                    else:
+                        logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
+                        break
 
-            logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
+                # Add safety margins to detected ranges
+                safety_margin = 100  # Add 100 encoder units as safety margin
+                detected_ranges[motor] = {
+                    "min": min_pos + safety_margin,
+                    "max": max_pos - safety_margin
+                }
+
+                logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
+
+        finally:
+            # Always disable torque after limit detection for safety
+            logger.info("Disabling torque after limit detection...")
+            self.bus.disable_torque()
 
         return detected_ranges
 

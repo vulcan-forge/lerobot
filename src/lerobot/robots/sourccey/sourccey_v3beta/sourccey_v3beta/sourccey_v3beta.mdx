@@ -1,17 +1,13 @@
----List of commands to help train Sourccey V2 Beta
+---List of commands to help train Sourccey V3 Beta
+
+###
+Sourccey Commands
+###
 
 ```bash
-uv run -m lerobot.calibrate \
-    --robot.type=sourccey_v3beta \
-    --robot.port=/dev/ttyACM0
+uv run -m lerobot.auto_calibrate \
+    --robot.type=sourccey_v3beta\
     --robot.id=sourccey_v3beta
-```
-
-```bash
-uv run -m lerobot.calibrate \
-    --teleop.type=sourccey_v3beta_teleop \
-    --teleop.port=COM29 \
-    --teleop.id=sourccey_v3beta_teleop
 ```
 
 To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
@@ -24,6 +20,10 @@ uv run -m lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta.sourccey_v3bet
 nano ~/.cache/huggingface/lerobot/calibration/robots/sourccey_v3beta_follower/sourccey_v3beta_left.json
 nano ~/.cache/huggingface/lerobot/calibration/robots/sourccey_v3beta_follower/sourccey_v3beta_right.json
 ```
+
+###
+Computer Commands
+###
 
 Then on your computer run the below source command then the teleoperate command
 

@@ -74,7 +74,6 @@ class AutoCalibrateConfig:
 
         self.device = self.robot if self.robot else self.teleop
 
-
 @draccus.wrap()
 def auto_calibrate(cfg: AutoCalibrateConfig):
     """Automatically calibrate a robot or teleoperator using current monitoring."""
