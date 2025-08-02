@@ -427,7 +427,7 @@ class SourcceyV3BetaFollower(Robot):
                 "max_search_distance": 4096,
                 "search_positive": False,
                 "search_negative": True,  # Only search positive (upward)
-                "current_threshold_multiplier": 1.5  # Higher current threshold for lifting
+                "current_threshold_multiplier": 2.0  # Increased from 1.5 to 2.0 for higher threshold
             },
             "elbow_flex": {
                 "max_search_distance": 2048,
@@ -654,12 +654,19 @@ class SourcceyV3BetaFollower(Robot):
             time.sleep(0.25)
 
             # Check current multiple times to ensure stability
-            for _ in range(2):  # Check twice for stability
+            current_readings = []
+            for i in range(3):  # Check three times for better stability
                 current = self.bus.read("Present_Current", motor, normalize=False)
+                current_readings.append(current)
                 if current > current_threshold:
-                    logger.debug(f"  {motor} current {current}mA > {current_threshold}mA at position {position}")
+                    logger.info(f"  {motor} current limit hit: {current}mA > {current_threshold}mA at position {position}")
+                    logger.info(f"  Current readings: {current_readings}")
                     return False
                 time.sleep(0.05)
+
+            # Log successful position test with current info
+            avg_current = sum(current_readings) / len(current_readings)
+            logger.info(f"  {motor} position {position} safe: avg current {avg_current:.1f}mA < {current_threshold}mA")
 
             return True
 
