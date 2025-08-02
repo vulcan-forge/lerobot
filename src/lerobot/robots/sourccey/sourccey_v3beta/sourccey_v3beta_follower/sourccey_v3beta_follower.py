@@ -415,14 +415,44 @@ class SourcceyV3BetaFollower(Robot):
         search_step = 50  # Back to 50 for safety - prevents damage
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
 
-        # Motor-specific search distances based on their expected ranges
-        motor_search_distances = {
-            "shoulder_pan": 2048,    # ~270° range
-            "shoulder_lift": 4096,   # Full range for shoulder lift
-            "elbow_flex": 2048,      # ~270° range
-            "wrist_flex": 2048,      # ~270° range
-            "wrist_roll": 4096,      # Full 360° range
-            "gripper": 2048,         # Gripper range
+        # Motor-specific search distances and current thresholds
+        motor_search_config = {
+            "shoulder_pan": {
+                "max_search_distance": 2048,
+                "search_positive": True,
+                "search_negative": True,
+                "current_threshold_multiplier": 1.0
+            },
+            "shoulder_lift": {
+                "max_search_distance": 4096,
+                "search_positive": True,
+                "search_negative": False,  # Only search positive (upward)
+                "current_threshold_multiplier": 1.5  # Higher current threshold for lifting
+            },
+            "elbow_flex": {
+                "max_search_distance": 2048,
+                "search_positive": True,
+                "search_negative": True,
+                "current_threshold_multiplier": 1.0
+            },
+            "wrist_flex": {
+                "max_search_distance": 2048,
+                "search_positive": True,
+                "search_negative": True,
+                "current_threshold_multiplier": 1.0
+            },
+            "wrist_roll": {
+                "max_search_distance": 4096,
+                "search_positive": True,
+                "search_negative": True,
+                "current_threshold_multiplier": 1.0
+            },
+            "gripper": {
+                "max_search_distance": 2048,
+                "search_positive": True,
+                "search_negative": True,
+                "current_threshold_multiplier": 1.0
+            }
         }
 
         # Enable torque for limit detection
@@ -433,9 +463,22 @@ class SourcceyV3BetaFollower(Robot):
             for motor in self.bus.motors:
                 logger.info(f"Detecting limits for {motor}...")
 
-                # Get motor-specific search distance
-                max_search_distance = motor_search_distances.get(motor, 2048)  # Default to 2048
+                # Get motor-specific configuration
+                motor_config = motor_search_config.get(motor, {
+                    "max_search_distance": 2048,
+                    "search_positive": True,
+                    "search_negative": True,
+                    "current_threshold_multiplier": 1.0
+                })
+
+                max_search_distance = motor_config["max_search_distance"]
+                search_positive = motor_config["search_positive"]
+                search_negative = motor_config["search_negative"]
+                motor_current_threshold = current_threshold * motor_config["current_threshold_multiplier"]
+
                 logger.info(f"  Using search distance: {max_search_distance}")
+                logger.info(f"  Search positive: {search_positive}, Search negative: {search_negative}")
+                logger.info(f"  Current threshold: {motor_current_threshold}mA (base: {current_threshold}mA)")
 
                 # Get drive mode for this motor
                 drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -446,25 +489,37 @@ class SourcceyV3BetaFollower(Robot):
                 min_pos = start_pos
                 max_pos = start_pos
 
-                # Search in positive direction
-                logger.info(f"  Searching positive direction from {start_pos}")
-                for step in range(0, max_search_distance, search_step):
-                    test_pos = start_pos + step
-                    if self._test_position_safe(motor, test_pos, current_threshold, drive_mode):
-                        max_pos = test_pos
-                    else:
-                        logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
-                        break
+                # Search in positive direction if configured
+                if search_positive:
+                    logger.info(f"  Searching positive direction from {start_pos}")
+                    for step in range(0, max_search_distance, search_step):
+                        test_pos = start_pos + step
+                        if test_pos > 4095:  # Encoder limit
+                            logger.info(f"  Reached encoder limit at position {test_pos}")
+                            max_pos = 4095
+                            break
 
-                # Search in negative direction
-                logger.info(f"  Searching negative direction from {start_pos}")
-                for step in range(0, max_search_distance, search_step):
-                    test_pos = start_pos - step
-                    if self._test_position_safe(motor, test_pos, current_threshold, drive_mode):
-                        min_pos = test_pos
-                    else:
-                        logger.info(f"  Hit limit at position {test_pos} (current exceeded threshold)")
-                        break
+                        if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
+                            max_pos = test_pos
+                        else:
+                            logger.info(f"  Hit positive limit at position {test_pos} (current exceeded threshold)")
+                            break
+
+                # Search in negative direction if configured
+                if search_negative:
+                    logger.info(f"  Searching negative direction from {start_pos}")
+                    for step in range(0, max_search_distance, search_step):
+                        test_pos = start_pos - step
+                        if test_pos < 0:  # Encoder limit
+                            logger.info(f"  Reached encoder limit at position {test_pos}")
+                            min_pos = 0
+                            break
+
+                        if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
+                            min_pos = test_pos
+                        else:
+                            logger.info(f"  Hit negative limit at position {test_pos} (current exceeded threshold)")
+                            break
 
                 # Calculate the middle position of the detected range
                 middle_pos = (min_pos + max_pos) // 2
@@ -491,6 +546,15 @@ class SourcceyV3BetaFollower(Robot):
                 # Verify final position before moving to next joint
                 final_pos = self.bus.read("Present_Position", motor, normalize=False)
                 logger.info(f"  Final position of {motor}: {final_pos}")
+
+        except Exception as e:
+            logger.error(f"Error during mechanical limit detection: {e}")
+            # Disable torque immediately on error
+            try:
+                self.bus.disable_torque()
+            except:
+                pass
+            raise
 
         finally:
             # Always disable torque after limit detection for safety
@@ -589,10 +653,13 @@ class SourcceyV3BetaFollower(Robot):
             # Wait for movement to complete and check current - reduced wait time
             time.sleep(0.25)
 
-            # Check current fewer times for speed - reduced from 2 to 1 check
-            current = self.bus.read("Present_Current", motor, normalize=False)
-            if current > current_threshold:
-                return False
+            # Check current multiple times to ensure stability
+            for _ in range(2):  # Check twice for stability
+                current = self.bus.read("Present_Current", motor, normalize=False)
+                if current > current_threshold:
+                    logger.debug(f"  {motor} current {current}mA > {current_threshold}mA at position {position}")
+                    return False
+                time.sleep(0.05)
 
             return True
 
