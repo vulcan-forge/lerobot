@@ -396,7 +396,7 @@ class SourcceyV3BetaFollower(Robot):
         detected_ranges = {}
 
         # Define search parameters - motor-specific search distances
-        search_step = 50
+        search_step = 100  # Increased from 50 for faster search
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
 
         # Motor-specific search distances based on their expected ranges
@@ -449,9 +449,15 @@ class SourcceyV3BetaFollower(Robot):
                 # Calculate the middle position of the detected range
                 middle_pos = (min_pos + max_pos) // 2
 
-                # Reset the joint to its middle position
+                # Reset the joint to its middle position with verification
                 logger.info(f"  Resetting {motor} to middle position {middle_pos}")
-                self._move_to_position_safe(motor, middle_pos)
+                success = self._move_to_position_safe_with_retry(motor, middle_pos)
+
+                if not success:
+                    logger.warning(f"  Failed to move {motor} to middle position. Using fallback position.")
+                    # Use a conservative middle position as fallback
+                    fallback_middle = (min_pos + max_pos) // 2
+                    self._move_to_position_safe_with_retry(motor, fallback_middle)
 
                 # Add safety margins to detected ranges
                 safety_margin = 100  # Add 100 encoder units as safety margin
@@ -461,7 +467,10 @@ class SourcceyV3BetaFollower(Robot):
                 }
 
                 logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
-                logger.info(f"  Reset {motor} to middle position: {middle_pos}")
+
+                # Verify final position before moving to next joint
+                final_pos = self.bus.read("Present_Position", motor, normalize=False)
+                logger.info(f"  Final position of {motor}: {final_pos}")
 
         finally:
             # Always disable torque after limit detection for safety
@@ -469,6 +478,49 @@ class SourcceyV3BetaFollower(Robot):
             self.bus.disable_torque()
 
         return detected_ranges
+
+    def _move_to_position_safe_with_retry(self, motor: str, position: int, max_retries: int = 2) -> bool:
+        """Safely move a motor to a specific position with retry mechanism and verification.
+
+        Args:
+            motor: Motor name to move
+            position: Target position
+            max_retries: Maximum number of retry attempts
+
+        Returns:
+            True if successfully moved to position, False otherwise
+        """
+        tolerance = 100  # Increased tolerance for faster operation
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"    Attempt {attempt + 1}/{max_retries} to move {motor} to {position}")
+
+                # Move to target position
+                self.bus.write("Goal_Position", motor, position, normalize=False)
+
+                # Wait for movement to complete - reduced wait time
+                time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
+
+                # Verify we reached the position
+                actual_pos = self.bus.read("Present_Position", motor, normalize=False)
+
+                if abs(actual_pos - position) <= tolerance:
+                    logger.info(f"    {motor} successfully moved to position {actual_pos}")
+                    return True
+                else:
+                    logger.warning(f"    {motor} did not reach target position {position}, actual: {actual_pos}")
+                    if attempt < max_retries - 1:
+                        logger.info(f"    Retrying...")
+                        time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
+
+            except Exception as e:
+                logger.warning(f"    Error moving {motor} to position {position} (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
+
+        logger.error(f"    Failed to move {motor} to position {position} after {max_retries} attempts")
+        return False
 
     def _move_to_position_safe(self, motor: str, position: int) -> None:
         """Safely move a motor to a specific position with current monitoring.
@@ -482,11 +534,11 @@ class SourcceyV3BetaFollower(Robot):
             self.bus.write("Goal_Position", motor, position, normalize=False)
 
             # Wait for movement to complete - reduced wait time
-            time.sleep(0.5)  # Reduced from 1.0 to 0.5 seconds
+            time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
 
             # Verify we reached the position (with some tolerance)
             actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-            tolerance = 50  # Allow 50 encoder units of tolerance
+            tolerance = 100  # Increased tolerance for faster operation
 
             if abs(actual_pos - position) > tolerance:
                 logger.warning(f"  {motor} did not reach target position {position}, actual: {actual_pos}")
@@ -512,14 +564,12 @@ class SourcceyV3BetaFollower(Robot):
             self.bus.write("Goal_Position", motor, position, normalize=False)
 
             # Wait for movement to complete and check current - reduced wait time
-            time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
+            time.sleep(0.15)  # Reduced from 0.25 to 0.15 seconds
 
-            # Check current fewer times for speed - reduced from 3 to 2 checks
-            for _ in range(2):  # Reduced from 3 to 2 checks
-                current = self.bus.read("Present_Current", motor, normalize=False)
-                if current > current_threshold:
-                    return False
-                time.sleep(0.05)  # Reduced from 0.1 to 0.05 seconds
+            # Check current fewer times for speed - reduced from 2 to 1 check
+            current = self.bus.read("Present_Current", motor, normalize=False)
+            if current > current_threshold:
+                return False
 
             return True
 
