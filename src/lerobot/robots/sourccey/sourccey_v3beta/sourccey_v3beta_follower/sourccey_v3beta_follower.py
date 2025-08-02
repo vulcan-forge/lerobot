@@ -134,9 +134,10 @@ class SourcceyV3BetaFollower(Robot):
         """Automatically calibrate the robot using current monitoring to detect mechanical limits.
 
         This method performs automatic calibration by:
-        1. Detecting mechanical limits using current monitoring
-        2. Setting homing offsets to center the range around the middle of detected limits
-        3. Writing calibration to motors and saving to file
+        1. Loading and applying initial calibration to set known starting positions
+        2. Detecting mechanical limits using current monitoring
+        3. Setting homing offsets to center the range around the middle of detected limits
+        4. Writing calibration to motors and saving to file
 
         WARNING: This process involves moving the robot to find limits.
         Ensure the robot arm is clear of obstacles and people during calibration.
@@ -144,25 +145,35 @@ class SourcceyV3BetaFollower(Robot):
         logger.info(f"Starting automatic calibration of {self}")
         logger.warning("WARNING: Robot will move to detect mechanical limits. Ensure clear workspace!")
 
-        # Step 1: Set up motors for calibration
+        # Step 1: Load and apply initial calibration
+        logger.info("Loading and applying initial calibration...")
+        initial_calibration = self._load_initial_calibration()
+        if initial_calibration:
+            logger.info("Applying initial calibration to motors...")
+            self.bus.write_calibration(initial_calibration)
+            logger.info("Initial calibration applied successfully")
+        else:
+            logger.warning("No initial calibration found, proceeding with current motor state")
+
+        # Step 2: Set up motors for calibration
         logger.info("Setting up motors for calibration...")
         for motor in self.bus.motors:
             self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        # Step 2: Detect actual mechanical limits using current monitoring
+        # Step 3: Detect actual mechanical limits using current monitoring
         # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
         detected_ranges = self._detect_mechanical_limits()
 
-        # Step 3: Disable torque for safety before setting homing offsets
+        # Step 4: Disable torque for safety before setting homing offsets
         logger.info("Disabling torque for safety...")
         self.bus.disable_torque()
 
-        # Step 4: Calculate homing offsets to center each range
+        # Step 5: Calculate homing offsets to center each range
         logger.info("Calculating homing offsets to center detected ranges...")
         homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
 
-        # Step 5: Create calibration dictionary
+        # Step 6: Create calibration dictionary
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -174,7 +185,7 @@ class SourcceyV3BetaFollower(Robot):
                 range_max=detected_ranges[motor]["max"],
             )
 
-        # Step 6: Write calibration to motors and save
+        # Step 7: Write calibration to motors and save
         self.bus.write_calibration(self.calibration)
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
@@ -595,3 +606,49 @@ class SourcceyV3BetaFollower(Robot):
         }
 
         return safe_ranges
+
+    def _load_initial_calibration(self) -> dict[str, MotorCalibration] | None:
+        """Load initial calibration from the appropriate file based on orientation.
+
+        Returns:
+            Dictionary of MotorCalibration objects or None if file not found
+        """
+        import json
+        import pathlib
+
+        # Determine which calibration file to load based on orientation
+        if self.config.orientation == "left":
+            config_filename = "left_arm_robot_initial_calibration.json"
+        else:
+            config_filename = "right_arm_robot_initial_calibration.json"
+
+        # Look for the calibration file in the sourccey_v3beta directory
+        config_path = pathlib.Path(__file__).parent.parent / config_filename
+
+        if not config_path.exists():
+            logger.warning(f"Initial calibration file not found: {config_path}")
+            return None
+
+        try:
+            with open(config_path, 'r') as f:
+                config_data = json.load(f)
+
+            # Convert JSON data to MotorCalibration objects
+            initial_calibration = {}
+            for motor_name, motor_data in config_data.items():
+                initial_calibration[motor_name] = MotorCalibration(
+                    id=motor_data["id"],
+                    drive_mode=motor_data["drive_mode"],
+                    homing_offset=motor_data["homing_offset"],
+                    range_min=motor_data["range_min"],
+                    range_max=motor_data["range_max"],
+                )
+
+            logger.info(f"Loaded initial calibration from {config_path}")
+            logger.info(f"Initial calibration includes motors: {list(initial_calibration.keys())}")
+
+            return initial_calibration
+
+        except Exception as e:
+            logger.error(f"Failed to load initial calibration from {config_path}: {e}")
+            return None
