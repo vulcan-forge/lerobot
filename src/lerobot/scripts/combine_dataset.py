@@ -19,10 +19,10 @@ from pathlib import Path
 
 from huggingface_hub import HfApi
 
-from lerobot.common.datasets.factory import combine_datasets
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.common.datasets.utils import create_lerobot_dataset_card
-from lerobot.common.utils.utils import init_logging
+from lerobot.datasets.factory import combine_datasets
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.utils import create_lerobot_dataset_card
+from lerobot.utils.utils import init_logging
 
 
 def main():
