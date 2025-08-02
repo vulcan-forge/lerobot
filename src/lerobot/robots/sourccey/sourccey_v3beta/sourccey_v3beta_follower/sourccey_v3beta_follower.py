@@ -522,10 +522,16 @@ class SourcceyV3BetaFollower(Robot):
                             break
 
                 # Calculate the middle position of the detected range
-                middle_pos = (min_pos + max_pos) // 2
+                # For shoulder_lift, use original starting position instead of middle
+                if motor == "shoulder_lift":
+                    middle_pos = start_pos
+                    logger.info(f"  Using original starting position for {motor}: {middle_pos}")
+                else:
+                    middle_pos = (min_pos + max_pos) // 2
+                    logger.info(f"  Using middle position for {motor}: {middle_pos}")
 
                 # Reset the joint to its middle position with verification
-                logger.info(f"  Resetting {motor} to middle position {middle_pos}")
+                logger.info(f"  Resetting {motor} to position {middle_pos}")
                 success = self._move_to_position_safe_with_retry(motor, middle_pos, drive_mode)
 
                 if not success:
