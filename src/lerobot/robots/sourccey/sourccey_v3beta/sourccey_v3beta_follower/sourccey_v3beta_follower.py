@@ -395,8 +395,8 @@ class SourcceyV3BetaFollower(Robot):
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
         detected_ranges = {}
 
-        # Define search parameters
-        search_step = 50  # Small increment to move
+        # Define search parameters - optimized for speed
+        search_step = 50
         max_search_distance = 2000  # Maximum distance to search from current position
         current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
 
@@ -468,8 +468,8 @@ class SourcceyV3BetaFollower(Robot):
             # Move to target position
             self.bus.write("Goal_Position", motor, position, normalize=False)
 
-            # Wait for movement to complete
-            time.sleep(1.0)  # Allow more time for movement to middle position
+            # Wait for movement to complete - reduced wait time
+            time.sleep(0.5)  # Reduced from 1.0 to 0.5 seconds
 
             # Verify we reached the position (with some tolerance)
             actual_pos = self.bus.read("Present_Position", motor, normalize=False)
@@ -498,15 +498,15 @@ class SourcceyV3BetaFollower(Robot):
             # Move to test position
             self.bus.write("Goal_Position", motor, position, normalize=False)
 
-            # Wait for movement to complete and check current
-            time.sleep(0.5)  # Allow time for movement
+            # Wait for movement to complete and check current - reduced wait time
+            time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
 
-            # Check current multiple times to ensure stability
-            for _ in range(3):
+            # Check current fewer times for speed - reduced from 3 to 2 checks
+            for _ in range(2):  # Reduced from 3 to 2 checks
                 current = self.bus.read("Present_Current", motor, normalize=False)
                 if current > current_threshold:
                     return False
-                time.sleep(0.1)
+                time.sleep(0.05)  # Reduced from 0.1 to 0.05 seconds
 
             return True
 
