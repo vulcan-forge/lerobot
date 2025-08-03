@@ -392,12 +392,12 @@ class SourcceyV3BetaFollower(Robot):
 
         # Base parameters
         base_step_size = 50
-        settle_time = 0.1
+        settle_time = 0.5
 
         # Motor-specific configuration
         motor_configs = {
             "shoulder_lift": {
-                "search_range": 4096,
+                "search_range": 3800,
                 "search_step": base_step_size * 2,
                 "max_current": self.config.max_current_safety_threshold,
                 "search_positive": False,
@@ -464,7 +464,7 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
-                time.sleep(settle_time * 2)  # Extra time to return to start
+                time.sleep(settle_time * 10)  # Extra time to return to start
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
                 max_pos = start_pos
@@ -500,7 +500,7 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
-                time.sleep(settle_time * 2)
+                time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
                 min_pos = start_pos
