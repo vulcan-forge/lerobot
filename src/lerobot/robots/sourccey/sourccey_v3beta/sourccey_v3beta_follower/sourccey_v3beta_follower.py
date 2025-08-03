@@ -385,7 +385,7 @@ class SourcceyV3BetaFollower(Robot):
         # Get current positions as starting points
         start_positions = self.bus.sync_read("Present_Position", normalize=False)
         reset_positions = start_positions.copy()
-        reset_positions['shoulder_lift'] = 2047 # Manually set shoulder_lift to half way position
+        reset_positions['shoulder_lift'] = 1536 # Manually set shoulder_lift to half way position
 
         # Initialize results dictionary
         detected_ranges = {}
