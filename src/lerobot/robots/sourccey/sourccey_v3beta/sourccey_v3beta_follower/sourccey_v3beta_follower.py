@@ -257,6 +257,137 @@ class SourcceyV3BetaFollower(Robot):
             return self._handle_overcurrent_motors(overcurrent_motors, goal_pos, present_pos)
         return {f"{motor}.pos": val for motor, val in goal_pos.items()}
 
+    def move_safe(self, goal_positions: dict[str, float], duration: float,
+                  update_rate: float = 50.0, safety_check: bool = True) -> dict[str, Any]:
+        """Move to goal positions over a specified duration to prevent high g-forces.
+
+        This function interpolates between the current position and goal position
+        over the specified duration, sending intermediate positions at the specified
+        update rate. This prevents sudden movements that could damage the robot.
+
+        Args:
+            goal_positions: Dictionary mapping motor names to target positions
+                           (e.g., {"shoulder_pan": 0.5, "shoulder_lift": -0.3})
+            duration: Time in seconds to complete the movement
+            update_rate: Frequency in Hz for sending position updates (default: 50Hz)
+            safety_check: Whether to perform safety checks during movement (default: True)
+
+        Returns:
+            Dictionary containing the final action sent and movement status
+
+        Raises:
+            DeviceNotConnectedError: if robot is not connected
+            ValueError: if duration is <= 0 or update_rate is <= 0
+        """
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected.")
+
+        if duration <= 0:
+            raise ValueError("Duration must be positive")
+
+        if update_rate <= 0:
+            raise ValueError("Update rate must be positive")
+
+        # Get current positions
+        present_positions = self.bus.sync_read("Present_Position")
+
+        # Convert goal_positions to the expected format with ".pos" suffix
+        goal_action = {f"{motor}.pos": pos for motor, pos in goal_positions.items()}
+
+        # Calculate number of steps and time between updates
+        num_steps = int(duration * update_rate)
+        step_time = duration / num_steps
+
+        logger.info(f"Starting safe movement over {duration}s with {num_steps} steps")
+
+        # Interpolate and send positions
+        for step in range(num_steps + 1):  # +1 to include the final position
+            # Calculate interpolation factor (0 to 1)
+            t = step / num_steps
+
+            # Interpolate between current and goal positions
+            interpolated_positions = {}
+            for motor in goal_positions.keys():
+                current_pos = present_positions[motor]
+                goal_pos = goal_positions[motor]
+                interpolated_pos = current_pos + t * (goal_pos - current_pos)
+                interpolated_positions[motor] = interpolated_pos
+
+            # Convert to action format
+            interpolated_action = {f"{motor}.pos": pos for motor, pos in interpolated_positions.items()}
+
+            # Send the interpolated position
+            try:
+                sent_action = self.send_action(interpolated_action)
+
+                # Perform safety check if enabled
+                if safety_check and step < num_steps:  # Don't check on final step
+                    overcurrent_motors = self._check_current_safety()
+                    if overcurrent_motors:
+                        logger.warning(f"Safety triggered during safe movement: {overcurrent_motors}")
+                        return {
+                            "action_sent": sent_action,
+                            "status": "safety_triggered",
+                            "overcurrent_motors": overcurrent_motors,
+                            "step": step,
+                            "total_steps": num_steps
+                        }
+
+                # Wait for next step (except on final step)
+                if step < num_steps:
+                    time.sleep(step_time)
+
+            except Exception as e:
+                logger.error(f"Error during safe movement at step {step}: {e}")
+                return {
+                    "action_sent": sent_action if 'sent_action' in locals() else {},
+                    "status": "error",
+                    "error": str(e),
+                    "step": step,
+                    "total_steps": num_steps
+                }
+
+        logger.info("Safe movement completed successfully")
+        return {
+            "action_sent": sent_action,
+            "status": "completed",
+            "step": num_steps,
+            "total_steps": num_steps
+        }
+
+    def move_safe_relative(self, relative_movements: dict[str, float], duration: float,
+                          update_rate: float = 50.0, safety_check: bool = True) -> dict[str, Any]:
+        """Move relative to current positions over a specified duration.
+
+        This is a convenience function that calculates goal positions relative to
+        current positions and calls move_safe.
+
+        Args:
+            relative_movements: Dictionary mapping motor names to relative movements
+                               (e.g., {"shoulder_pan": 0.1, "shoulder_lift": -0.2})
+            duration: Time in seconds to complete the movement
+            update_rate: Frequency in Hz for sending position updates (default: 50Hz)
+            safety_check: Whether to perform safety checks during movement (default: True)
+
+        Returns:
+            Dictionary containing the final action sent and movement status
+        """
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected.")
+
+        # Get current positions
+        present_positions = self.bus.sync_read("Present_Position")
+
+        # Calculate goal positions by adding relative movements to current positions
+        goal_positions = {}
+        for motor, relative_movement in relative_movements.items():
+            if motor in present_positions:
+                goal_positions[motor] = present_positions[motor] + relative_movement
+            else:
+                logger.warning(f"Motor {motor} not found in present positions")
+
+        return self.move_safe(goal_positions, duration, update_rate, safety_check)
+
     def _apply_minimum_action(self, goal_present_pos: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
         """Apply a minimum action to the robot's geared down motors.
 
@@ -463,10 +594,12 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos}")
+                logger.info(f"Resetting {motor_name} to {reset_pos} using safe movement")
                 logger.info("")
-                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
-                time.sleep(settle_time * 10)  # Extra time to return to start
+                # Use move_safe to reset to the reset position over 3 seconds
+                reset_result = self.move_safe({motor_name: reset_pos}, duration=3.0, safety_check=False)
+                if reset_result["status"] != "completed":
+                    logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
                 max_pos = start_pos
@@ -501,10 +634,12 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos}")
+                logger.info(f"Resetting {motor_name} to {reset_pos} using safe movement")
                 logger.info("")
-                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
-                time.sleep(settle_time * 10)
+                # Use move_safe to reset to the reset position over 3 seconds
+                reset_result = self.move_safe({motor_name: reset_pos}, duration=3.0, safety_check=False)
+                if reset_result["status"] != "completed":
+                    logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
                 min_pos = start_pos
