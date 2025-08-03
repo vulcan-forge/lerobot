@@ -447,9 +447,10 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw
-                    current, limit_reached = self._check_current(motor_name, current_pos, config, "positive")
+                    current = self.bus.read("Present_Current", motor_name, normalize=False)
 
-                    if limit_reached:
+                    if current > config["max_current"]:
+                        logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         max_pos = current_pos
                         break
 
@@ -482,9 +483,10 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw
-                    current, limit_reached = self._check_current(motor_name, current_pos, config, "negative")
+                    current = self.bus.read("Present_Current", motor_name, normalize=False)
 
-                    if limit_reached:
+                    if current > config["max_current"]:
+                        logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         min_pos = current_pos
                         break
 
@@ -511,35 +513,3 @@ class SourcceyV3BetaFollower(Robot):
 
         logger.info("Mechanical limit detection completed")
         return detected_ranges
-
-    def _check_current(self, motor_name: str, current_pos: int, config: dict, direction: str) -> tuple[int, bool]:
-        """
-        Check current draw for a motor with overload recovery.
-
-        Args:
-            motor_name: Name of the motor to check
-            current_pos: Current position of the motor
-            config: Motor configuration dictionary
-            direction: Direction being tested ("positive" or "negative")
-
-        Returns:
-            tuple: (current_value, limit_reached)
-            - current_value: The current reading (or 0 if overload)
-            - limit_reached: True if a limit was reached (overcurrent or overload)
-        """
-        try:
-            current = self.bus.read("Present_Current", motor_name, normalize=False)
-
-            if current > config["max_current"]:
-                logger.info(f"    Hit {direction} limit for {motor_name} at position {current_pos} (current: {current}mA)")
-                return current, True
-            else:
-                return current, False
-
-        except RuntimeError as e:
-            if "Overload error" in str(e):
-                logger.warning(f"    Overload detected for {motor_name} at position {current_pos} in {direction} direction")
-                return 0, True  # Treat overload as a limit
-            else:
-                logger.error(f"    Communication error for {motor_name}: {e}")
-                return 0, True  # Treat communication error as a limit
