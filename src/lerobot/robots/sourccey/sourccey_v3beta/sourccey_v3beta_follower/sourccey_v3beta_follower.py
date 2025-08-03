@@ -462,13 +462,13 @@ class SourcceyV3BetaFollower(Robot):
                 else:
                     logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} positive direction")
                     max_pos = current_pos
+
+                # Return to start position
+                self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+                time.sleep(settle_time * 2)  # Extra time to return to start
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
                 max_pos = start_pos
-
-            # Return to start position
-            self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
-            time.sleep(settle_time * 2)  # Extra time to return to start
 
             # Test negative direction (decreasing position)
             if config["search_negative"]:
@@ -498,13 +498,13 @@ class SourcceyV3BetaFollower(Robot):
                 else:
                     logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} negative direction")
                     min_pos = current_pos
+
+                # Return to start position
+                self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+                time.sleep(settle_time * 2)
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
                 min_pos = start_pos
-
-            # Return to start position
-            self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
-            time.sleep(settle_time * 2)
 
             # Store detected range
             detected_ranges[motor_name] = {
