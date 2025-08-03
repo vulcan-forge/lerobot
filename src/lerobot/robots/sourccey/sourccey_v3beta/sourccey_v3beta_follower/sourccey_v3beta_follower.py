@@ -361,252 +361,148 @@ class SourcceyV3BetaFollower(Robot):
         homing_offsets["shoulder_lift"] = shoulder_lift_homing_offset["shoulder_lift"]
         return homing_offsets
 
-    def _detect_mechanical_limits(self) -> dict[str, dict[str, int]]:
-        """Detect mechanical limits for each motor using current monitoring.
+    def _detect_mechanical_limits(self) -> dict[str, dict[str, float]]:
+        """
+        Detect the mechanical limits of the robot using current monitoring.
 
-        This method moves each joint in small increments while monitoring current.
-        When current exceeds the safety threshold, it assumes a mechanical limit has been reached.
-        After testing each joint, it resets to the middle position to avoid restricting other joints.
+        This function moves each motor incrementally while monitoring current draw.
+        When a motor hits a mechanical limit, the current will spike, indicating
+        the limit has been reached.
+
+        Search ranges:
+        - shoulder_lift: 4096 steps in negative direction only, double step size and current threshold
+        - All other motors: 2048 steps in both positive and negative directions
 
         Returns:
-            Dictionary mapping motor names to their detected min/max ranges
+            dict[str, dict[str, float]]: Dictionary mapping motor names to their
+            detected min/max position limits.
         """
-        # Get current positions as starting point
+        logger.info("Starting mechanical limit detection...")
+
+        # Enable torque for all motors to allow movement
+        self.bus.enable_torque()
+
+        # Get current positions as starting points
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
+
+        # Initialize results dictionary
         detected_ranges = {}
 
-        # Define search parameters - motor-specific search distances
-        search_step = 50  # Back to 50 for safety - prevents damage
-        current_threshold = self.config.max_current_safety_threshold * 0.8  # Use 80% of safety threshold
+        # Base parameters
+        base_step_size = 50
+        base_current_threshold = self.config.max_current_safety_threshold * 0.8
+        settle_time = 0.1
 
-        # Motor-specific search distances and current thresholds
-        motor_search_config = {
-            "shoulder_pan": {
-                "max_search_distance": 2048,
-                "search_positive": True,
-                "search_negative": True,
-                "current_threshold_multiplier": 1.0,
-                "search_step": search_step
-            },
+        # Motor-specific configuration
+        motor_configs = {
             "shoulder_lift": {
-                "max_search_distance": 4096,
+                "search_range": 4096,
+                "search_step": base_step_size * 2,
+                "max_current": base_current_threshold * 2,
                 "search_positive": False,
-                "search_negative": True,  # Only search positive (upward)
-                "current_threshold_multiplier": 2.0,  # Increased from 1.5 to 2.0 for higher threshold
-                "search_step": 2 * search_step  # Larger step size for shoulder_lift to overcome extended arm load
-            },
-            "elbow_flex": {
-                "max_search_distance": 2048,
-                "search_positive": True,
-                "search_negative": True,
-                "current_threshold_multiplier": 1.0,
-                "search_step": search_step
-            },
-            "wrist_flex": {
-                "max_search_distance": 2048,
-                "search_positive": True,
-                "search_negative": True,
-                "current_threshold_multiplier": 1.0,
-                "search_step": search_step
-            },
-            "wrist_roll": {
-                "max_search_distance": 2048,
-                "search_positive": True,
-                "search_negative": True,
-                "current_threshold_multiplier": 1.0,
-                "search_step": search_step
-            },
-            "gripper": {
-                "max_search_distance": 2048,
-                "search_positive": True,
-                "search_negative": True,
-                "current_threshold_multiplier": 1.0,
-                "search_step": search_step
+                "search_negative": True
             }
         }
 
-        # Enable torque for limit detection
-        logger.info("Enabling torque for mechanical limit detection...")
-        self.bus.enable_torque()
+        # Default configuration for all other motors
+        default_config = {
+            "search_range": 2048,
+            "search_step": base_step_size,
+            "max_current": base_current_threshold,
+            "search_positive": True,
+            "search_negative": True
+        }
 
-        try:
-            for motor in self.bus.motors:
-                # Get motor-specific configuration
-                motor_config = motor_search_config.get(motor, {
-                    "max_search_distance": 2048,
-                    "search_positive": True,
-                    "search_negative": True,
-                    "current_threshold_multiplier": 1.0
-                })
+        for motor_name in self.bus.motors:
+            logger.info(f"Detecting limits for motor: {motor_name}")
 
-                max_search_distance = motor_config["max_search_distance"]
-                search_positive = motor_config["search_positive"]
-                search_negative = motor_config["search_negative"]
-                motor_current_threshold = current_threshold * motor_config["current_threshold_multiplier"]
-                motor_search_step = motor_config.get("search_step", search_step)
-
-                # Get drive mode for this motor
-                drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
-                logger.info(f"  Drive mode for {motor}: {drive_mode}")
-
-                # Start from current position
-                start_pos = current_positions[motor]
-                min_pos = start_pos
-                max_pos = start_pos
-
-                # Search in positive direction if configured
-                if search_positive:
-                    logger.info(f"  Searching positive direction from {start_pos}")
-                    for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
-                        test_pos = start_pos + step
-
-                        # Check encoder limits first
-                        if test_pos > 4095:
-                            logger.info(f"  Reached encoder limit at position {test_pos}")
-                            max_pos = 4095
-                            break
-
-                        # Test if position is safe (moves and current below threshold)
-                        if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
-                            max_pos = test_pos
-                            logger.info(f"  Successfully moved to {test_pos}")
-                        else:
-                            logger.info(f"  Hit positive limit at position {test_pos} (current exceeded threshold or no movement)")
-                            break
-
-                # Search in negative direction if configured
-                if search_negative:
-                    logger.info(f"  Searching negative direction from {start_pos}")
-                    for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
-                        test_pos = start_pos - step
-
-                        # Check encoder limits first
-                        if test_pos < 0:
-                            logger.info(f"  Reached encoder limit at position {test_pos}")
-                            min_pos = 0
-                            break
-
-                        # Test if position is safe (moves and current below threshold)
-                        if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
-                            min_pos = test_pos
-                            logger.info(f"  Successfully moved to {test_pos}")
-                        else:
-                            logger.info(f"  Hit negative limit at position {test_pos} (current exceeded threshold or no movement)")
-                            break
-
-                # Calculate the middle position of the detected range
-                # For shoulder_lift, use original starting position instead of middle
-                if motor == "shoulder_lift":
-                    middle_pos = start_pos
-                    logger.info(f"  Using original starting position for {motor}: {middle_pos}")
-                else:
-                    middle_pos = (min_pos + max_pos) // 2
-                    logger.info(f"  Using middle position for {motor}: {middle_pos}")
-
-                # Reset the joint to its middle position with verification
-                logger.info(f"  Resetting {motor} to position {middle_pos}")
-                success = self._move_to_position_safe(motor, middle_pos, drive_mode)
-
-                if not success:
-                    logger.warning(f"  Failed to move {motor} to middle position. Using fallback position.")
-                    # Use a conservative middle position as fallback
-                    fallback_middle = (min_pos + max_pos) // 2
-                    self._move_to_position_safe(motor, fallback_middle, drive_mode)
-
-                # Add safety margins to detected ranges
-                safety_margin = 100  # Add 100 encoder units as safety margin
-                detected_ranges[motor] = {
-                    "min": min_pos + safety_margin,
-                    "max": max_pos - safety_margin
-                }
-
-                logger.info(f"  Detected range for {motor}: {detected_ranges[motor]}")
-
-                # Verify final position before moving to next joint
-                final_pos = self.bus.read("Present_Position", motor, normalize=False)
-                logger.info(f"  Final position of {motor}: {final_pos}")
-
-        except Exception as e:
-            logger.error(f"Error during mechanical limit detection: {e}")
-            # Disable torque immediately on error
-            try:
-                self.bus.disable_torque()
-            except:
-                pass
-            raise
-
-        finally:
-            # Always disable torque after limit detection for safety
-            logger.info("Disabling torque after limit detection...")
-            self.bus.disable_torque()
-
-        return detected_ranges
-
-    def _move_to_position_safe(self, motor: str, position: int, drive_mode: int = 0) -> bool:
-        """Safely move a motor to a specific position with overcurrent detection and gradual movement.
-
-        Args:
-            motor: Motor name to move
-            position: Target position
-            drive_mode: Drive mode of the motor (0 or 1)
-
-        Returns:
-            True if successfully moved to position, False otherwise
-        """
-        try:
-            logger.info(f"  Moving {motor} to position {position}")
+            # Get motor-specific configuration or use default
+            config = motor_configs.get(motor_name, default_config)
 
             # Get current position
-            current_pos = self.bus.read("Present_Position", motor, normalize=False)
+            start_pos = current_positions[motor_name]
+            min_pos = start_pos
+            max_pos = start_pos
 
-            # Calculate the distance to move
-            distance = abs(position - current_pos)
+            # Test positive direction (increasing position)
+            if config["search_positive"]:
+                logger.info(f"  Testing positive direction for {motor_name} (range: {config['search_range']})")
+                current_pos = start_pos
+                steps_taken = 0
+                max_steps = config["search_range"] // config["search_step"]
 
-            # If distance is small, move directly
-            if distance <= 200:
-                self.bus.write("Goal_Position", motor, position, normalize=False)
-                time.sleep(0.5)
+                while steps_taken < max_steps:
+                    # Move motor
+                    target_pos = current_pos + config["search_step"]
+                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
+
+                    # Wait for movement to settle
+                    time.sleep(settle_time)
+
+                    # Check current draw
+                    current = self.bus.read("Present_Current", motor_name, normalize=False)
+
+                    if current > config["max_current"]:
+                        logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
+                        max_pos = current_pos
+                        break
+
+                    current_pos = target_pos
+                    steps_taken += 1
+                else:
+                    logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} positive direction")
+                    max_pos = current_pos
             else:
-                # For larger movements, move in steps with current monitoring
-                step_size = 100  # Move in 100-unit steps
-                current_threshold = self.config.max_current_safety_threshold * 0.8
+                logger.info(f"  Skipping positive direction for {motor_name}")
+                max_pos = start_pos
 
-                # Determine direction
-                direction = 1 if position > current_pos else -1
+            # Return to start position
+            self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+            time.sleep(settle_time * 2)  # Extra time to return to start
 
-                # Move in steps
-                for step_pos in range(current_pos, position, direction * step_size):
-                    # Don't overshoot
-                    if (direction > 0 and step_pos >= position) or (direction < 0 and step_pos <= position):
-                        step_pos = position
+            # Test negative direction (decreasing position)
+            if config["search_negative"]:
+                logger.info(f"  Testing negative direction for {motor_name} (range: {config['search_range']})")
+                current_pos = start_pos
+                steps_taken = 0
+                max_steps = config["search_range"] // config["search_step"]
 
-                    # Move to step position
-                    self.bus.write("Goal_Position", motor, step_pos, normalize=False)
-                    time.sleep(0.1)
+                while steps_taken < max_steps:
+                    # Move motor
+                    target_pos = current_pos - config["search_step"]
+                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
-                    # Check current
-                    current = self.bus.read("Present_Current", motor, normalize=False)
-                    if current > current_threshold:
-                        logger.warning(f"  {motor} overcurrent detected: {current}mA > {current_threshold}mA")
-                        return False
+                    # Wait for movement to settle
+                    time.sleep(settle_time)
 
-                    # Check if we reached the step position
-                    actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-                    if abs(actual_pos - step_pos) > 50:
-                        logger.warning(f"  {motor} did not reach step position {step_pos}, actual: {actual_pos}")
-                        return False
+                    # Check current draw
+                    current = self.bus.read("Present_Current", motor_name, normalize=False)
 
-            # Final verification
-            actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-            tolerance = 100
+                    if current > config["max_current"]:
+                        logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
+                        min_pos = current_pos
+                        break
 
-            if abs(actual_pos - position) <= tolerance:
-                logger.info(f"  {motor} successfully moved to position {actual_pos}")
-                return True
+                    current_pos = target_pos
+                    steps_taken += 1
+                else:
+                    logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} negative direction")
+                    min_pos = current_pos
             else:
-                logger.warning(f"  {motor} did not reach target position {position}, actual: {actual_pos}")
-                return False
+                logger.info(f"  Skipping negative direction for {motor_name}")
+                min_pos = start_pos
 
-        except Exception as e:
-            logger.warning(f"Error moving {motor} to position {position}: {e}")
-            return False
+            # Return to start position
+            self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+            time.sleep(settle_time * 2)
+
+            # Store detected range
+            detected_ranges[motor_name] = {
+                "min": float(min_pos),
+                "max": float(max_pos)
+            }
+
+            logger.info(f"  Detected range for {motor_name}: {min_pos} to {max_pos}")
+
+        logger.info("Mechanical limit detection completed")
+        return detected_ranges
