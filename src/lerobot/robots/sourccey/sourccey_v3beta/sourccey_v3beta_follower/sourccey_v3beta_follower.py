@@ -480,7 +480,8 @@ class SourcceyV3BetaFollower(Robot):
                     # Move motor
                     target_pos = current_pos - config["search_step"]
                     if (motor_name == "shoulder_lift"):
-                        import pdb; pdb.set_trace()
+                        print(f"Target position: {target_pos}")
+                        print(f"Reset current_pos: {current_pos}")
                     self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
