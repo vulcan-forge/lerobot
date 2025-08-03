@@ -364,12 +364,11 @@ class SourcceyV3BetaFollower(Robot):
         """Adjust calibration so that current physical positions become desired logical positions.
 
         This method follows the same pattern as the existing calibrate() method:
-        1. Uses set_half_turn_homings() for most motors to center current positions
-        2. Handles shoulder_lift separately to set it to position 0 (arm down)
-        3. Sets safe default position limits
-        4. Applies the calibration without moving motors physically
+        1. Calculates homing offsets manually to center current positions
+        2. Sets safe default position limits
+        3. Applies the calibration without moving motors physically
 
-        This approach avoids sign-magnitude encoding limits by using the proven Feetech calibration method.
+        This approach avoids sign-magnitude encoding limits by using conservative homing offsets.
         """
         logger.info("Adjusting calibration to align current positions with desired logical positions...")
 
@@ -377,11 +376,33 @@ class SourcceyV3BetaFollower(Robot):
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
         logger.info(f"Current physical positions: {current_positions}")
 
-        # Step 1: Use the existing set_half_turn_homings method for most motors
-        # This centers each motor's current position around the middle of its encoder range
-        logger.info("Setting half-turn homing offsets for most motors...")
-        homing_offsets = self.bus.set_half_turn_homings()
-        logger.info(f"Half-turn homing offsets: {homing_offsets}")
+        # Step 1: Calculate homing offsets manually (similar to _get_half_turn_homings but with limits)
+        logger.info("Calculating homing offsets...")
+        homing_offsets = {}
+
+        for motor, current_pos in current_positions.items():
+            # Get the motor model to determine encoder resolution
+            motor_model = self.bus._get_motor_model(motor)
+            max_resolution = self.bus.model_resolution_table[motor_model] - 1
+            mid = int(max_resolution / 2)
+
+            # Calculate the homing offset to center the current position
+            # homing_offset = current_pos - mid
+            homing_offset = current_pos - mid
+
+            # Check if the homing offset is within the valid range
+            if abs(homing_offset) > 2047:
+                logger.warning(f"  {motor}: Homing offset {homing_offset} exceeds limit of 2047")
+                # Use a conservative homing offset that's within limits
+                if homing_offset > 0:
+                    conservative_offset = 2047
+                else:
+                    conservative_offset = -2047
+                logger.warning(f"  {motor}: Using conservative homing offset {conservative_offset}")
+                homing_offsets[motor] = conservative_offset
+            else:
+                homing_offsets[motor] = homing_offset
+                logger.info(f"  {motor}: Using homing offset {homing_offset}")
 
         # Step 2: Handle shoulder_lift separately to set it to position 0
         if "shoulder_lift" in current_positions:
@@ -397,11 +418,14 @@ class SourcceyV3BetaFollower(Robot):
             # Check if the homing offset is within the valid range
             if abs(shoulder_homing_offset) > 2047:
                 logger.warning(f"Shoulder_lift homing offset {shoulder_homing_offset} exceeds limit of 2047")
-                logger.warning("Using half-turn homing offset instead")
-                # Use the half-turn homing offset as fallback
-                homing_offsets["shoulder_lift"] = homing_offsets["shoulder_lift"]
+                logger.warning("Using conservative homing offset instead")
+                # Use a conservative homing offset that's within limits
+                if shoulder_homing_offset > 0:
+                    conservative_offset = 2047
+                else:
+                    conservative_offset = -2047
+                homing_offsets["shoulder_lift"] = conservative_offset
             else:
-                # Use the calculated homing offset
                 homing_offsets["shoulder_lift"] = shoulder_homing_offset
                 logger.info(f"Set shoulder_lift homing offset to {shoulder_homing_offset}")
 
@@ -460,13 +484,14 @@ class SourcceyV3BetaFollower(Robot):
             else:
                 # Other motors should be roughly in the middle of their range
                 expected_middle = 2048
-                tolerance = 500  # Allow significant tolerance since we're using half-turn homing
+                tolerance = 500  # Allow significant tolerance since we might use conservative offsets
                 if abs(normalized_pos - expected_middle) > tolerance:
                     logger.warning(f"  {motor} position {normalized_pos:.1f} is far from expected middle {expected_middle}")
+                    logger.info(f"  This may be due to conservative homing offset limits")
                 else:
                     logger.info(f"  {motor} position is near expected middle")
 
-        logger.info("Calibration adjustment completed using Feetech half-turn homing method with shoulder_lift adjustment")
+        logger.info("Calibration adjustment completed using manual homing offset calculation")
 
     def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
         """Calculate homing offsets to center each motor's range around the middle of its detected limits.
