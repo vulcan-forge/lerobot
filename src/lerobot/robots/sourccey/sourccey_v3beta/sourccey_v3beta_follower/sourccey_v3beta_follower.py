@@ -384,6 +384,9 @@ class SourcceyV3BetaFollower(Robot):
 
         # Get current positions as starting points
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
+        logger.info(f"--------------------------------")
+        logger.info(f"Current positions: {current_positions}")
+        logger.info(f"--------------------------------")
 
         # Initialize results dictionary
         detected_ranges = {}
