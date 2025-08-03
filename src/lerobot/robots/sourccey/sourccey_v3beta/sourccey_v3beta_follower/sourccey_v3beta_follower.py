@@ -150,9 +150,9 @@ class SourcceyV3BetaFollower(Robot):
         self._initialize_calibration()
 
         # Print positions of all motors
-        # logger.info("Current positions of all motors:")
-        # for motor, position in self.bus.sync_read("Present_Position").items():
-        #     logger.info(f"{motor}: {position}")
+        logger.info("Current positions of all motors:")
+        for motor, position in self.bus.sync_read("Present_Position", normalize=False).items():
+            logger.info(f"{motor}: {position}")
 
         # Step 2: Set up motors for calibration
         # logger.info("Setting up motors for calibration...")
