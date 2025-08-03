@@ -392,7 +392,7 @@ class SourcceyV3BetaFollower(Robot):
 
         # Base parameters
         base_step_size = 50
-        settle_time = 0.5
+        settle_time = 0.25
 
         # Motor-specific configuration
         motor_configs = {
@@ -450,7 +450,6 @@ class SourcceyV3BetaFollower(Robot):
 
                     # Check current draw
                     current = self.bus.read("Present_Current", motor_name, normalize=False)
-
                     if current > config["max_current"]:
                         logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         max_pos = current_pos
@@ -463,6 +462,9 @@ class SourcceyV3BetaFollower(Robot):
                     max_pos = current_pos
 
                 # Return to start position
+                logger.info("")
+                logger.info(f"Resetting {motor_name} to {reset_pos}")
+                logger.info("")
                 self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
                 time.sleep(settle_time * 10)  # Extra time to return to start
             else:
@@ -486,7 +488,6 @@ class SourcceyV3BetaFollower(Robot):
 
                     # Check current draw
                     current = self.bus.read("Present_Current", motor_name, normalize=False)
-
                     if current > config["max_current"]:
                         logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         min_pos = current_pos
@@ -499,6 +500,9 @@ class SourcceyV3BetaFollower(Robot):
                     min_pos = current_pos
 
                 # Return to start position
+                logger.info("")
+                logger.info(f"Resetting {motor_name} to {reset_pos}")
+                logger.info("")
                 self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
                 time.sleep(settle_time * 10)
             else:
