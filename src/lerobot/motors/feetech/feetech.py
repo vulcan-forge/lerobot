@@ -309,10 +309,40 @@ class FeetechMotorsBus(MotorsBus):
     def _get_position_homings(self, actual_positions: dict[NameOrID, Value], target_positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
         """
         Calculate homing offsets to move from actual positions to target positions.
+
+        The homing offset must be within the range [-mid, mid] for the motor's resolution.
+        We use wrap-around logic to handle cases where the required offset exceeds this range.
         """
         homings = {}
         for motor, pos in target_positions.items():
-            homings[motor] = pos - actual_positions[motor]
+            model = self._get_motor_model(motor)
+            max_res = self.model_resolution_table[model] - 1
+            encoder_range = max_res + 1  # Convert from max value to range
+            mid = max_res // 2  # Calculate the mid-point
+
+            # Calculate the raw offset needed
+            raw_offset = pos - actual_positions[motor]
+
+            # Handle wrap-around to keep offset within [-mid, mid] range
+            # Find the shortest path to the target position
+            # Try both positive and negative directions
+            offset_positive = raw_offset
+            offset_negative = raw_offset - encoder_range
+
+            # Choose the offset with smaller magnitude
+            if abs(offset_positive) <= abs(offset_negative):
+                final_offset = offset_positive
+            else:
+                final_offset = offset_negative
+
+            # Ensure the offset is within the valid range [-mid, mid]
+            if final_offset > mid:
+                final_offset -= encoder_range
+            elif final_offset < -mid:
+                final_offset += encoder_range
+
+            homings[motor] = final_offset
+
         return homings
 
     def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
