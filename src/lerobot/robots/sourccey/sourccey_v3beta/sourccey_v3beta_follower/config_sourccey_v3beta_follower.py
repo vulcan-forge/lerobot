@@ -27,7 +27,7 @@ class SourcceyV3BetaFollowerConfig(RobotConfig):
     max_relative_target: int | None = None
 
     # `max_current_safety_threshold` is the maximum current threshold for safety purposes.
-    max_current_safety_threshold: int = 500
+    max_current_safety_threshold: int = 1000
 
     # `min_action_threshold` is the minimum action threshold for motors during ai evaluation
     # to avoid sticktion in the gearbox preventing the arm from moving.
