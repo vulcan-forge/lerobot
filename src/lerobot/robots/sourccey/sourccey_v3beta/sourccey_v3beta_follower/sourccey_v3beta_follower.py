@@ -493,7 +493,7 @@ class SourcceyV3BetaFollower(Robot):
                 # Search in positive direction if configured
                 if search_positive:
                     logger.info(f"  Searching positive direction from {start_pos}")
-                    for step in range(0, max_search_distance, motor_search_step):
+                    for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
                         test_pos = start_pos + step
                         if test_pos > 4095:  # Encoder limit
                             logger.info(f"  Reached encoder limit at position {test_pos}")
@@ -509,7 +509,7 @@ class SourcceyV3BetaFollower(Robot):
                 # Search in negative direction if configured
                 if search_negative:
                     logger.info(f"  Searching negative direction from {start_pos}")
-                    for step in range(0, max_search_distance, motor_search_step):
+                    for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
                         test_pos = start_pos - step
                         if test_pos < 0:  # Encoder limit
                             logger.info(f"  Reached encoder limit at position {test_pos}")
