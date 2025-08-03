@@ -401,6 +401,13 @@ class SourcceyV3BetaFollower(Robot):
                 "max_current": base_current_threshold * 2,
                 "search_positive": False,
                 "search_negative": True
+            },
+            "gripper": {
+                "search_range": 1536,
+                "search_step": base_step_size,
+                "max_current": base_current_threshold,
+                "search_positive": True,
+                "search_negative": True
             }
         }
 
