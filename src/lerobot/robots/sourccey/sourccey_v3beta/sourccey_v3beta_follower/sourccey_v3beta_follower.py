@@ -392,7 +392,7 @@ class SourcceyV3BetaFollower(Robot):
 
         # Base parameters
         base_step_size = 50
-        settle_time = 0.15
+        settle_time = 0.1
 
         # Motor-specific configuration
         motor_configs = {
