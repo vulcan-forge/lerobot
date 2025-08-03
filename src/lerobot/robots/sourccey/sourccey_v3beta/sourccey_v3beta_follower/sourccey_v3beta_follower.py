@@ -443,7 +443,7 @@ class SourcceyV3BetaFollower(Robot):
                 search_positive = motor_config["search_positive"]
                 search_negative = motor_config["search_negative"]
                 motor_current_threshold = current_threshold * motor_config["current_threshold_multiplier"]
-                motor_search_step = motor_config.get("search_step", search_step)  # Use motor-specific step size
+                motor_search_step = motor_config.get("search_step", search_step)
 
                 # Get drive mode for this motor
                 drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -459,15 +459,19 @@ class SourcceyV3BetaFollower(Robot):
                     logger.info(f"  Searching positive direction from {start_pos}")
                     for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
                         test_pos = start_pos + step
-                        if test_pos > 4095:  # Encoder limit
+
+                        # Check encoder limits first
+                        if test_pos > 4095:
                             logger.info(f"  Reached encoder limit at position {test_pos}")
                             max_pos = 4095
                             break
 
+                        # Test if position is safe (moves and current below threshold)
                         if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
                             max_pos = test_pos
+                            logger.info(f"  Successfully moved to {test_pos}")
                         else:
-                            logger.info(f"  Hit positive limit at position {test_pos} (current exceeded threshold)")
+                            logger.info(f"  Hit positive limit at position {test_pos} (current exceeded threshold or no movement)")
                             break
 
                 # Search in negative direction if configured
@@ -475,15 +479,19 @@ class SourcceyV3BetaFollower(Robot):
                     logger.info(f"  Searching negative direction from {start_pos}")
                     for step in range(motor_search_step, max_search_distance + motor_search_step, motor_search_step):
                         test_pos = start_pos - step
-                        if test_pos < 0:  # Encoder limit
+
+                        # Check encoder limits first
+                        if test_pos < 0:
                             logger.info(f"  Reached encoder limit at position {test_pos}")
                             min_pos = 0
                             break
 
+                        # Test if position is safe (moves and current below threshold)
                         if self._test_position_safe(motor, test_pos, motor_current_threshold, drive_mode):
                             min_pos = test_pos
+                            logger.info(f"  Successfully moved to {test_pos}")
                         else:
-                            logger.info(f"  Hit negative limit at position {test_pos} (current exceeded threshold)")
+                            logger.info(f"  Hit negative limit at position {test_pos} (current exceeded threshold or no movement)")
                             break
 
                 # Calculate the middle position of the detected range
@@ -602,153 +610,3 @@ class SourcceyV3BetaFollower(Robot):
         except Exception as e:
             logger.warning(f"Error moving {motor} to position {position}: {e}")
             return False
-
-
-
-
-
-    def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
-        """Calculate homing offsets to center each motor's range around the middle of its detected limits.
-
-        Args:
-            detected_ranges: Dictionary of detected min/max ranges for each motor
-
-        Returns:
-            Dictionary mapping motor names to their calculated homing offsets
-        """
-        homing_offsets = {}
-
-        for motor, ranges in detected_ranges.items():
-            # Calculate the middle of the detected range
-            range_middle = (ranges["min"] + ranges["max"]) // 2
-
-            # Get the motor model to determine the encoder resolution
-            motor_model = self.bus._get_motor_model(motor)
-            max_resolution = self.bus.model_resolution_table[motor_model] - 1
-
-            # Calculate the target center position (half turn)
-            target_center = max_resolution // 2
-
-            # Calculate homing offset: offset = actual_middle - target_center
-            homing_offset = range_middle - target_center
-
-            homing_offsets[motor] = homing_offset
-
-            logger.info(f"  {motor}: range_middle={range_middle}, target_center={target_center}, homing_offset={homing_offset}")
-
-        return homing_offsets
-
-    def _test_position_safe(self, motor: str, position: int, current_threshold: int, drive_mode: int = 0) -> bool:
-        """Test if a position is safe by monitoring current and verifying actual movement.
-
-        Args:
-            motor: Motor name to test
-            position: Position to test
-            current_threshold: Current threshold to consider safe
-            drive_mode: Drive mode of the motor (0 or 1)
-
-        Returns:
-            True if position is safe (current below threshold) and motor actually moved, False otherwise
-        """
-        try:
-            # Read initial position before movement
-            initial_pos = self.bus.read("Present_Position", motor, normalize=False)
-
-            # Move to test position
-            self.bus.write("Goal_Position", motor, position, normalize=False)
-
-            # Wait for movement to complete and check current - reduced wait time
-            time.sleep(0.25)
-
-            # Read actual position after movement
-            actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-
-            # Check if motor actually moved (with some tolerance)
-            position_tolerance = 50  # Allow 50 encoder units of difference
-            actually_moved = abs(actual_pos - initial_pos) > position_tolerance
-
-            if not actually_moved:
-                logger.info(f"  {motor} commanded to {position} but didn't move from {initial_pos} (actual: {actual_pos})")
-                return False
-
-            # Check current multiple times to ensure stability
-            current_readings = []
-            for i in range(3):  # Check three times for better stability
-                current = self.bus.read("Present_Current", motor, normalize=False)
-                current_readings.append(current)
-                if current > current_threshold:
-                    logger.info(f"  {motor} current limit hit: {current}mA > {current_threshold}mA at position {actual_pos}")
-                    logger.info(f"  Current readings: {current_readings}")
-                    return False
-                time.sleep(0.05)
-
-            # Log successful position test with current info
-            avg_current = sum(current_readings) / len(current_readings)
-            logger.info(f"  {motor} position {actual_pos} safe: avg current {avg_current:.1f}mA < {current_threshold}mA, moved from {initial_pos}")
-
-            return True
-
-        except Exception as e:
-            logger.warning(f"Error testing position {position} for {motor}: {e}")
-            return False
-
-    def _get_safe_motor_ranges(self) -> dict[str, dict[str, int]]:
-        """Get predefined safe ranges for each motor to prevent damage during auto-calibration.
-
-        Returns:
-            Dictionary mapping motor names to their safe min/max ranges
-        """
-        # Define safe ranges based on motor specifications and mechanical limits
-        # These are conservative ranges to prevent damage
-        safe_ranges = {
-            "shoulder_pan": {"min": 500, "max": 3595},    # ~270° range
-            "shoulder_lift": {"min": 1000, "max": 3095},  # ~180° range
-            "elbow_flex": {"min": 500, "max": 3595},      # ~270° range
-            "wrist_flex": {"min": 500, "max": 3595},      # ~270° range
-            "wrist_roll": {"min": 0, "max": 4095},        # Full 360° range
-            "gripper": {"min": 1000, "max": 3000},        # 0-100% range
-        }
-
-        return safe_ranges
-
-    def _reset_homing_offsets_to_current_positions(self) -> None:
-        """Reset homing offsets so that current physical positions align with expected logical positions.
-
-        This ensures that:
-        - shoulder_lift at current position = 0 (arm down) - accounting for drive_mode=1
-        - All other motors at current position = 2048 (middle) - accounting for drive_mode=0
-
-        Note: drive_mode=1 inverts the direction of motion, so we need to account for this
-        when calculating homing offsets.
-        """
-        logger.info("Resetting homing offsets to current positions...")
-
-        # Get current positions
-        current_positions = self.bus.sync_read("Present_Position", normalize=False)
-
-        for motor, current_pos in current_positions.items():
-            # Determine drive mode for this motor
-            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
-
-            # Determine target position based on motor type
-            if motor == "shoulder_lift":
-                target_pos = 0  # shoulder_lift should be at 0 when arm is down
-            else:
-                target_pos = 2048  # All other motors should be at middle position
-
-            # Calculate homing offset: offset = current_position - target_position
-            # For drive_mode=1, the direction is inverted, so we need to flip the offset
-            homing_offset = current_pos - target_pos
-            if drive_mode == 1:
-                homing_offset = -homing_offset  # Flip the offset for inverted direction
-
-            logger.info(f"  {motor}: current_pos={current_pos}, target_pos={target_pos}, drive_mode={drive_mode}, homing_offset={homing_offset}")
-
-            # Write the homing offset to the motor
-            try:
-                self.bus.write("Homing_Offset", motor, homing_offset, normalize=False)
-                logger.info(f"  Set {motor} homing offset to {homing_offset}")
-            except Exception as e:
-                logger.warning(f"  Failed to set homing offset for {motor}: {e}")
-
-        logger.info("Homing offsets reset successfully")
