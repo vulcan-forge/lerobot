@@ -145,7 +145,7 @@ class Robot(abc.ABC):
             draccus.dump(self.calibration, f, indent=4)
 
     @abc.abstractmethod
-    def auto_calibrate(self) -> None:
+    def auto_calibrate(self, hard_reset: bool = False) -> None:
         """
         Automatically calibrate the robot.
 

@@ -10,6 +10,14 @@ uv run -m lerobot.auto_calibrate \
     --robot.id=sourccey_v3beta
 ```
 
+# For hard reset:
+```bash
+uv run -m lerobot.auto_calibrate \
+    --robot.type=sourccey_v3beta\
+    --robot.id=sourccey_v3beta \
+    --full_reset=True
+```
+
 To teleoperate, SSH into your Raspberry Pi, navigate to the lerobot repo and run this command:
 
 ```

@@ -130,7 +130,7 @@ class SourcceyV3BetaFollower(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
-    def auto_calibrate(self) -> None:
+    def auto_calibrate(self, full_reset: bool = False) -> None:
         """Automatically calibrate the robot using current monitoring to detect mechanical limits.
 
         This method performs automatic calibration by:
@@ -149,16 +149,21 @@ class SourcceyV3BetaFollower(Robot):
         logger.info("Adjusting calibration to align current positions with desired logical positions...")
         homing_offsets = self._initialize_calibration()
 
-        # Step 3: Detect actual mechanical limits using current monitoring
+        # If hard_reset is False, we don't need to detect mechanical limits
+        # Only detect mechanical limits if the customer is doing a hard reset
+        if not full_reset:
+            return
+
+        # Step 2: Detect actual mechanical limits using current monitoring
         # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
         detected_ranges = self._detect_mechanical_limits()
 
-        # Step 4: Disable torque for safety before setting homing offsets
+        # Step 3: Disable torque for safety before setting homing offsets
         logger.info("Disabling torque for safety...")
         self.bus.disable_torque()
 
-        # Step 5: Create calibration dictionary
+        # Step 4: Create calibration dictionary
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -170,7 +175,7 @@ class SourcceyV3BetaFollower(Robot):
                 range_max=detected_ranges[motor]["max"],
             )
 
-        # Step 6: Write calibration to motors and save
+        # Step 5: Write calibration to motors and save
         self.bus.write_calibration(self.calibration)
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")

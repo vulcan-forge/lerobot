@@ -118,9 +118,9 @@ class SourcceyV3Beta(Robot):
         self.left_arm.calibrate()
         self.right_arm.calibrate()
 
-    def auto_calibrate(self) -> None:
-        self.left_arm.auto_calibrate()
-        self.right_arm.auto_calibrate()
+    def auto_calibrate(self, full_reset: bool = False) -> None:
+        self.left_arm.auto_calibrate(full_reset)
+        self.right_arm.auto_calibrate(full_reset)
 
     def configure(self) -> None:
         self.left_arm.configure()

@@ -67,6 +67,7 @@ from lerobot.utils.utils import init_logging
 class AutoCalibrateConfig:
     teleop: TeleoperatorConfig | None = None
     robot: RobotConfig | None = None
+    full_reset: bool = False
 
     def __post_init__(self):
         if bool(self.teleop) == bool(self.robot):
@@ -96,7 +97,7 @@ def auto_calibrate(cfg: AutoCalibrateConfig):
         # Check if device supports auto-calibration
         if hasattr(device, 'auto_calibrate'):
             logging.info("Device supports auto-calibration. Starting automatic calibration...")
-            device.auto_calibrate()
+            device.auto_calibrate(full_reset=cfg.full_reset)
             logging.info("Automatic calibration completed successfully!")
         else:
             logging.warning("Device does not support auto-calibration. Returning")
