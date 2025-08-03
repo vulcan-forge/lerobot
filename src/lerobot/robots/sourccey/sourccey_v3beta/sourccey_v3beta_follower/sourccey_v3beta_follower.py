@@ -147,47 +147,33 @@ class SourcceyV3BetaFollower(Robot):
 
         # Step 1: Adjust calibration so current positions become desired logical positions
         logger.info("Adjusting calibration to align current positions with desired logical positions...")
-        self._initialize_calibration()
+        homing_offsets = self._initialize_calibration()
 
-        # Print positions of all motors
-        logger.info("Current positions of all motors:")
-        for motor, position in self.bus.sync_read("Present_Position", normalize=False).items():
-            logger.info(f"{motor}: {position}")
+        # Step 3: Detect actual mechanical limits using current monitoring
+        # Note: Torque will be enabled during limit detection
+        logger.info("Detecting mechanical limits using current monitoring...")
+        detected_ranges = self._detect_mechanical_limits()
 
-        # Step 2: Set up motors for calibration
-        # logger.info("Setting up motors for calibration...")
-        # for motor in self.bus.motors:
-        #     self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+        # Step 4: Disable torque for safety before setting homing offsets
+        logger.info("Disabling torque for safety...")
+        self.bus.disable_torque()
 
-        # # Step 3: Detect actual mechanical limits using current monitoring
-        # # Note: Torque will be enabled during limit detection
-        # logger.info("Detecting mechanical limits using current monitoring...")
-        # detected_ranges = self._detect_mechanical_limits()
+        # Step 5: Create calibration dictionary
+        self.calibration = {}
+        for motor, m in self.bus.motors.items():
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+            self.calibration[motor] = MotorCalibration(
+                id=m.id,
+                drive_mode=drive_mode,
+                homing_offset=homing_offsets[motor],
+                range_min=detected_ranges[motor]["min"],
+                range_max=detected_ranges[motor]["max"],
+            )
 
-        # # Step 4: Disable torque for safety before setting homing offsets
-        # logger.info("Disabling torque for safety...")
-        # self.bus.disable_torque()
-
-        # # Step 5: Calculate homing offsets to center each range
-        # logger.info("Calculating homing offsets to center detected ranges...")
-        # homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
-
-        # # Step 6: Create calibration dictionary
-        # self.calibration = {}
-        # for motor, m in self.bus.motors.items():
-        #     drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
-        #     self.calibration[motor] = MotorCalibration(
-        #         id=m.id,
-        #         drive_mode=drive_mode,
-        #         homing_offset=homing_offsets[motor],
-        #         range_min=detected_ranges[motor]["min"],
-        #         range_max=detected_ranges[motor]["max"],
-        #     )
-
-        # # Step 7: Write calibration to motors and save
-        # self.bus.write_calibration(self.calibration)
-        # self._save_calibration()
-        # logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
+        # Step 6: Write calibration to motors and save
+        self.bus.write_calibration(self.calibration)
+        self._save_calibration()
+        logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
 
     def configure(self) -> None:
         self.bus.disable_torque()
@@ -361,43 +347,13 @@ class SourcceyV3BetaFollower(Robot):
     # Auto Calibration Functions
     ############################
     def _initialize_calibration(self) -> None:
-        """Initialize the calibration of the robot.
+        """
+        Initialize the calibration of the robot.
         """
         # Set all motors to half turn homings except shoulder_lift
-        self.bus.set_half_turn_homings()
-
-        # Set shoulder_lift to position 0 (arm down position) as per existing calibration logic
-        self.bus.set_position_homings({"shoulder_lift": 4095})
-
-    def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
-        """Calculate homing offsets to center each motor's range around the middle of its detected limits.
-
-        Args:
-            detected_ranges: Dictionary of detected min/max ranges for each motor
-
-        Returns:
-            Dictionary mapping motor names to their calculated homing offsets
-        """
-        homing_offsets = {}
-
-        for motor, ranges in detected_ranges.items():
-            # Calculate the middle of the detected range
-            range_middle = (ranges["min"] + ranges["max"]) // 2
-
-            # Get the motor model to determine the encoder resolution
-            motor_model = self.bus._get_motor_model(motor)
-            max_resolution = self.bus.model_resolution_table[motor_model] - 1
-
-            # Calculate the target center position (half turn)
-            target_center = max_resolution // 2
-
-            # Calculate homing offset: offset = actual_middle - target_center
-            homing_offset = range_middle - target_center
-
-            homing_offsets[motor] = homing_offset
-
-            logger.info(f"  {motor}: range_middle={range_middle}, target_center={target_center}, homing_offset={homing_offset}")
-
+        homing_offsets = self.bus.set_half_turn_homings()
+        shoulder_lift_homing_offset = self.bus.set_position_homings({"shoulder_lift": 4095})
+        homing_offsets["shoulder_lift"] = shoulder_lift_homing_offset["shoulder_lift"]
         return homing_offsets
 
     def _detect_mechanical_limits(self) -> dict[str, dict[str, int]]:
@@ -432,7 +388,7 @@ class SourcceyV3BetaFollower(Robot):
                 "search_positive": False,
                 "search_negative": True,  # Only search positive (upward)
                 "current_threshold_multiplier": 2.0,  # Increased from 1.5 to 2.0 for higher threshold
-                "search_step": 2*search_step  # Larger step size for shoulder_lift to overcome extended arm load
+                "search_step": 2 * search_step  # Larger step size for shoulder_lift to overcome extended arm load
             },
             "elbow_flex": {
                 "max_search_distance": 2048,
@@ -449,7 +405,7 @@ class SourcceyV3BetaFollower(Robot):
                 "search_step": search_step
             },
             "wrist_roll": {
-                "max_search_distance": 4096,
+                "max_search_distance": 2048,
                 "search_positive": True,
                 "search_negative": True,
                 "current_threshold_multiplier": 1.0,
@@ -536,13 +492,13 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Reset the joint to its middle position with verification
                 logger.info(f"  Resetting {motor} to position {middle_pos}")
-                success = self._move_to_position_safe_with_retry(motor, middle_pos, drive_mode)
+                success = self._move_to_position_safe(motor, middle_pos, drive_mode)
 
                 if not success:
                     logger.warning(f"  Failed to move {motor} to middle position. Using fallback position.")
                     # Use a conservative middle position as fallback
                     fallback_middle = (min_pos + max_pos) // 2
-                    self._move_to_position_safe_with_retry(motor, fallback_middle, drive_mode)
+                    self._move_to_position_safe(motor, fallback_middle, drive_mode)
 
                 # Add safety margins to detected ranges
                 safety_margin = 100  # Add 100 encoder units as safety margin
@@ -573,76 +529,109 @@ class SourcceyV3BetaFollower(Robot):
 
         return detected_ranges
 
-    def _move_to_position_safe_with_retry(self, motor: str, position: int, drive_mode: int = 0, max_retries: int = 2) -> bool:
-        """Safely move a motor to a specific position with retry mechanism and verification.
+    def _move_to_position_safe(self, motor: str, position: int, drive_mode: int = 0) -> bool:
+        """Safely move a motor to a specific position with overcurrent detection and gradual movement.
 
         Args:
             motor: Motor name to move
             position: Target position
             drive_mode: Drive mode of the motor (0 or 1)
-            max_retries: Maximum number of retry attempts
 
         Returns:
             True if successfully moved to position, False otherwise
         """
-        tolerance = 100  # Increased tolerance for faster operation
-
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"    Attempt {attempt + 1}/{max_retries} to move {motor} to {position}")
-
-                # Move to target position
-                self.bus.write("Goal_Position", motor, position, normalize=False)
-
-                # Wait for movement to complete - reduced wait time
-                time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
-
-                # Verify we reached the position
-                actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-
-                if abs(actual_pos - position) <= tolerance:
-                    logger.info(f"    {motor} successfully moved to position {actual_pos}")
-                    return True
-                else:
-                    logger.warning(f"    {motor} did not reach target position {position}, actual: {actual_pos}")
-                    if attempt < max_retries - 1:
-                        logger.info(f"    Retrying...")
-                        time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
-
-            except Exception as e:
-                logger.warning(f"    Error moving {motor} to position {position} (attempt {attempt + 1}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
-
-        logger.error(f"    Failed to move {motor} to position {position} after {max_retries} attempts")
-        return False
-
-    def _move_to_position_safe(self, motor: str, position: int, drive_mode: int = 0) -> None:
-        """Safely move a motor to a specific position with current monitoring.
-
-        Args:
-            motor: Motor name to move
-            position: Target position
-            drive_mode: Drive mode of the motor (0 or 1)
-        """
         try:
-            # Move to target position
-            self.bus.write("Goal_Position", motor, position, normalize=False)
+            logger.info(f"  Moving {motor} to position {position}")
 
-            # Wait for movement to complete - reduced wait time
-            time.sleep(0.25)  # Reduced from 0.5 to 0.25 seconds
+            # Get current position
+            current_pos = self.bus.read("Present_Position", motor, normalize=False)
 
-            # Verify we reached the position (with some tolerance)
-            actual_pos = self.bus.read("Present_Position", motor, normalize=False)
-            tolerance = 100  # Increased tolerance for faster operation
+            # Calculate the distance to move
+            distance = abs(position - current_pos)
 
-            if abs(actual_pos - position) > tolerance:
-                logger.warning(f"  {motor} did not reach target position {position}, actual: {actual_pos}")
+            # If distance is small, move directly
+            if distance <= 200:
+                self.bus.write("Goal_Position", motor, position, normalize=False)
+                time.sleep(0.5)
             else:
+                # For larger movements, move in steps with current monitoring
+                step_size = 100  # Move in 100-unit steps
+                current_threshold = self.config.max_current_safety_threshold * 0.8
+
+                # Determine direction
+                direction = 1 if position > current_pos else -1
+
+                # Move in steps
+                for step_pos in range(current_pos, position, direction * step_size):
+                    # Don't overshoot
+                    if (direction > 0 and step_pos >= position) or (direction < 0 and step_pos <= position):
+                        step_pos = position
+
+                    # Move to step position
+                    self.bus.write("Goal_Position", motor, step_pos, normalize=False)
+                    time.sleep(0.1)
+
+                    # Check current
+                    current = self.bus.read("Present_Current", motor, normalize=False)
+                    if current > current_threshold:
+                        logger.warning(f"  {motor} overcurrent detected: {current}mA > {current_threshold}mA")
+                        return False
+
+                    # Check if we reached the step position
+                    actual_pos = self.bus.read("Present_Position", motor, normalize=False)
+                    if abs(actual_pos - step_pos) > 50:
+                        logger.warning(f"  {motor} did not reach step position {step_pos}, actual: {actual_pos}")
+                        return False
+
+            # Final verification
+            actual_pos = self.bus.read("Present_Position", motor, normalize=False)
+            tolerance = 100
+
+            if abs(actual_pos - position) <= tolerance:
                 logger.info(f"  {motor} successfully moved to position {actual_pos}")
+                return True
+            else:
+                logger.warning(f"  {motor} did not reach target position {position}, actual: {actual_pos}")
+                return False
 
         except Exception as e:
             logger.warning(f"Error moving {motor} to position {position}: {e}")
+            return False
+
+
+
+
+
+    def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
+        """Calculate homing offsets to center each motor's range around the middle of its detected limits.
+
+        Args:
+            detected_ranges: Dictionary of detected min/max ranges for each motor
+
+        Returns:
+            Dictionary mapping motor names to their calculated homing offsets
+        """
+        homing_offsets = {}
+
+        for motor, ranges in detected_ranges.items():
+            # Calculate the middle of the detected range
+            range_middle = (ranges["min"] + ranges["max"]) // 2
+
+            # Get the motor model to determine the encoder resolution
+            motor_model = self.bus._get_motor_model(motor)
+            max_resolution = self.bus.model_resolution_table[motor_model] - 1
+
+            # Calculate the target center position (half turn)
+            target_center = max_resolution // 2
+
+            # Calculate homing offset: offset = actual_middle - target_center
+            homing_offset = range_middle - target_center
+
+            homing_offsets[motor] = homing_offset
+
+            logger.info(f"  {motor}: range_middle={range_middle}, target_center={target_center}, homing_offset={homing_offset}")
+
+        return homing_offsets
 
     def _test_position_safe(self, motor: str, position: int, current_threshold: int, drive_mode: int = 0) -> bool:
         """Test if a position is safe by monitoring current and verifying actual movement.

@@ -338,9 +338,6 @@ class FeetechMotorsBus(MotorsBus):
             elif offset == -(mid + 1):
                 offset = mid
 
-            # Debug output
-            print(f"DEBUG {motor}: target={pos}, actual={actual_positions[motor]}, raw_offset={raw_offset}, final_offset={offset}")
-
             homings[motor] = offset
 
         return homings

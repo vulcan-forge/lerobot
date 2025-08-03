@@ -769,6 +769,8 @@ class MotorsBus(abc.ABC):
         for motor, offset in homing_offsets.items():
             self.write("Homing_Offset", motor, offset)
 
+        return homing_offsets
+
     @abc.abstractmethod
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
         pass
