@@ -311,37 +311,30 @@ class FeetechMotorsBus(MotorsBus):
         Calculate homing offsets to move from actual positions to target positions.
 
         The homing offset must be within the range [-mid, mid] for the motor's resolution.
-        We use wrap-around logic to handle cases where the required offset exceeds this range.
+        We use modulo to handle wrap-around cases.
         """
         homings = {}
         for motor, pos in target_positions.items():
             model = self._get_motor_model(motor)
             max_res = self.model_resolution_table[model] - 1
-            encoder_range = max_res + 1  # Convert from max value to range
-            mid = max_res // 2  # Calculate the mid-point
+            encoder_range = max_res + 1
+            mid = max_res // 2
 
-            # Calculate the raw offset needed
+            # Calculate the shortest path offset
             raw_offset = pos - actual_positions[motor]
+            offset = raw_offset % encoder_range
 
-            # Handle wrap-around to keep offset within [-mid, mid] range
-            # Find the shortest path to the target position
-            # Try both positive and negative directions
-            offset_positive = raw_offset
-            offset_negative = raw_offset - encoder_range
+            # Convert to signed range [-mid, mid]
+            if offset > mid:
+                offset -= encoder_range
 
-            # Choose the offset with smaller magnitude
-            if abs(offset_positive) <= abs(offset_negative):
-                final_offset = offset_positive
-            else:
-                final_offset = offset_negative
+            # Handle edge case: if offset is exactly at boundary, wrap it around
+            if offset == mid + 1:
+                offset = -mid
+            elif offset == -(mid + 1):
+                offset = mid
 
-            # Ensure the offset is within the valid range [-mid, mid]
-            if final_offset > mid:
-                final_offset -= encoder_range
-            elif final_offset < -mid:
-                final_offset += encoder_range
-
-            homings[motor] = final_offset
+            homings[motor] = offset
 
         return homings
 
