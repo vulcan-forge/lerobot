@@ -756,14 +756,14 @@ class MotorsBus(abc.ABC):
 
         motors = list(positions.keys())
 
-        # Read positions BEFORE resetting calibration (to get calibrated positions)
-        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
-
-        # Now reset calibration
+        # Reset calibration first
         self.reset_calibration(motors)
         print(f"Resetting calibration for {motors}")
 
-        # Calculate homing offsets using the pre-reset calibrated positions
+        # Read positions AFTER resetting calibration (to get raw encoder positions)
+        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+
+        # Calculate homing offsets using the raw encoder positions
         homing_offsets = self._get_position_homings(actual_positions, positions)
 
         for motor, offset in homing_offsets.items():
