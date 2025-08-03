@@ -99,8 +99,7 @@ def auto_calibrate(cfg: AutoCalibrateConfig):
             device.auto_calibrate()
             logging.info("Automatic calibration completed successfully!")
         else:
-            logging.warning("Device does not support auto-calibration. Falling back to manual calibration...")
-            device.calibrate()
+            logging.warning("Device does not support auto-calibration. Returning")
 
     except Exception as e:
         logging.error(f"Calibration failed: {e}")
