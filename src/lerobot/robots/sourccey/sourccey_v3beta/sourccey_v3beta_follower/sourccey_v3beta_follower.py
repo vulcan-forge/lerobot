@@ -366,8 +366,8 @@ class SourcceyV3BetaFollower(Robot):
         # Set all motors to half turn homings except shoulder_lift
         self.bus.set_half_turn_homings()
 
-        # Set shoulder_lift to position 4095 specifically
-        self.bus.set_position_homings({"shoulder_lift": 4095})
+        # Set shoulder_lift to position 0 (arm down position) as per existing calibration logic
+        self.bus.set_position_homings({"shoulder_lift": 0})
 
     def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
         """Calculate homing offsets to center each motor's range around the middle of its detected limits.
