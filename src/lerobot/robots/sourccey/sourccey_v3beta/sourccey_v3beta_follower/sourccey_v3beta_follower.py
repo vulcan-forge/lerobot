@@ -467,8 +467,6 @@ class SourcceyV3BetaFollower(Robot):
 
         try:
             for motor in self.bus.motors:
-                logger.info(f"Detecting limits for {motor}...")
-
                 # Get motor-specific configuration
                 motor_config = motor_search_config.get(motor, {
                     "max_search_distance": 2048,
@@ -482,11 +480,6 @@ class SourcceyV3BetaFollower(Robot):
                 search_negative = motor_config["search_negative"]
                 motor_current_threshold = current_threshold * motor_config["current_threshold_multiplier"]
                 motor_search_step = motor_config.get("search_step", search_step)  # Use motor-specific step size
-
-                logger.info(f"  Using search distance: {max_search_distance}")
-                logger.info(f"  Search positive: {search_positive}, Search negative: {search_negative}")
-                logger.info(f"  Current threshold: {motor_current_threshold}mA (base: {current_threshold}mA)")
-                logger.info(f"  Search step size: {motor_search_step}")
 
                 # Get drive mode for this motor
                 drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
