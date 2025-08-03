@@ -135,11 +135,10 @@ class SourcceyV3BetaFollower(Robot):
 
         This method performs automatic calibration by:
         1. Loading and applying initial calibration to set known starting positions
-        2. Moving motors to expected starting positions (2048 for most motors, 0 for shoulder_lift)
-        3. Resetting homing offsets to align current positions with expected positions
-        4. Detecting mechanical limits using current monitoring
-        5. Setting homing offsets to center the range around the middle of detected limits
-        6. Writing calibration to motors and saving to file
+        2. Adjusting calibration so current physical positions become desired logical positions
+        3. Detecting mechanical limits using current monitoring
+        4. Setting homing offsets to center the range around the middle of detected limits
+        5. Writing calibration to motors and saving to file
 
         WARNING: This process involves moving the robot to find limits.
         Ensure the robot arm is clear of obstacles and people during calibration.
@@ -158,33 +157,29 @@ class SourcceyV3BetaFollower(Robot):
             logger.warning("No initial calibration found, exiting auto-calibration")
             return
 
-        # Step 2: Move motors to expected starting positions
-        logger.info("Moving motors to expected starting positions...")
-        self._move_motors_to_starting_positions()
+        # Step 2: Adjust calibration so current positions become desired logical positions
+        logger.info("Adjusting calibration to align current positions with desired logical positions...")
+        self._adjust_calibration_to_current_positions()
 
-        # Step 3: Reset homing offsets to align current positions with expected positions
-        logger.info("Resetting homing offsets to align current positions...")
-        self._reset_homing_offsets_to_current_positions()
-
-        # Step 4: Set up motors for calibration
+        # Step 3: Set up motors for calibration
         logger.info("Setting up motors for calibration...")
         for motor in self.bus.motors:
             self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        # Step 5: Detect actual mechanical limits using current monitoring
+        # Step 4: Detect actual mechanical limits using current monitoring
         # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
         detected_ranges = self._detect_mechanical_limits()
 
-        # Step 6: Disable torque for safety before setting homing offsets
+        # Step 5: Disable torque for safety before setting homing offsets
         logger.info("Disabling torque for safety...")
         self.bus.disable_torque()
 
-        # Step 7: Calculate homing offsets to center each range
+        # Step 6: Calculate homing offsets to center each range
         logger.info("Calculating homing offsets to center detected ranges...")
         homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
 
-        # Step 8: Create calibration dictionary
+        # Step 7: Create calibration dictionary
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
@@ -196,7 +191,7 @@ class SourcceyV3BetaFollower(Robot):
                 range_max=detected_ranges[motor]["max"],
             )
 
-        # Step 9: Write calibration to motors and save
+        # Step 8: Write calibration to motors and save
         self.bus.write_calibration(self.calibration)
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
@@ -809,158 +804,75 @@ class SourcceyV3BetaFollower(Robot):
 
         logger.info("Homing offsets reset successfully")
 
-    def _move_motors_to_starting_positions(self) -> None:
-        """Move all motors to their expected starting positions before calibration.
+    def _adjust_calibration_to_current_positions(self) -> None:
+        """Adjust calibration so that current physical positions become desired logical positions.
 
-        This ensures consistent starting conditions for auto-calibration:
-        - shoulder_lift: position 0 (arm down)
-        - All other motors: position 2048 (middle of range)
+        This method:
+        1. Reads current physical positions of all motors
+        2. Calculates new homing offsets so that:
+           - shoulder_lift at current position = 0 (arm down)
+           - All other motors at current position = 2048 (middle)
+        3. Applies the new calibration without moving the motors physically
 
-        Motors are moved slowly and safely using incremental movements with current monitoring.
+        This is much safer than physically moving motors to target positions.
         """
-        logger.info("Moving motors to expected starting positions...")
+        logger.info("Adjusting calibration to align current positions with desired logical positions...")
 
-        # Enable torque for movement
-        self.bus.enable_torque()
+        # Get current physical positions (raw encoder values)
+        current_positions = self.bus.sync_read("Present_Position", normalize=False)
+        logger.info(f"Current physical positions: {current_positions}")
 
-        try:
-            # Set up motors for position control
-            for motor in self.bus.motors:
-                self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+        # Create new calibration that maps current positions to desired logical positions
+        adjusted_calibration = {}
 
-            # Define target starting positions for each motor
-            starting_positions = {}
-            for motor in self.bus.motors:
-                if motor == "shoulder_lift":
-                    starting_positions[motor] = 0  # shoulder_lift should start at 0 (arm down)
-                else:
-                    starting_positions[motor] = 2048  # All other motors should start at middle position
+        for motor, current_pos in current_positions.items():
+            # Determine drive mode for this motor
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
 
-            # Move each motor to its starting position slowly and safely
-            for motor, target_pos in starting_positions.items():
-                logger.info(f"  Moving {motor} to starting position {target_pos}")
-
-                # Get current position
-                current_pos = self.bus.read("Present_Position", motor, normalize=False)
-                logger.info(f"    Current position: {current_pos}")
-
-                # Move to target position slowly and safely
-                success = self._move_to_position_slowly_and_safely(motor, target_pos, current_pos)
-
-                if success:
-                    final_pos = self.bus.read("Present_Position", motor, normalize=False)
-                    logger.info(f"    Successfully moved {motor} to position {final_pos}")
-                else:
-                    logger.warning(f"    Failed to move {motor} to starting position {target_pos}")
-                    # Continue with calibration even if some motors fail to reach starting position
-
-                # Add delay between motors to avoid overwhelming the system
-                time.sleep(1.0)  # Increased delay for safety
-
-        except Exception as e:
-            logger.error(f"Error moving motors to starting positions: {e}")
-            raise
-        finally:
-            # Disable torque after positioning for safety
-            self.bus.disable_torque()
-            logger.info("Motors moved to starting positions, torque disabled for safety")
-
-    def _move_to_position_slowly_and_safely(self, motor: str, target_pos: int, current_pos: int) -> bool:
-        """Move a motor to a target position slowly and safely using incremental movements.
-
-        Args:
-            motor: Motor name to move
-            target_pos: Target position to reach
-            current_pos: Current position of the motor
-
-        Returns:
-            True if successfully moved to position, False otherwise
-        """
-        # Calculate the distance to move
-        distance = abs(target_pos - current_pos)
-
-        if distance < 50:  # If already close to target, move directly
-            logger.info(f"    {motor} already close to target, moving directly")
-            return self._move_to_position_safe_with_retry(motor, target_pos, max_retries=3)
-
-        # Define movement parameters for safety
-        max_step_size = 200  # Maximum step size per movement
-        step_delay = 0.5  # Delay between steps
-        current_threshold = self.config.max_current_safety_threshold * 0.7  # Conservative current threshold
-
-        # Determine direction
-        direction = 1 if target_pos > current_pos else -1
-
-        logger.info(f"    Moving {motor} from {current_pos} to {target_pos} (distance: {distance})")
-        logger.info(f"    Using step size: {max_step_size}, step delay: {step_delay}s")
-
-        try:
-            current_position = current_pos
-
-            # Move in steps until we reach the target
-            while abs(current_position - target_pos) > 50:  # Stop when within 50 units
-                # Calculate next step position
-                remaining_distance = abs(target_pos - current_position)
-                step_size = min(max_step_size, remaining_distance)
-                next_position = current_position + (direction * step_size)
-
-                # Ensure we don't overshoot
-                if direction > 0 and next_position > target_pos:
-                    next_position = target_pos
-                elif direction < 0 and next_position < target_pos:
-                    next_position = target_pos
-
-                logger.info(f"      Moving {motor} to intermediate position {next_position}")
-
-                # Move to next position
-                self.bus.write("Goal_Position", motor, next_position, normalize=False)
-
-                # Wait for movement and monitor current
-                time.sleep(step_delay)
-
-                # Check current to ensure we're not hitting limits
-                current = self.bus.read("Present_Current", motor, normalize=False)
-                if current > current_threshold:
-                    logger.warning(f"      {motor} current limit hit: {current}mA > {current_threshold}mA")
-                    logger.warning(f"      Stopping movement for safety")
-                    return False
-
-                # Update current position
-                current_position = self.bus.read("Present_Position", motor, normalize=False)
-                logger.info(f"      {motor} reached position {current_position}, current: {current}mA")
-
-                # Check if we're stuck (not moving)
-                if abs(current_position - next_position) > 100:
-                    logger.warning(f"      {motor} did not reach target position {next_position}, actual: {current_position}")
-                    # Try one more time with smaller step
-                    if step_size > 50:
-                        logger.info(f"      Retrying with smaller step size")
-                        continue
-                    else:
-                        logger.error(f"      {motor} stuck at position {current_position}")
-                        return False
-
-                # Add small delay for stability
-                time.sleep(0.1)
-
-            # Final movement to exact target position
-            logger.info(f"    Final movement to target position {target_pos}")
-            success = self._move_to_position_safe_with_retry(motor, target_pos, max_retries=2)
-
-            if success:
-                logger.info(f"    {motor} successfully reached target position {target_pos}")
-                return True
+            # Determine desired logical position based on motor type
+            if motor == "shoulder_lift":
+                desired_logical_pos = 0  # shoulder_lift should be at 0 when arm is down
             else:
-                logger.warning(f"    {motor} failed to reach exact target position")
-                # Check if we're close enough to proceed
-                final_pos = self.bus.read("Present_Position", motor, normalize=False)
-                if abs(final_pos - target_pos) <= 100:
-                    logger.info(f"    {motor} close enough to target (within 100 units)")
-                    return True
-                else:
-                    logger.error(f"    {motor} too far from target position")
-                    return False
+                desired_logical_pos = 2048  # All other motors should be at middle position
 
-        except Exception as e:
-            logger.error(f"    Error during slow movement of {motor}: {e}")
-            return False
+            # Calculate homing offset: offset = current_physical_position - desired_logical_position
+            # For drive_mode=1, the direction is inverted, so we need to flip the offset
+            homing_offset = current_pos - desired_logical_pos
+            if drive_mode == 1:
+                homing_offset = -homing_offset  # Flip the offset for inverted direction
+
+            logger.info(f"  {motor}: physical_pos={current_pos}, desired_logical_pos={desired_logical_pos}, drive_mode={drive_mode}, homing_offset={homing_offset}")
+
+            # Create MotorCalibration object with the new homing offset
+            # Use safe default ranges for now (will be updated after limit detection)
+            adjusted_calibration[motor] = MotorCalibration(
+                id=self.bus.motors[motor].id,
+                drive_mode=drive_mode,
+                homing_offset=homing_offset,
+                range_min=500,   # Safe default, will be updated
+                range_max=3595,  # Safe default, will be updated
+            )
+
+        # Apply the adjusted calibration to the motors
+        logger.info("Applying adjusted calibration to motors...")
+        self.bus.write_calibration(adjusted_calibration)
+
+        # Verify the adjustment worked by reading normalized positions
+        logger.info("Verifying calibration adjustment...")
+        normalized_positions = self.bus.sync_read("Present_Position", normalize=True)
+        for motor, normalized_pos in normalized_positions.items():
+            if motor == "shoulder_lift":
+                expected_pos = 0
+            else:
+                expected_pos = 2048
+
+            logger.info(f"  {motor}: normalized position = {normalized_pos:.1f}, expected = {expected_pos}")
+
+            # Check if we're close to expected position (within reasonable tolerance)
+            tolerance = 100  # Allow some tolerance for rounding
+            if abs(normalized_pos - expected_pos) > tolerance:
+                logger.warning(f"  {motor} normalized position {normalized_pos:.1f} differs significantly from expected {expected_pos}")
+            else:
+                logger.info(f"  {motor} calibration adjustment successful")
+
+        logger.info("Calibration adjustment completed")
