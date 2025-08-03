@@ -755,10 +755,15 @@ class MotorsBus(abc.ABC):
             return
 
         motors = list(positions.keys())
+
+        # Read positions BEFORE resetting calibration (to get calibrated positions)
+        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+
+        # Now reset calibration
         self.reset_calibration(motors)
         print(f"Resetting calibration for {motors}")
 
-        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+        # Calculate homing offsets using the pre-reset calibrated positions
         homing_offsets = self._get_position_homings(actual_positions, positions)
 
         for motor, offset in homing_offsets.items():
