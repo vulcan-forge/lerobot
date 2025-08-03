@@ -384,9 +384,7 @@ class SourcceyV3BetaFollower(Robot):
 
         # Get current positions as starting points
         current_positions = self.bus.sync_read("Present_Position", normalize=False)
-        logger.info(f"--------------------------------")
-        logger.info(f"Current positions: {current_positions}")
-        logger.info(f"--------------------------------")
+        current_positions['shoulder_lift'] = 2047 # Manually set shoulder_lift to half way position
 
         # Initialize results dictionary
         detected_ranges = {}
@@ -431,7 +429,6 @@ class SourcceyV3BetaFollower(Robot):
 
             # Get current position
             start_pos = current_positions[motor_name]
-            start_pos['shoulder_lift'] = 2048 # Manually set shoulder_lift to half way position
             min_pos = start_pos
             max_pos = start_pos
 
