@@ -742,8 +742,43 @@ class MotorsBus(abc.ABC):
 
         return homing_offsets
 
+    def set_position_homings(self, positions: dict[NameOrID, Value]) -> None:
+        """Set homing offsets to make current positions match the specified target positions.
+
+        This function computes and writes homing offsets such that the present position of each motor
+        becomes exactly the specified target position.
+
+        Args:
+            positions: Dictionary mapping motor names/IDs to their target positions.
+        """
+        if not positions:
+            return
+
+        motors = list(positions.keys())
+        self.reset_calibration(motors)
+        print(f"Resetting calibration for {motors}")
+
+        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+        homing_offsets = self._get_position_homings(actual_positions, positions)
+
+        for motor, offset in homing_offsets.items():
+            self.write("Homing_Offset", motor, offset)
+
     @abc.abstractmethod
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        pass
+
+    @abc.abstractmethod
+    def _get_position_homings(self, actual_positions: dict[NameOrID, Value], target_positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        """Calculate homing offsets to move from actual positions to target positions.
+
+        Args:
+            actual_positions: Current positions of motors (from Present_Position)
+            target_positions: Desired positions for motors
+
+        Returns:
+            Dictionary mapping motor names/IDs to homing offset values
+        """
         pass
 
     def record_ranges_of_motion(

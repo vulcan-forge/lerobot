@@ -306,6 +306,15 @@ class FeetechMotorsBus(MotorsBus):
 
         return half_turn_homings
 
+    def _get_position_homings(self, actual_positions: dict[NameOrID, Value], target_positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        """
+        Calculate homing offsets to move from actual positions to target positions.
+        """
+        homings = {}
+        for motor, pos in target_positions.items():
+            homings[motor] = pos - actual_positions[motor]
+        return homings
+
     def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
         for motor in self._get_motors_list(motors):
             self.write("Torque_Enable", motor, TorqueMode.DISABLED.value, num_retry=num_retry)
