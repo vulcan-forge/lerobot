@@ -383,8 +383,9 @@ class SourcceyV3BetaFollower(Robot):
         self.bus.enable_torque()
 
         # Get current positions as starting points
-        current_positions = self.bus.sync_read("Present_Position", normalize=False)
-        current_positions['shoulder_lift'] = 2047 # Manually set shoulder_lift to half way position
+        start_positions = self.bus.sync_read("Present_Position", normalize=False)
+        reset_positions = start_positions.copy()
+        reset_positions['shoulder_lift'] = 2047 # Manually set shoulder_lift to half way position
 
         # Initialize results dictionary
         detected_ranges = {}
@@ -427,7 +428,8 @@ class SourcceyV3BetaFollower(Robot):
             config = motor_configs.get(motor_name, default_config)
 
             # Get current position
-            start_pos = current_positions[motor_name]
+            start_pos = start_positions[motor_name]
+            reset_pos = reset_positions[motor_name]
             min_pos = start_pos
             max_pos = start_pos
 
@@ -461,7 +463,7 @@ class SourcceyV3BetaFollower(Robot):
                     max_pos = current_pos
 
                 # Return to start position
-                self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
                 time.sleep(settle_time * 2)  # Extra time to return to start
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
@@ -497,7 +499,7 @@ class SourcceyV3BetaFollower(Robot):
                     min_pos = current_pos
 
                 # Return to start position
-                self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
+                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
                 time.sleep(settle_time * 2)
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
