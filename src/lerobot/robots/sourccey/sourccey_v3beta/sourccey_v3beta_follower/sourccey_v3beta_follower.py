@@ -431,6 +431,7 @@ class SourcceyV3BetaFollower(Robot):
 
             # Get current position
             start_pos = current_positions[motor_name]
+            start_pos['shoulder_lift'] = 2048 # Manually set shoulder_lift to half way position
             min_pos = start_pos
             max_pos = start_pos
 
@@ -464,7 +465,6 @@ class SourcceyV3BetaFollower(Robot):
                     max_pos = current_pos
 
                 # Return to start position
-                import pdb; pdb.set_trace()
                 self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
                 time.sleep(settle_time * 2)  # Extra time to return to start
             else:
@@ -501,7 +501,6 @@ class SourcceyV3BetaFollower(Robot):
                     min_pos = current_pos
 
                 # Return to start position
-                import pdb; pdb.set_trace()
                 self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
                 time.sleep(settle_time * 2)
             else:
