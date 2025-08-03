@@ -310,6 +310,10 @@ class FeetechMotorsBus(MotorsBus):
         """
         Calculate homing offsets to move from actual positions to target positions.
 
+        On Feetech Motors:
+        Present_Position = Actual_Position - Homing_Offset
+        Therefore: Homing_Offset = Actual_Position - Present_Position
+
         The homing offset must be within the range [-mid, mid] for the motor's resolution.
         We use modulo to handle wrap-around cases.
         """
@@ -320,8 +324,8 @@ class FeetechMotorsBus(MotorsBus):
             encoder_range = max_res + 1
             mid = max_res // 2
 
-            # Calculate the shortest path offset
-            raw_offset = pos - actual_positions[motor]
+            # Calculate the homing offset: Homing_Offset = Actual_Position - Target_Position
+            raw_offset = actual_positions[motor] - pos
             offset = raw_offset % encoder_range
 
             # Convert to signed range [-mid, mid]
