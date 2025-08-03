@@ -479,6 +479,8 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos - config["search_step"]
+                    if (motor_name == "shoulder_lift"):
+                        import pdb; pdb.set_trace()
                     self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
