@@ -357,7 +357,7 @@ class SourcceyV3BetaFollower(Robot):
         """
         # Set all motors to half turn homings except shoulder_lift
         homing_offsets = self.bus.set_half_turn_homings()
-        shoulder_lift_homing_offset = self.bus.set_position_homings({"shoulder_lift": 4095})
+        shoulder_lift_homing_offset = self.bus.set_position_homings({"shoulder_lift": 3800})
         homing_offsets["shoulder_lift"] = shoulder_lift_homing_offset["shoulder_lift"]
         return homing_offsets
 
