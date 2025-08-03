@@ -134,11 +134,10 @@ class SourcceyV3BetaFollower(Robot):
         """Automatically calibrate the robot using current monitoring to detect mechanical limits.
 
         This method performs automatic calibration by:
-        1. Loading and applying initial calibration to set known starting positions
-        2. Adjusting calibration so current physical positions become desired logical positions
-        3. Detecting mechanical limits using current monitoring
-        4. Setting homing offsets to center the range around the middle of detected limits
-        5. Writing calibration to motors and saving to file
+        1. Adjusting calibration so current physical positions become desired logical positions
+        2. Detecting mechanical limits using current monitoring
+        3. Setting homing offsets to center the range around the middle of detected limits
+        4. Writing calibration to motors and saving to file
 
         WARNING: This process involves moving the robot to find limits.
         Ensure the robot arm is clear of obstacles and people during calibration.
@@ -146,55 +145,49 @@ class SourcceyV3BetaFollower(Robot):
         logger.info(f"Starting automatic calibration of {self}")
         logger.warning("WARNING: Robot will move to detect mechanical limits. Ensure clear workspace!")
 
-        # Step 1: Load and apply initial calibration
-        logger.info("Loading and applying initial calibration...")
-        initial_calibration = self._load_initial_calibration()
-        if initial_calibration:
-            logger.info("Applying initial calibration to motors...")
-            self.bus.write_calibration(initial_calibration)
-            logger.info("Initial calibration applied successfully")
-        else:
-            logger.warning("No initial calibration found, exiting auto-calibration")
-            return
-
-        # Step 2: Adjust calibration so current positions become desired logical positions
+        # Step 1: Adjust calibration so current positions become desired logical positions
         logger.info("Adjusting calibration to align current positions with desired logical positions...")
         self._adjust_calibration_to_current_positions()
 
-        # Step 3: Set up motors for calibration
-        logger.info("Setting up motors for calibration...")
-        for motor in self.bus.motors:
-            self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+        # Print positions of all motors
+        logger.info("Current positions of all motors:")
+        for motor, position in self.bus.sync_read("Present_Position").items():
+            logger.info(f"{motor}: {position}")
 
-        # Step 4: Detect actual mechanical limits using current monitoring
-        # Note: Torque will be enabled during limit detection
-        logger.info("Detecting mechanical limits using current monitoring...")
-        detected_ranges = self._detect_mechanical_limits()
+        # Step 2: Set up motors for calibration
+        # logger.info("Setting up motors for calibration...")
+        # for motor in self.bus.motors:
+        #     self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
-        # Step 5: Disable torque for safety before setting homing offsets
-        logger.info("Disabling torque for safety...")
-        self.bus.disable_torque()
+        # # Step 3: Detect actual mechanical limits using current monitoring
+        # # Note: Torque will be enabled during limit detection
+        # logger.info("Detecting mechanical limits using current monitoring...")
+        # detected_ranges = self._detect_mechanical_limits()
 
-        # Step 6: Calculate homing offsets to center each range
-        logger.info("Calculating homing offsets to center detected ranges...")
-        homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
+        # # Step 4: Disable torque for safety before setting homing offsets
+        # logger.info("Disabling torque for safety...")
+        # self.bus.disable_torque()
 
-        # Step 7: Create calibration dictionary
-        self.calibration = {}
-        for motor, m in self.bus.motors.items():
-            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
-            self.calibration[motor] = MotorCalibration(
-                id=m.id,
-                drive_mode=drive_mode,
-                homing_offset=homing_offsets[motor],
-                range_min=detected_ranges[motor]["min"],
-                range_max=detected_ranges[motor]["max"],
-            )
+        # # Step 5: Calculate homing offsets to center each range
+        # logger.info("Calculating homing offsets to center detected ranges...")
+        # homing_offsets = self._calculate_centered_homing_offsets(detected_ranges)
 
-        # Step 8: Write calibration to motors and save
-        self.bus.write_calibration(self.calibration)
-        self._save_calibration()
-        logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
+        # # Step 6: Create calibration dictionary
+        # self.calibration = {}
+        # for motor, m in self.bus.motors.items():
+        #     drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+        #     self.calibration[motor] = MotorCalibration(
+        #         id=m.id,
+        #         drive_mode=drive_mode,
+        #         homing_offset=homing_offsets[motor],
+        #         range_min=detected_ranges[motor]["min"],
+        #         range_max=detected_ranges[motor]["max"],
+        #     )
+
+        # # Step 7: Write calibration to motors and save
+        # self.bus.write_calibration(self.calibration)
+        # self._save_calibration()
+        # logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
 
     def configure(self) -> None:
         self.bus.disable_torque()
@@ -367,6 +360,79 @@ class SourcceyV3BetaFollower(Robot):
     ############################
     # Auto Calibration Functions
     ############################
+    def _adjust_calibration_to_current_positions(self) -> None:
+        """Adjust calibration so that current physical positions become desired logical positions.
+
+        This method:
+        1. Reads current physical positions of all motors
+        2. Calculates new homing offsets so that:
+           - shoulder_lift at current position = 0 (arm down)
+           - All other motors at current position = 2048 (middle)
+        3. Applies the new calibration without moving the motors physically
+
+        This is much safer than physically moving motors to target positions.
+        """
+        logger.info("Adjusting calibration to align current positions with desired logical positions...")
+
+        # Get current physical positions (raw encoder values)
+        current_positions = self.bus.sync_read("Present_Position", normalize=False)
+        logger.info(f"Current physical positions: {current_positions}")
+
+        # Create new calibration that maps current positions to desired logical positions
+        adjusted_calibration = {}
+
+        for motor, current_pos in current_positions.items():
+            # Determine drive mode for this motor
+            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
+
+            # Determine desired logical position based on motor type
+            if motor == "shoulder_lift":
+                desired_logical_pos = 0  # shoulder_lift should be at 0 when arm is down
+            else:
+                desired_logical_pos = 2048  # All other motors should be at middle position
+
+            # Calculate homing offset: offset = current_physical_position - desired_logical_position
+            # For drive_mode=1, the direction is inverted, so we need to flip the offset
+            homing_offset = current_pos - desired_logical_pos
+            if drive_mode == 1:
+                homing_offset = -homing_offset  # Flip the offset for inverted direction
+
+            logger.info(f"  {motor}: physical_pos={current_pos}, desired_logical_pos={desired_logical_pos}, drive_mode={drive_mode}, homing_offset={homing_offset}")
+
+            # Create MotorCalibration object with the new homing offset
+            # Use safe default ranges for now (will be updated after limit detection)
+            adjusted_calibration[motor] = MotorCalibration(
+                id=self.bus.motors[motor].id,
+                drive_mode=drive_mode,
+                homing_offset=homing_offset,
+                range_min=500,   # Safe default, will be updated
+                range_max=3595,  # Safe default, will be updated
+            )
+
+        # Apply the adjusted calibration to the motors
+        logger.info("Applying adjusted calibration to motors...")
+        self.bus.write_calibration(adjusted_calibration)
+
+        # Verify the adjustment worked by reading normalized positions
+        logger.info("Verifying calibration adjustment...")
+        normalized_positions = self.bus.sync_read("Present_Position", normalize=True)
+        for motor, normalized_pos in normalized_positions.items():
+            if motor == "shoulder_lift":
+                expected_pos = 0
+            else:
+                expected_pos = 2048
+
+            logger.info(f"  {motor}: normalized position = {normalized_pos:.1f}, expected = {expected_pos}")
+
+            # Check if we're close to expected position (within reasonable tolerance)
+            tolerance = 100  # Allow some tolerance for rounding
+            if abs(normalized_pos - expected_pos) > tolerance:
+                logger.warning(f"  {motor} normalized position {normalized_pos:.1f} differs significantly from expected {expected_pos}")
+            else:
+                logger.info(f"  {motor} calibration adjustment successful")
+
+        logger.info("Calibration adjustment completed")
+
     def _calculate_centered_homing_offsets(self, detected_ranges: dict[str, dict[str, int]]) -> dict[str, int]:
         """Calculate homing offsets to center each motor's range around the middle of its detected limits.
 
@@ -715,53 +781,6 @@ class SourcceyV3BetaFollower(Robot):
 
         return safe_ranges
 
-    def _load_initial_calibration(self) -> dict[str, MotorCalibration] | None:
-        """Load initial calibration from the appropriate file based on orientation.
-
-        Returns:
-            Dictionary of MotorCalibration objects or None if file not found
-        """
-        import json
-        import pathlib
-
-        # Determine which calibration file to load based on orientation
-        if self.config.orientation == "left":
-            config_filename = "left_arm_robot_initial_calibration.json"
-        else:
-            config_filename = "right_arm_robot_initial_calibration.json"
-
-        # Look for the calibration file in the sourccey_v3beta directory
-        # Path: sourccey_v3beta_follower -> sourccey_v3beta -> sourccey_v3beta subdirectory
-        config_path = pathlib.Path(__file__).parent.parent / "sourccey_v3beta" / config_filename
-
-        if not config_path.exists():
-            logger.warning(f"Initial calibration file not found: {config_path}")
-            return None
-
-        try:
-            with open(config_path, 'r') as f:
-                config_data = json.load(f)
-
-            # Convert JSON data to MotorCalibration objects
-            initial_calibration = {}
-            for motor_name, motor_data in config_data.items():
-                initial_calibration[motor_name] = MotorCalibration(
-                    id=motor_data["id"],
-                    drive_mode=motor_data["drive_mode"],
-                    homing_offset=motor_data["homing_offset"],
-                    range_min=motor_data["range_min"],
-                    range_max=motor_data["range_max"],
-                )
-
-            logger.info(f"Loaded initial calibration from {config_path}")
-            logger.info(f"Initial calibration includes motors: {list(initial_calibration.keys())}")
-
-            return initial_calibration
-
-        except Exception as e:
-            logger.error(f"Failed to load initial calibration from {config_path}: {e}")
-            return None
-
     def _reset_homing_offsets_to_current_positions(self) -> None:
         """Reset homing offsets so that current physical positions align with expected logical positions.
 
@@ -803,76 +822,3 @@ class SourcceyV3BetaFollower(Robot):
                 logger.warning(f"  Failed to set homing offset for {motor}: {e}")
 
         logger.info("Homing offsets reset successfully")
-
-    def _adjust_calibration_to_current_positions(self) -> None:
-        """Adjust calibration so that current physical positions become desired logical positions.
-
-        This method:
-        1. Reads current physical positions of all motors
-        2. Calculates new homing offsets so that:
-           - shoulder_lift at current position = 0 (arm down)
-           - All other motors at current position = 2048 (middle)
-        3. Applies the new calibration without moving the motors physically
-
-        This is much safer than physically moving motors to target positions.
-        """
-        logger.info("Adjusting calibration to align current positions with desired logical positions...")
-
-        # Get current physical positions (raw encoder values)
-        current_positions = self.bus.sync_read("Present_Position", normalize=False)
-        logger.info(f"Current physical positions: {current_positions}")
-
-        # Create new calibration that maps current positions to desired logical positions
-        adjusted_calibration = {}
-
-        for motor, current_pos in current_positions.items():
-            # Determine drive mode for this motor
-            drive_mode = 1 if motor == "shoulder_lift" or (self.config.orientation == "right" and motor == "gripper") else 0
-
-            # Determine desired logical position based on motor type
-            if motor == "shoulder_lift":
-                desired_logical_pos = 0  # shoulder_lift should be at 0 when arm is down
-            else:
-                desired_logical_pos = 2048  # All other motors should be at middle position
-
-            # Calculate homing offset: offset = current_physical_position - desired_logical_position
-            # For drive_mode=1, the direction is inverted, so we need to flip the offset
-            homing_offset = current_pos - desired_logical_pos
-            if drive_mode == 1:
-                homing_offset = -homing_offset  # Flip the offset for inverted direction
-
-            logger.info(f"  {motor}: physical_pos={current_pos}, desired_logical_pos={desired_logical_pos}, drive_mode={drive_mode}, homing_offset={homing_offset}")
-
-            # Create MotorCalibration object with the new homing offset
-            # Use safe default ranges for now (will be updated after limit detection)
-            adjusted_calibration[motor] = MotorCalibration(
-                id=self.bus.motors[motor].id,
-                drive_mode=drive_mode,
-                homing_offset=homing_offset,
-                range_min=500,   # Safe default, will be updated
-                range_max=3595,  # Safe default, will be updated
-            )
-
-        # Apply the adjusted calibration to the motors
-        logger.info("Applying adjusted calibration to motors...")
-        self.bus.write_calibration(adjusted_calibration)
-
-        # Verify the adjustment worked by reading normalized positions
-        logger.info("Verifying calibration adjustment...")
-        normalized_positions = self.bus.sync_read("Present_Position", normalize=True)
-        for motor, normalized_pos in normalized_positions.items():
-            if motor == "shoulder_lift":
-                expected_pos = 0
-            else:
-                expected_pos = 2048
-
-            logger.info(f"  {motor}: normalized position = {normalized_pos:.1f}, expected = {expected_pos}")
-
-            # Check if we're close to expected position (within reasonable tolerance)
-            tolerance = 100  # Allow some tolerance for rounding
-            if abs(normalized_pos - expected_pos) > tolerance:
-                logger.warning(f"  {motor} normalized position {normalized_pos:.1f} differs significantly from expected {expected_pos}")
-            else:
-                logger.info(f"  {motor} calibration adjustment successful")
-
-        logger.info("Calibration adjustment completed")
