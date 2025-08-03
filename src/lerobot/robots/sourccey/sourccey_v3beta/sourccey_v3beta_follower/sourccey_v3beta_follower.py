@@ -447,7 +447,7 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw
-                    current = self.bus.read("Present_Current", motor_name, normalize=False)
+                    current = self.bus.read("Present_Current", motor_name, normalize=False, num_retry=30)
 
                     if current > config["max_current"]:
                         logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
@@ -483,7 +483,7 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw
-                    current = self.bus.read("Present_Current", motor_name, normalize=False)
+                    current = self.bus.read("Present_Current", motor_name, normalize=False, num_retry=30)
 
                     if current > config["max_current"]:
                         logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
