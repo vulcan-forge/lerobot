@@ -464,6 +464,7 @@ class SourcceyV3BetaFollower(Robot):
                     max_pos = current_pos
 
                 # Return to start position
+                import pdb; pdb.set_trace()
                 self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
                 time.sleep(settle_time * 2)  # Extra time to return to start
             else:
@@ -500,6 +501,7 @@ class SourcceyV3BetaFollower(Robot):
                     min_pos = current_pos
 
                 # Return to start position
+                import pdb; pdb.set_trace()
                 self.bus.write("Goal_Position", motor_name, start_pos, normalize=False)
                 time.sleep(settle_time * 2)
             else:
