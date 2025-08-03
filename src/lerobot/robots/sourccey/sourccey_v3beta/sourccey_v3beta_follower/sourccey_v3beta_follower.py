@@ -730,7 +730,8 @@ class SourcceyV3BetaFollower(Robot):
             config_filename = "right_arm_robot_initial_calibration.json"
 
         # Look for the calibration file in the sourccey_v3beta directory
-        config_path = pathlib.Path(__file__).parent.parent / config_filename
+        # Path: sourccey_v3beta_follower -> sourccey_v3beta -> sourccey_v3beta subdirectory
+        config_path = pathlib.Path(__file__).parent.parent / "sourccey_v3beta" / config_filename
 
         if not config_path.exists():
             logger.warning(f"Initial calibration file not found: {config_path}")
