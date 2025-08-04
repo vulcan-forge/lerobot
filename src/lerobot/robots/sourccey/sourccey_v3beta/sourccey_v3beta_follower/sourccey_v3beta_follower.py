@@ -466,7 +466,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
+                self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10)
                 time.sleep(settle_time * 10)
                 # # Use move_safe_raw to reset to the reset position over 3 seconds
                 # reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
@@ -509,7 +509,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
+                self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10)
                 time.sleep(settle_time * 10)
 
                 # Use move_safe_raw to reset to the reset position over 3 seconds
@@ -542,3 +542,34 @@ class SourcceyV3BetaFollower(Robot):
         except Exception as e:
             logger.error(f"Error reading calibration current for {motor_name}: {e}")
             return 1001
+
+    def write_calibration_goal_position(self, motor_name: str, position: float, max_retries: int = 3, base_delay: float = 0.1) -> bool:
+        """
+        Write the calibration goal position of the robot with exponential backoff retry.
+
+        Args:
+            motor_name: Name of the motor to write position to
+            position: Target position to write
+            max_retries: Maximum number of retry attempts (default: 3)
+            base_delay: Base delay in seconds for exponential backoff (default: 0.1s)
+
+        Returns:
+            True if write was successful, False if all retries failed
+        """
+        for attempt in range(max_retries + 1):  # +1 to include initial attempt
+            try:
+                self.bus.write("Goal_Position", motor_name, position, normalize=False)
+                return True
+            except Exception as e:
+                if attempt == max_retries:
+                    # Final attempt failed, log error and return False
+                    logger.error(f"Error writing calibration goal position for {motor_name} after {max_retries + 1} attempts: {e}")
+                    return False
+                else:
+                    # Calculate exponential backoff delay
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"Attempt {attempt + 1} failed for {motor_name}: {e}. Retrying in {delay:.3f}s...")
+                    time.sleep(delay)
+
+        # This should never be reached, but just in case
+        return False
