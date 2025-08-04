@@ -88,7 +88,10 @@ class SourcceyV3Beta(Robot):
     @property
     def _state_ft(self) -> dict[str, type]:
         return {f"{motor}.pos": float for motor in self.left_arm.bus.motors} | {
-            f"{motor}.pos": float for motor in self.right_arm.bus.motors
+            f"{motor}.pos": float for motor in self.right_arm.bus.motors} | {
+            "x.vel": float,
+            "y.vel": float,
+            "theta.vel": float,
         }
 
     @property
@@ -123,6 +126,16 @@ class SourcceyV3Beta(Robot):
 
         for cam in self.cameras.values():
             cam.connect()
+
+    def disconnect(self):
+        self.left_arm.disconnect()
+        self.right_arm.disconnect()
+
+        self.stop_base()
+        self.dc_motors_controller.disconnect()
+
+        for cam in self.cameras.values():
+            cam.disconnect()
 
     @property
     def is_calibrated(self) -> bool:
@@ -200,86 +213,176 @@ class SourcceyV3Beta(Robot):
             print(f"Error sending action: {e}")
             return {}
 
-    def disconnect(self):
-        self.left_arm.disconnect()
-        self.right_arm.disconnect()
-        self.dc_motors_controller.disconnect()
+    # Base Functions
+    def stop_base(self):
+        self.dc_motors_controller.set_velocity("base_front_left_wheel", 0)
+        self.dc_motors_controller.set_velocity("base_front_right_wheel", 0)
+        self.dc_motors_controller.set_velocity("base_rear_left_wheel", 0)
+        self.dc_motors_controller.set_velocity("base_rear_right_wheel", 0)
 
-        for cam in self.cameras.values():
-            cam.disconnect()
+    @staticmethod
+    def _raw_to_degps(raw_speed: int) -> float:
+        steps_per_deg = 4096.0 / 360.0
+        magnitude = raw_speed
+        degps = magnitude / steps_per_deg
+        return degps
 
-    # High precision wheel control methods
-    def set_mecanum_velocity(self, linear_x: float, linear_y: float, angular_z: float):
+    @staticmethod
+    def _degps_to_raw(degps: float) -> int:
+        steps_per_deg = 4096.0 / 360.0
+        speed_in_steps = degps * steps_per_deg
+        speed_int = int(round(speed_in_steps))
+        # Cap the value to fit within signed 16-bit range (-32768 to 32767)
+        if speed_int > 0x7FFF:
+            speed_int = 0x7FFF  # 32767 -> maximum positive value
+        elif speed_int < -0x8000:
+            speed_int = -0x8000  # -32768 -> minimum negative value
+        return speed_int
+
+    def _body_to_wheel_raw(
+        self,
+        x: float,
+        y: float,
+        theta: float,
+        wheel_radius: float = 0.05,
+        wheelbase: float = 0.25,  # Distance between front and rear wheels
+        track_width: float = 0.25,  # Distance between left and right wheels
+        max_raw: int = 3000,
+    ) -> dict:
         """
-        Set mecanum wheel velocities for holonomic movement (high precision).
+        Convert desired body-frame velocities into wheel raw commands for 4-wheel mechanum drive.
 
-        Args:
-            linear_x: Forward/backward velocity (-1 to 1)
-            linear_y: Left/right velocity (-1 to 1)
-            angular_z: Rotational velocity (-1 to 1)
+        Parameters:
+          x_cmd      : Linear velocity in x (m/s).
+          y_cmd      : Linear velocity in y (m/s).
+          theta_cmd  : Rotational velocity (deg/s).
+          wheel_radius: Radius of each wheel (meters).
+          wheelbase  : Distance between front and rear wheels (meters).
+          track_width: Distance between left and right wheels (meters).
+          max_raw    : Maximum allowed raw command (ticks) per wheel.
+
+        Returns:
+          A dictionary with wheel raw commands:
+             {"base_front_left_wheel": value, "base_front_right_wheel": value,
+              "base_rear_left_wheel": value, "base_rear_right_wheel": value}.
+
+        Notes:
+          - Internally, the method converts theta_cmd to rad/s for the kinematics.
+          - The raw command is computed from the wheels angular speed in deg/s
+            using _degps_to_raw(). If any command exceeds max_raw, all commands
+            are scaled down proportionally.
+          - Mechanum wheels allow for omnidirectional movement including strafing.
         """
-        # Mecanum wheel kinematic equations
-        wheel_radius = 0.05  # 5cm wheel radius
-        wheelbase = 0.2      # 20cm between wheels
-        track_width = 0.2    # 20cm track width
+        # Convert rotational velocity from deg/s to rad/s.
+        theta_rad = theta * (np.pi / 180.0)
 
-        # Calculate individual wheel velocities
-        v_fl = linear_x + linear_y + angular_z * (wheelbase + track_width) / 2
-        v_fr = linear_x - linear_y - angular_z * (wheelbase + track_width) / 2
-        v_rl = linear_x - linear_y + angular_z * (wheelbase + track_width) / 2
-        v_rr = linear_x + linear_y - angular_z * (wheelbase + track_width) / 2
+        # Create the body velocity vector [x, y, theta_rad].
+        velocity_vector = np.array([x, y, theta_rad])
 
-        # Normalize to [-1, 1] range
-        max_vel = max(abs(v_fl), abs(v_fr), abs(v_rl), abs(v_rr))
-        if max_vel > 1.0:
-            v_fl /= max_vel
-            v_fr /= max_vel
-            v_rl /= max_vel
-            v_rr /= max_vel
+        # Mechanum wheel kinematic matrix
+        # For mechanum wheels, the kinematic relationship is:
+        # [v_fl]   [1  1  -(wheelbase + track_width)/2] [v_x]
+        # [v_fr] = [1 -1   (wheelbase + track_width)/2] [v_y]
+        # [v_rl]   [1 -1  -(wheelbase + track_width)/2] [v_theta]
+        # [v_rr]   [1  1   (wheelbase + track_width)/2]
 
-        # Set wheel velocities (hardware PWM - high precision)
-        self.dc_motors_controller.set_velocity("front_left", v_fl)
-        self.dc_motors_controller.set_velocity("front_right", v_fr)
-        self.dc_motors_controller.set_velocity("rear_left", v_rl)
-        self.dc_motors_controller.set_velocity("rear_right", v_rr)
+        # Calculate the effective radius for rotation
+        effective_radius = np.sqrt((wheelbase/2)**2 + (track_width/2)**2)
 
-    # Lower precision actuator control methods
-    def set_actuator_velocity(self, velocity: float):
+        # Build the kinematic matrix for mechanum wheels
+        # Each row represents: [forward/backward, left/right, rotation]
+        m = np.array([
+            [1,  1, -effective_radius],  # Front-left wheel
+            [1, -1,  effective_radius],  # Front-right wheel
+            [1, -1, -effective_radius],  # Rear-left wheel
+            [1,  1,  effective_radius],  # Rear-right wheel
+        ])
+
+        # Compute each wheel's linear speed (m/s) and then its angular speed (rad/s).
+        wheel_linear_speeds = m.dot(velocity_vector)
+        wheel_angular_speeds = wheel_linear_speeds / wheel_radius
+
+        # Convert wheel angular speeds from rad/s to deg/s.
+        wheel_degps = wheel_angular_speeds * (180.0 / np.pi)
+
+        # Scaling to respect maximum raw command
+        steps_per_deg = 4096.0 / 360.0
+        raw_floats = [abs(degps) * steps_per_deg for degps in wheel_degps]
+        max_raw_computed = max(raw_floats)
+        if max_raw_computed > max_raw:
+            scale = max_raw / max_raw_computed
+            wheel_degps = wheel_degps * scale
+
+        # Convert each wheel's angular speed (deg/s) to a raw integer.
+        wheel_raw = [self._degps_to_raw(deg) for deg in wheel_degps]
+
+        return {
+            "base_front_left_wheel": wheel_raw[0],
+            "base_front_right_wheel": wheel_raw[1],
+            "base_rear_left_wheel": wheel_raw[2],
+            "base_rear_right_wheel": wheel_raw[3],
+        }
+
+    def _wheel_raw_to_body(
+        self,
+        front_left_wheel_speed,
+        front_right_wheel_speed,
+        rear_left_wheel_speed,
+        rear_right_wheel_speed,
+        wheel_radius: float = 0.05,
+        wheelbase: float = 0.25,  # Distance between front and rear wheels
+        track_width: float = 0.25,  # Distance between left and right wheels
+    ) -> dict[str, Any]:
         """
-        Set actuator velocity (software PWM - lower precision).
+        Convert wheel raw command feedback back into body-frame velocities for 4-wheel mechanum drive.
 
-        Args:
-            velocity: Actuator velocity (-1 to 1, negative=retract, positive=extend)
+        Parameters:
+          wheel_raw   : Vector with raw wheel commands ("base_front_left_wheel", "base_front_right_wheel",
+                       "base_rear_left_wheel", "base_rear_right_wheel").
+          wheel_radius: Radius of each wheel (meters).
+          wheelbase   : Distance between front and rear wheels (meters).
+          track_width : Distance between left and right wheels (meters).
+
+        Returns:
+          A dict (x.vel, y.vel, theta.vel) all in m/s and deg/s
         """
-        self.dc_motors_controller.set_velocity("actuator", velocity)
 
-    def set_actuator_position(self, position: float):
-        """
-        Set actuator position (0 to 1, simplified control).
+        # Convert each raw command back to an angular speed in deg/s.
+        wheel_degps = np.array([
+            self._raw_to_degps(front_left_wheel_speed),
+            self._raw_to_degps(front_right_wheel_speed),
+            self._raw_to_degps(rear_left_wheel_speed),
+            self._raw_to_degps(rear_right_wheel_speed),
+        ])
 
-        Args:
-            position: Actuator position (0=fully retracted, 1=fully extended)
-        """
-        self.dc_motors_controller.set_position("actuator", position)
+        # Convert from deg/s to rad/s.
+        wheel_radps = wheel_degps * (np.pi / 180.0)
+        # Compute each wheel's linear speed (m/s) from its angular speed.
+        wheel_linear_speeds = wheel_radps * wheel_radius
 
-    def get_actuator_position(self) -> float:
-        """Get current actuator position estimate."""
-        return self.dc_motors_controller.get_position("actuator") or 0.0
+        # Calculate the effective radius for rotation
+        effective_radius = np.sqrt((wheelbase/2)**2 + (track_width/2)**2)
 
-    def stop_motors(self):
-        """Stop all motors."""
-        # Stop wheels
-        self.dc_motors_controller.set_velocity("front_left", 0.0)
-        self.dc_motors_controller.set_velocity("front_right", 0.0)
-        self.dc_motors_controller.set_velocity("rear_left", 0.0)
-        self.dc_motors_controller.set_velocity("rear_right", 0.0)
-        # Stop actuator
-        self.dc_motors_controller.set_velocity("actuator", 0.0)
+        # Build the kinematic matrix for mechanum wheels (same as forward kinematics)
+        m = np.array([
+            [1,  1, -effective_radius],  # Front-left wheel
+            [1, -1,  effective_radius],  # Front-right wheel
+            [1, -1, -effective_radius],  # Rear-left wheel
+            [1,  1,  effective_radius],  # Rear-right wheel
+        ])
 
-    def stop_wheels_only(self):
-        """Stop only the wheels, leave actuator running."""
-        self.dc_motors_controller.set_velocity("front_left", 0.0)
-        self.dc_motors_controller.set_velocity("front_right", 0.0)
-        self.dc_motors_controller.set_velocity("rear_left", 0.0)
-        self.dc_motors_controller.set_velocity("rear_right", 0.0)
+        # Solve the inverse kinematics: body_velocity = M⁺ · wheel_linear_speeds.
+        # Use pseudo-inverse since we have 4 equations and 3 unknowns
+        m_pinv = np.linalg.pinv(m)
+        velocity_vector = m_pinv.dot(wheel_linear_speeds)
+        x, y, theta_rad = velocity_vector
+        theta = theta_rad * (180.0 / np.pi)
+
+        return {
+            "x.vel": x,
+            "y.vel": y,
+            "theta.vel": theta,
+        }  # m/s and deg/s
+
+
 
