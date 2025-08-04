@@ -443,6 +443,7 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos + config["search_step"]
+                    print(f"Moving {motor_name} to {target_pos}")
                     self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
