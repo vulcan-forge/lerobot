@@ -378,9 +378,9 @@ class SourcceyV3BetaFollower(Robot):
         Load the default calibration from the calibration file.
         """
         if reversed:
-            calibration_file = "sourccey_v3beta_follower_left_arm_default_calibration.json"
+            calibration_file = "./src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/left_arm_default_calibration.json"
         else:
-            calibration_file = "sourccey_v3beta_follower_right_arm_default_calibration.json"
+            calibration_file = "./src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/right_arm_default_calibration.json"
 
         with open(calibration_file, "r") as f:
             return json.load(f)
