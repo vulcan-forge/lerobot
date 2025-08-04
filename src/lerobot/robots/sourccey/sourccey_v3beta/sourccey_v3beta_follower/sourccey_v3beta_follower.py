@@ -588,8 +588,11 @@ class SourcceyV3BetaFollower(Robot):
                 # Interpolate between current and target position
                 interpolated_position = current_position + t * (target_position - current_position)
 
+                # Convert to integer for motor bus
+                interpolated_position_int = int(round(interpolated_position))
+
                 # Write position with retry logic
-                self.bus.write("Goal_Position", motor_name, interpolated_position, normalize=False)
+                self.bus.write("Goal_Position", motor_name, interpolated_position_int, normalize=False)
 
                 # Wait for next step (except on final step)
                 if step < total_steps:
