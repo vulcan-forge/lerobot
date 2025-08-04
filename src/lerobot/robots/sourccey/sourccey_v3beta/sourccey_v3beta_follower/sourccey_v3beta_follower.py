@@ -456,8 +456,9 @@ class SourcceyV3BetaFollower(Robot):
                     # Check current draw with retry logic
                     current = self.read_calibration_current(motor_name)
                     if current > config["max_current"]:
-                        logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
-                        max_pos = current_pos
+                        actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                        logger.info(f"    Hit positive limit for {motor_name} at position {actual_pos} (current: {current}mA)")
+                        max_pos = actual_pos
                         break
 
                     current_pos = target_pos
@@ -493,10 +494,11 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw with retry logic
-                    current = self.bus.read("Present_Current", motor_name, normalize=False)
+                    current = self.read_calibration_current(motor_name)
                     if current > config["max_current"]:
-                        logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
-                        min_pos = current_pos
+                        actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                        logger.info(f"    Hit negative limit for {motor_name} at position {actual_pos} (current: {current}mA)")
+                        min_pos = actual_pos
                         break
 
                     current_pos = target_pos
