@@ -119,7 +119,7 @@ class SourcceyV3Beta(Robot):
         self.right_arm.calibrate()
 
     def auto_calibrate(self, full_reset: bool = False) -> None:
-        # self.left_arm.auto_calibrate(reversed=False, full_reset=full_reset)
+        self.left_arm.auto_calibrate(reversed=False, full_reset=full_reset)
         self.right_arm.auto_calibrate(reversed=True, full_reset=full_reset)
 
     def configure(self) -> None:
