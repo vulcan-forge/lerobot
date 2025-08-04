@@ -167,6 +167,7 @@ class SourcceyV3BetaFollower(Robot):
             # the homing offsets are set in the _initialize_calibration function
             # Manually get range of motions from the default calibration file
             default_calibration = self._load_default_calibration(reversed)
+            print(f"Default calibration: {default_calibration}")
             for motor, m in self.bus.motors.items():
                 detected_ranges[motor] = {
                     "min": default_calibration[motor].range_min,
@@ -378,9 +379,9 @@ class SourcceyV3BetaFollower(Robot):
         Load the default calibration from the calibration file.
         """
         if reversed:
-            calibration_file = "./src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/left_arm_default_calibration.json"
+            calibration_file = "~/Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/left_arm_default_calibration.json"
         else:
-            calibration_file = "./src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/right_arm_default_calibration.json"
+            calibration_file = "~/Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/right_arm_default_calibration.json"
 
         with open(calibration_file, "r") as f:
             return json.load(f)
