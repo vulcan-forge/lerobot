@@ -18,9 +18,10 @@ import logging
 import time
 from functools import cached_property
 from itertools import chain
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
+import threading
 
 from lerobot.cameras.utils import make_cameras_from_configs
 from lerobot.constants import OBS_IMAGES, OBS_STATE
@@ -119,8 +120,26 @@ class SourcceyV3Beta(Robot):
         self.right_arm.calibrate()
 
     def auto_calibrate(self, full_reset: bool = False) -> None:
-        self.left_arm.auto_calibrate(reversed=False, full_reset=full_reset)
-        self.right_arm.auto_calibrate(reversed=True, full_reset=full_reset)
+        """
+        Auto-calibrate both arms simultaneously using threading.
+        """
+        # Create threads for each arm
+        left_thread = threading.Thread(
+            target=self.left_arm.auto_calibrate,
+            kwargs={"reversed": False, "full_reset": full_reset}
+        )
+        right_thread = threading.Thread(
+            target=self.right_arm.auto_calibrate,
+            kwargs={"reversed": True, "full_reset": full_reset}
+        )
+
+        # Start both threads
+        left_thread.start()
+        right_thread.start()
+
+        # Wait for both threads to complete
+        left_thread.join()
+        right_thread.join()
 
     def configure(self) -> None:
         self.left_arm.configure()
