@@ -147,7 +147,7 @@ class SourcceyV3BetaFollower(Robot):
 
         # Step 1: Adjust calibration so current positions become desired logical positions
         logger.info("Adjusting calibration to align current positions with desired logical positions...")
-        homing_offsets = self._initialize_calibration()
+        homing_offsets = self._initialize_calibration(reversed)
 
         # If hard_reset is False, we don't need to detect mechanical limits
         # Only detect mechanical limits if the customer is doing a hard reset
@@ -386,6 +386,10 @@ class SourcceyV3BetaFollower(Robot):
         start_positions = self.bus.sync_read("Present_Position", normalize=False)
         reset_positions = start_positions.copy()
         reset_positions['shoulder_lift'] = 2304 # Manually set shoulder_lift to half way position
+
+        print("--------------------------------")
+        print(f"Start positions: {start_positions}")
+        print("--------------------------------")
 
         # Initialize results dictionary
         detected_ranges = {}
