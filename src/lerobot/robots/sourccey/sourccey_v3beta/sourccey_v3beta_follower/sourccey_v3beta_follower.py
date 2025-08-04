@@ -443,7 +443,7 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos + config["search_step"]
-                    if not self.write_calibration_goal_position(motor_name, target_pos, max_retries=10):
+                    if not self.write_calibration_goal_position(motor_name, target_pos):
                         logger.error(f"Failed to write goal position for {motor_name}, stopping search")
                         break
 
@@ -451,7 +451,7 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw with retry logic
-                    current = self.read_calibration_current(motor_name, max_retries=10)
+                    current = self.read_calibration_current(motor_name)
                     if current > config["max_current"]:
                         logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         max_pos = current_pos
@@ -468,7 +468,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                if not self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10):
+                if not self.write_calibration_goal_position(motor_name, reset_pos):
                     logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
             else:
@@ -485,7 +485,7 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos - config["search_step"]
-                    if not self.write_calibration_goal_position(motor_name, target_pos, max_retries=10):
+                    if not self.write_calibration_goal_position(motor_name, target_pos):
                         logger.error(f"Failed to write goal position for {motor_name}, stopping search")
                         break
 
@@ -493,7 +493,7 @@ class SourcceyV3BetaFollower(Robot):
                     time.sleep(settle_time)
 
                     # Check current draw with retry logic
-                    current = self.read_calibration_current(motor_name, max_retries=10)
+                    current = self.read_calibration_current(motor_name)
                     if current > config["max_current"]:
                         logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         min_pos = current_pos
@@ -510,7 +510,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                if not self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10):
+                if not self.write_calibration_goal_position(motor_name, reset_pos):
                     logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
             else:
