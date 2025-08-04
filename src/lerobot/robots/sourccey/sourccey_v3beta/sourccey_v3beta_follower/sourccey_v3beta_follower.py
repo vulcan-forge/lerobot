@@ -1,4 +1,5 @@
 from functools import cached_property
+import json
 import time
 from typing import Any
 from venv import logger
@@ -151,17 +152,26 @@ class SourcceyV3BetaFollower(Robot):
 
         # If hard_reset is False, we don't need to detect mechanical limits
         # Only detect mechanical limits if the customer is doing a hard reset
-        if not full_reset:
-            return
+        detected_ranges = {}
+        if full_reset:
+            # Step 2: Detect actual mechanical limits using current monitoring
+            # Note: Torque will be enabled during limit detection
+            logger.info("Detecting mechanical limits using current monitoring...")
+            detected_ranges = self._detect_mechanical_limits(reversed)
 
-        # Step 2: Detect actual mechanical limits using current monitoring
-        # Note: Torque will be enabled during limit detection
-        logger.info("Detecting mechanical limits using current monitoring...")
-        detected_ranges = self._detect_mechanical_limits(reversed)
-
-        # Step 3: Disable torque for safety before setting homing offsets
-        logger.info("Disabling torque for safety...")
-        self.bus.disable_torque()
+            # Step 3: Disable torque for safety before setting homing offsets
+            logger.info("Disabling torque for safety...")
+            self.bus.disable_torque()
+        else:
+            # If we are not doing a full reset, we should manually set the range of motions
+            # the homing offsets are set in the _initialize_calibration function
+            # Manually get range of motions from the default calibration file
+            default_calibration = self._load_default_calibration(reversed)
+            for motor, m in self.bus.motors.items():
+                detected_ranges[motor] = {
+                    "min": default_calibration[motor].range_min,
+                    "max": default_calibration[motor].range_max,
+                }
 
         # Step 4: Create calibration dictionary
         self.calibration = {}
@@ -361,6 +371,18 @@ class SourcceyV3BetaFollower(Robot):
         homing_offsets["shoulder_lift"] = shoulder_lift_homing_offset["shoulder_lift"]
         return homing_offsets
 
+    def _load_default_calibration(self, reversed: bool = False) -> dict[str, MotorCalibration]:
+        """
+        Load the default calibration from the calibration file.
+        """
+        if reversed:
+            calibration_file = "sourccey_v3beta_follower_left_arm_default_calibration.json"
+        else:
+            calibration_file = "sourccey_v3beta_follower_right_arm_default_calibration.json"
+
+        with open(calibration_file, "r") as f:
+            return json.load(f)
+
     def _detect_mechanical_limits(self, reversed: bool = False) -> dict[str, dict[str, float]]:
         """
         Detect the mechanical limits of the robot using current monitoring.
@@ -462,12 +484,11 @@ class SourcceyV3BetaFollower(Robot):
                     actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
                     max_pos = actual_pos
 
-                self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
+                self._move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
-                actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
-                max_pos = actual_pos
+                max_pos = start_pos
 
             # Test negative direction (decreasing position)
             if config["search_negative"]:
@@ -498,7 +519,7 @@ class SourcceyV3BetaFollower(Robot):
                     actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
                     min_pos = actual_pos
 
-                self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
+                self._move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
@@ -514,7 +535,7 @@ class SourcceyV3BetaFollower(Robot):
 
         # Reset all motors to their start positions (Just the shoulder lift is out of position)
         reset_motor = "shoulder_lift"
-        self.move_calibration_slow(reset_motor, start_positions[reset_motor], duration=3.0)
+        self._move_calibration_slow(reset_motor, start_positions[reset_motor], duration=3.0)
 
         logger.info("Mechanical limit detection completed")
         return detected_ranges
@@ -549,7 +570,7 @@ class SourcceyV3BetaFollower(Robot):
         # This should never be reached, but just in case
         return 1001
 
-    def move_calibration_slow(self, motor_name: str, target_position: float, duration: float = 3.0,
+    def _move_calibration_slow(self, motor_name: str, target_position: float, duration: float = 3.0,
                              steps_per_second: float = 10.0, max_retries: int = 3) -> bool:
         """
         Move a single motor slowly to target position during calibration.
