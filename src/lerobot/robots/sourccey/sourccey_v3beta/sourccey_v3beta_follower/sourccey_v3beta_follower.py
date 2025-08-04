@@ -465,10 +465,10 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
+                logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
                 logger.info("")
 
-                if not self.write_calibration_goal_position(motor_name, reset_pos):
+                if not self.reset_motor_safe(motor_name, reset_pos, duration=3.0):
                     logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
             else:
@@ -507,10 +507,10 @@ class SourcceyV3BetaFollower(Robot):
 
                 # Return to start position
                 logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
+                logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
                 logger.info("")
 
-                if not self.write_calibration_goal_position(motor_name, reset_pos):
+                if not self.reset_motor_safe(motor_name, reset_pos, duration=3.0):
                     logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
             else:
@@ -588,3 +588,73 @@ class SourcceyV3BetaFollower(Robot):
 
         # This should never be reached, but just in case
         return False
+
+    def move_calibration_slow(self, motor_name: str, target_position: float, duration: float = 3.0,
+                             steps_per_second: float = 10.0, max_retries: int = 3) -> bool:
+        """
+        Move a single motor slowly to target position during calibration.
+
+        This function moves the motor in small steps over the specified duration
+        to prevent high g-forces that could damage the robot during calibration.
+
+        Args:
+            motor_name: Name of the motor to move
+            target_position: Target position to move to
+            duration: Time in seconds to complete the movement (default: 3.0s)
+            steps_per_second: Number of position updates per second (default: 10Hz)
+            max_retries: Maximum retries for each position write (default: 3)
+
+        Returns:
+            True if movement completed successfully, False otherwise
+        """
+        try:
+            # Get current position
+            current_position = self.bus.read("Present_Position", motor_name, normalize=False)
+
+            # Calculate movement parameters
+            total_steps = int(duration * steps_per_second)
+            step_time = duration / total_steps
+
+            logger.info(f"Moving {motor_name} from {current_position:.1f} to {target_position:.1f} over {duration}s")
+
+            # Move in small steps
+            for step in range(total_steps + 1):  # +1 to include final position
+                # Calculate interpolation factor (0 to 1)
+                t = step / total_steps
+
+                # Interpolate between current and target position
+                interpolated_position = current_position + t * (target_position - current_position)
+
+                # Write position with retry logic
+                if not self.write_calibration_goal_position(motor_name, interpolated_position, max_retries):
+                    logger.error(f"Failed to write position {interpolated_position:.1f} for {motor_name} at step {step}")
+                    return False
+
+                # Wait for next step (except on final step)
+                if step < total_steps:
+                    time.sleep(step_time)
+
+            logger.info(f"Successfully moved {motor_name} to {target_position:.1f}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error during slow movement of {motor_name}: {e}")
+            return False
+
+    def reset_motor_safe(self, motor_name: str, reset_position: float, duration: float = 3.0) -> bool:
+        """
+        Safely reset a motor to its reset position during calibration.
+
+        This is a convenience function that uses slow movement to reset
+        a motor to its calibration reset position.
+
+        Args:
+            motor_name: Name of the motor to reset
+            reset_position: Target reset position
+            duration: Time in seconds to complete the reset movement (default: 3.0s)
+
+        Returns:
+            True if reset was successful, False otherwise
+        """
+        logger.info(f"Resetting {motor_name} to {reset_position:.1f} using slow movement")
+        return self.move_calibration_slow(motor_name, reset_position, duration)
