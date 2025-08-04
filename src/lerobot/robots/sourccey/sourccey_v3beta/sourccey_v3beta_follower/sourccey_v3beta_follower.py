@@ -465,10 +465,13 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info("")
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
-                # Use move_safe_raw to reset to the reset position over 3 seconds
-                reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
-                if reset_result["status"] != "completed":
-                    logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
+
+                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
+                time.sleep(settle_time * 10)
+                # # Use move_safe_raw to reset to the reset position over 3 seconds
+                # reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
+                # if reset_result["status"] != "completed":
+                #     logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
                 max_pos = start_pos
@@ -505,10 +508,14 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info("")
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
+
+                self.bus.write("Goal_Position", motor_name, reset_pos, normalize=False)
+                time.sleep(settle_time * 10)
+
                 # Use move_safe_raw to reset to the reset position over 3 seconds
-                reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
-                if reset_result["status"] != "completed":
-                    logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
+                # reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
+                # if reset_result["status"] != "completed":
+                #     logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
                 min_pos = start_pos
