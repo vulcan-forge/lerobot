@@ -443,13 +443,15 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos + config["search_step"]
-                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
+                    if not self.write_calibration_goal_position(motor_name, target_pos, max_retries=10):
+                        logger.error(f"Failed to write goal position for {motor_name}, stopping search")
+                        break
 
                     # Wait for movement to settle
                     time.sleep(settle_time)
 
-                    # Check current draw
-                    current = self.read_calibration_current(motor_name)
+                    # Check current draw with retry logic
+                    current = self.read_calibration_current(motor_name, max_retries=10)
                     if current > config["max_current"]:
                         logger.info(f"    Hit positive limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         max_pos = current_pos
@@ -466,12 +468,9 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10)
+                if not self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10):
+                    logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
-                # # Use move_safe_raw to reset to the reset position over 3 seconds
-                # reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
-                # if reset_result["status"] != "completed":
-                #     logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
                 max_pos = start_pos
@@ -486,13 +485,15 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos - config["search_step"]
-                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
+                    if not self.write_calibration_goal_position(motor_name, target_pos, max_retries=10):
+                        logger.error(f"Failed to write goal position for {motor_name}, stopping search")
+                        break
 
                     # Wait for movement to settle
                     time.sleep(settle_time)
 
-                    # Check current draw
-                    current = self.read_calibration_current(motor_name)
+                    # Check current draw with retry logic
+                    current = self.read_calibration_current(motor_name, max_retries=10)
                     if current > config["max_current"]:
                         logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         min_pos = current_pos
@@ -509,13 +510,9 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using safe raw movement")
                 logger.info("")
 
-                self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10)
+                if not self.write_calibration_goal_position(motor_name, reset_pos, max_retries=10):
+                    logger.error(f"Failed to reset {motor_name} to {reset_pos}")
                 time.sleep(settle_time * 10)
-
-                # Use move_safe_raw to reset to the reset position over 3 seconds
-                # reset_result = self.move_safe_raw({motor_name: reset_pos}, duration=3.0, safety_check=False)
-                # if reset_result["status"] != "completed":
-                #     logger.warning(f"Reset movement for {motor_name} did not complete successfully: {reset_result}")
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
                 min_pos = start_pos
@@ -531,17 +528,35 @@ class SourcceyV3BetaFollower(Robot):
         logger.info("Mechanical limit detection completed")
         return detected_ranges
 
-    # If we get an overload error, we can assume that the motor is at the mechanical limit
-    def read_calibration_current(self, motor_name: str) -> dict[str, float]:
+    def read_calibration_current(self, motor_name: str, max_retries: int = 3, base_delay: float = 0.1) -> float:
         """
-        Read the calibration current of the robot.
+        Read the calibration current of the robot with exponential backoff retry.
+
+        Args:
+            motor_name: Name of the motor to read current from
+            max_retries: Maximum number of retry attempts (default: 3)
+            base_delay: Base delay in seconds for exponential backoff (default: 0.1s)
+
+        Returns:
+            Current reading in mA, or 1001 if all retries fail
         """
-        try:
-            current = self.bus.read("Present_Current", motor_name, normalize=False)
-            return current
-        except Exception as e:
-            logger.error(f"Error reading calibration current for {motor_name}: {e}")
-            return 1001
+        for attempt in range(max_retries + 1):  # +1 to include initial attempt
+            try:
+                current = self.bus.read("Present_Current", motor_name, normalize=False)
+                return current
+            except Exception as e:
+                if attempt == max_retries:
+                    # Final attempt failed, log error and return default value
+                    logger.error(f"Error reading calibration current for {motor_name} after {max_retries + 1} attempts: {e}")
+                    return 1001
+                else:
+                    # Calculate exponential backoff delay
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"Attempt {attempt + 1} failed for {motor_name}: {e}. Retrying in {delay:.3f}s...")
+                    time.sleep(delay)
+
+        # This should never be reached, but just in case
+        return 1001
 
     def write_calibration_goal_position(self, motor_name: str, position: float, max_retries: int = 3, base_delay: float = 0.1) -> bool:
         """
