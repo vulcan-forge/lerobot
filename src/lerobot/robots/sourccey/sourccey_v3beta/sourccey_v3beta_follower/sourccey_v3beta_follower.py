@@ -12,6 +12,8 @@ from lerobot.motors.motors_bus import Motor, MotorCalibration, MotorNormMode
 from lerobot.robots.robot import Robot
 from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta_follower.config_sourccey_v3beta_follower import SourcceyV3BetaFollowerConfig
 from lerobot.robots.utils import ensure_safe_goal_position
+import os
+from pathlib import Path
 
 class SourcceyV3BetaFollower(Robot):
     config_class = SourcceyV3BetaFollowerConfig
@@ -376,12 +378,12 @@ class SourcceyV3BetaFollower(Robot):
 
     def _load_default_calibration(self, reversed: bool = False) -> dict[str, MotorCalibration]:
         """
-        Load the default calibration from the calibration file.
+        Load default calibration from file.
         """
         if reversed:
-            calibration_file = "~/Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/left_arm_default_calibration.json"
+            calibration_file = Path.home() / "Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/left_arm_default_calibration.json"
         else:
-            calibration_file = "~/Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/right_arm_default_calibration.json"
+            calibration_file = Path.home() / "Desktop/Projects/lerobot/src/lerobot/robots/sourccey/sourccey_v3beta/sourccey_v3beta/right_arm_default_calibration.json"
 
         with open(calibration_file, "r") as f:
             return json.load(f)
