@@ -408,7 +408,7 @@ class SourcceyV3BetaFollower(Robot):
                 "search_step": base_step_size,
                 "max_current": self.config.max_current_safety_threshold,
                 "search_positive": True,
-                "search_negative": True
+                "search_negative": False
             }
         }
 
