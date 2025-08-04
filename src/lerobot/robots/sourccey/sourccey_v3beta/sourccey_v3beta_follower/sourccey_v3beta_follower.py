@@ -130,7 +130,7 @@ class SourcceyV3BetaFollower(Robot):
         self._save_calibration()
         print("Calibration saved to", self.calibration_fpath)
 
-    def auto_calibrate(self, full_reset: bool = False) -> None:
+    def auto_calibrate(self, reversed: bool = False, full_reset: bool = False) -> None:
         """Automatically calibrate the robot using current monitoring to detect mechanical limits.
 
         This method performs automatic calibration by:
@@ -157,7 +157,7 @@ class SourcceyV3BetaFollower(Robot):
         # Step 2: Detect actual mechanical limits using current monitoring
         # Note: Torque will be enabled during limit detection
         logger.info("Detecting mechanical limits using current monitoring...")
-        detected_ranges = self._detect_mechanical_limits()
+        detected_ranges = self._detect_mechanical_limits(reversed)
 
         # Step 3: Disable torque for safety before setting homing offsets
         logger.info("Disabling torque for safety...")
@@ -351,17 +351,17 @@ class SourcceyV3BetaFollower(Robot):
     ############################
     # Auto Calibration Functions
     ############################
-    def _initialize_calibration(self) -> None:
+    def _initialize_calibration(self, reversed: bool = False) -> None:
         """
         Initialize the calibration of the robot.
         """
         # Set all motors to half turn homings except shoulder_lift
         homing_offsets = self.bus.set_half_turn_homings()
-        shoulder_lift_homing_offset = self.bus.set_position_homings({"shoulder_lift": 3800})
+        shoulder_lift_homing_offset = self.bus.set_position_homings({"shoulder_lift": 296 if reversed else 3800})
         homing_offsets["shoulder_lift"] = shoulder_lift_homing_offset["shoulder_lift"]
         return homing_offsets
 
-    def _detect_mechanical_limits(self) -> dict[str, dict[str, float]]:
+    def _detect_mechanical_limits(self, reversed: bool = False) -> dict[str, dict[str, float]]:
         """
         Detect the mechanical limits of the robot using current monitoring.
 
@@ -400,15 +400,15 @@ class SourcceyV3BetaFollower(Robot):
                 "search_range": 3800,
                 "search_step": base_step_size * 2,
                 "max_current": self.config.max_current_safety_threshold,
-                "search_positive": False,
-                "search_negative": True
+                "search_positive": reversed,
+                "search_negative": not reversed
             },
             "gripper": {
                 "search_range": 1536,
                 "search_step": base_step_size,
                 "max_current": self.config.max_current_safety_threshold,
-                "search_positive": False,
-                "search_negative": True
+                "search_positive": reversed,
+                "search_negative": not reversed
             }
         }
 
