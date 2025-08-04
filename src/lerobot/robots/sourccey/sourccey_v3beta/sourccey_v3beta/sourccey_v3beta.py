@@ -78,31 +78,11 @@ class SourcceyV3Beta(Robot):
             cameras={},
         )
 
-        # Configure DC motors for mecanum wheels + actuator
-        self._setup_dc_motors()
-
         self.left_arm = SourcceyV3BetaFollower(left_arm_config)
         self.right_arm = SourcceyV3BetaFollower(right_arm_config)
         self.cameras = make_cameras_from_configs(config.cameras)
-
-    def _setup_dc_motors(self):
-        """Setup DC motors for mecanum wheel control + actuator."""
-        # Define the 5 DC motors: 4 wheels + 1 actuator
-        motors = {
-            # High precision wheels (hardware PWM)
-            "front_left": DCMotor(id=1, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
-            "front_right": DCMotor(id=2, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
-            "rear_left": DCMotor(id=3, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
-            "rear_right": DCMotor(id=4, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
-            # Lower precision actuator (software PWM)
-            "actuator": DCMotor(id=5, model="linear_actuator", norm_mode=MotorNormMode.RANGE_M100_100),
-        }
-
-        # Create DC motors controller with configuration
         self.dc_motors_controller = PWMDCMotorsController(
-            motors=motors,
-            protocol="pwm",
-            config=self.config.dc_motors_config
+            config=self.config.dc_motors
         )
 
     @property

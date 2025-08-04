@@ -39,6 +39,24 @@ def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
     }
     return config
 
+def sourccey_v3beta_dc_motors_config() -> dict[str, DCMotor]:
+    return {
+        "motors": {
+            "front_left": DCMotor(id=1, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "front_right": DCMotor(id=2, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "rear_left": DCMotor(id=3, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "rear_right": DCMotor(id=4, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "actuator": DCMotor(id=5, model="linear_actuator", norm_mode=MotorNormMode.RANGE_M100_100),
+        },
+        "pwm_pins": [12, 13, 14, 15, 18],
+        "direction_pins": [2, 3, 4, 5, 6],
+        "enable_pins": [7, 8, 9, 10, 11],
+        "pwm_frequency": 25000,
+        "invert_direction": False,
+        "invert_enable": False,
+        "invert_brake": False,
+    }
+
 @RobotConfig.register_subclass("sourccey_v3beta")
 @dataclass
 class SourcceyV3BetaConfig(RobotConfig):
@@ -53,16 +71,8 @@ class SourcceyV3BetaConfig(RobotConfig):
     right_arm_max_relative_target: int | None = None
     right_arm_use_degrees: bool = False
 
-    # DC Motors Configuration: 4 wheels (hardware PWM) + 1 actuator (software PWM)
-    dc_motors_config: dict = field(default_factory=lambda: {
-        "pwm_pins": [12, 13, 14, 15, 18],  # 4 hardware PWM + 1 software PWM
-        "direction_pins": [2, 3, 4, 5, 6],  # Direction control for all motors
-        "enable_pins": [7, 8, 9, 10, 11],   # Enable pins for all motors
-        "pwm_frequency": 25000,              # 25kHz for optimal performance
-        "invert_direction": False,           # Adjust if motors spin wrong direction
-    })
-
     cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v3beta_cameras_config)
+    dc_motors: dict = field(default_factory=sourccey_v3beta_dc_motors_config)
 
 @dataclass
 class SourcceyV3BetaHostConfig:
