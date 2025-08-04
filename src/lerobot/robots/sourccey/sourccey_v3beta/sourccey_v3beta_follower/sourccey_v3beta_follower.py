@@ -404,7 +404,7 @@ class SourcceyV3BetaFollower(Robot):
                 "search_negative": not reversed
             },
             "gripper": {
-                "search_range": 1536,
+                "search_range": 1664,
                 "search_step": base_step_size,
                 "max_current": self.config.max_current_safety_threshold,
                 "search_positive": False,
