@@ -120,7 +120,7 @@ class SourcceyV3Beta(Robot):
 
     def auto_calibrate(self, full_reset: bool = False) -> None:
         self.left_arm.auto_calibrate(full_reset)
-        # self.right_arm.auto_calibrate(full_reset)
+        self.right_arm.auto_calibrate(full_reset)
 
     def configure(self) -> None:
         self.left_arm.configure()

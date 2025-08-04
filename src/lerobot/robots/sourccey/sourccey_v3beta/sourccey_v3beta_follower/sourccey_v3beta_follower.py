@@ -180,8 +180,6 @@ class SourcceyV3BetaFollower(Robot):
         self._save_calibration()
         logger.info(f"Automatic calibration completed and saved to {self.calibration_fpath}")
 
-
-
     def configure(self) -> None:
         self.bus.disable_torque()
         for motor in self.bus.motors:
@@ -521,9 +519,9 @@ class SourcceyV3BetaFollower(Robot):
 
             logger.info(f"  Detected range for {motor_name}: {min_pos} to {max_pos}")
 
-        # Reset all motors to their start positions
-        for motor_name in self.bus.motors:
-            self.move_calibration_slow(motor_name, start_positions[motor_name], duration=3.0)
+        # Reset all motors to their start positions (Just the shoulder lift is out of position)
+        reset_motor = "shoulder_lift"
+        self.move_calibration_slow(reset_motor, start_positions[reset_motor], duration=3.0)
 
         logger.info("Mechanical limit detection completed")
         return detected_ranges
