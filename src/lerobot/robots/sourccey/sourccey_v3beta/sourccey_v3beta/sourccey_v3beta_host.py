@@ -49,7 +49,7 @@ class SourcceyV3BetaHost:
 
 def main():
     logging.info("Configuring Sourccey V3 Beta")
-    robot_config = SourcceyV3BetaConfig()
+    robot_config = SourcceyV3BetaConfig(id="sourccey_v3beta")
     robot = SourcceyV3Beta(robot_config)
 
     logging.info("Connecting Sourccey V3 Beta")
@@ -62,10 +62,14 @@ def main():
     last_cmd_time = time.time()
     watchdog_active = False
     logging.info("Waiting for commands...")
+    print("Waiting for commands...")
     try:
         # Business logic
         start = time.perf_counter()
         duration = 0
+
+        observation = None
+        previous_observation = None
         while duration < host.connection_time_s:
             loop_start_time = time.time()
             try:
@@ -76,7 +80,8 @@ def main():
                 watchdog_active = False
             except zmq.Again:
                 if not watchdog_active:
-                    logging.warning("No command available")
+                    # logging.warning("No command available")
+                    pass
             except Exception as e:
                 logging.error("Message fetching failed: %s", e)
 
@@ -88,21 +93,29 @@ def main():
                 watchdog_active = True
                 robot.stop_base()
 
-            last_observation = robot.get_observation()
+            if observation is not None and observation != {}:
+                previous_observation = observation
+            observation = robot.get_observation()
 
             # Encode ndarrays to base64 strings
             for cam_key, _ in robot.cameras.items():
-                ret, buffer = cv2.imencode(
-                    ".jpg", last_observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
-                )
-                if ret:
-                    last_observation[cam_key] = base64.b64encode(buffer).decode("utf-8")
-                else:
-                    last_observation[cam_key] = ""
+                if cam_key in observation:
+                    ret, buffer = cv2.imencode(
+                        ".jpg", observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+                    )
+                    if ret:
+                        observation[cam_key] = base64.b64encode(buffer).decode("utf-8")
+                    else:
+                        observation[cam_key] = ""
 
             # Send the observation to the remote agent
             try:
-                host.zmq_observation_socket.send_string(json.dumps(last_observation), flags=zmq.NOBLOCK)
+                # Don't send an empty observation
+                # Maybe we send the last observation instead? Nick - 7/29/2025
+                if observation is None or observation == {}:
+                    observation = previous_observation
+                    logging.warning("No observation received. Sending previous observation.")
+                host.zmq_observation_socket.send_string(json.dumps(observation), flags=zmq.NOBLOCK)
             except zmq.Again:
                 logging.info("Dropping observation, no client connected")
 

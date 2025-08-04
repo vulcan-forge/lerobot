@@ -13,15 +13,20 @@
 # limitations under the License.
 
 """
-Helper to recalibrate your device (robot or teleoperator).
+Helper to automatically recalibrate your device (robot or teleoperator) using current monitoring.
+
+This script performs automatic calibration by detecting mechanical limits using current monitoring,
+then setting homing offsets to center the detected ranges.
+
+WARNING: This process involves moving the robot to find limits.
+Ensure the robot arm is clear of obstacles and people during calibration.
 
 Example:
 
 ```shell
-python -m lerobot.calibrate \
-    --teleop.type=so100_leader \
-    --teleop.port=/dev/tty.usbmodem58760431551 \
-    --teleop.id=blue
+python -m lerobot.auto_calibrate \
+    --robot.type=sourccey_v3beta_follower \
+    --robot.port=/dev/tty.usbmodem58760431551
 ```
 """
 
@@ -59,9 +64,10 @@ from lerobot.utils.utils import init_logging
 
 
 @dataclass
-class CalibrateConfig:
+class AutoCalibrateConfig:
     teleop: TeleoperatorConfig | None = None
     robot: RobotConfig | None = None
+    full_reset: bool = False
 
     def __post_init__(self):
         if bool(self.teleop) == bool(self.robot):
@@ -69,25 +75,43 @@ class CalibrateConfig:
 
         self.device = self.robot if self.robot else self.teleop
 
-
 @draccus.wrap()
-def calibrate(cfg: CalibrateConfig):
+def auto_calibrate(cfg: AutoCalibrateConfig):
+    """Automatically calibrate a robot or teleoperator using current monitoring."""
     init_logging()
+    logging.info("Starting automatic calibration process...")
     logging.info(pformat(asdict(cfg)))
 
+    # Create device instance
     if isinstance(cfg.device, RobotConfig):
         device = make_robot_from_config(cfg.device)
     elif isinstance(cfg.device, TeleoperatorConfig):
         device = make_teleoperator_from_config(cfg.device)
+    else:
+        raise ValueError(f"Unsupported device type: {type(cfg.device)}")
 
-    device.connect(calibrate=False)
-    device.calibrate()
-    device.disconnect()
+    try:
+        # Connect without calibration (we'll do auto-calibration)
+        device.connect(calibrate=False)
 
+        # Check if device supports auto-calibration
+        if hasattr(device, 'auto_calibrate'):
+            logging.info("Device supports auto-calibration. Starting automatic calibration...")
+            device.auto_calibrate(full_reset=cfg.full_reset)
+            logging.info("Automatic calibration completed successfully!")
+        else:
+            logging.warning("Device does not support auto-calibration. Returning")
 
-def main():
-    calibrate()
+    except Exception as e:
+        logging.error(f"Calibration failed: {e}")
+        raise
+    finally:
+        # Always disconnect
+        try:
+            device.disconnect()
+        except Exception as e:
+            logging.warning(f"Error during disconnect: {e}")
 
 
 if __name__ == "__main__":
-    main()
+    auto_calibrate()

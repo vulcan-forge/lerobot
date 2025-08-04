@@ -12,8 +12,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from lerobot.common.motors import Motor, MotorNormMode
-from lerobot.common.motors.feetech import FeetechMotorsBus
+from lerobot.motors import Motor, MotorNormMode
+from lerobot.motors.feetech import FeetechMotorsBus
 
 
 def test_feetech_motor_sync_read():
@@ -21,18 +21,18 @@ def test_feetech_motor_sync_read():
 
     # Define the motor configuration - EXACTLY as used in teleoperation
     motors = {
-        "left_arm_shoulder_pan": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_elbow_flex": Motor(3, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
-        "left_arm_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
-        "right_arm_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
-        "right_arm_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
+        "left_shoulder_pan": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100),
+        "left_shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
+        "left_elbow_flex": Motor(3, "sts3215", MotorNormMode.RANGE_M100_100),
+        "left_wrist_flex": Motor(4, "sts3215", MotorNormMode.RANGE_M100_100),
+        "left_wrist_roll": Motor(5, "sts3215", MotorNormMode.RANGE_M100_100),
+        "left_gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
+        "right_shoulder_pan": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_shoulder_lift": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_elbow_flex": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_wrist_flex": Motor(10, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_wrist_roll": Motor(11, "sts3215", MotorNormMode.RANGE_M100_100),
+        "right_gripper": Motor(12, "sts3215", MotorNormMode.RANGE_0_100),
     }
 
     # Create the motors bus

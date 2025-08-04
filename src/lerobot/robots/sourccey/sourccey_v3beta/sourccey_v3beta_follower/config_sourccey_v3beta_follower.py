@@ -17,6 +17,7 @@ def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
 class SourcceyV3BetaFollowerConfig(RobotConfig):
     # Port to connect to the arm
     port: str
+    orientation: str = "left"
 
     disable_torque_on_disconnect: bool = True
 

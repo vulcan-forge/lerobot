@@ -72,10 +72,23 @@ class SourcceyV3BetaClient(Robot):
 
     @cached_property
     def _state_ft(self) -> dict[str, type]:
-        return {
-            **{f"left_{motor}.pos": float for motor in self.left_arm.bus.motors},
-            **{f"right_{motor}.pos": float for motor in self.right_arm.bus.motors},
-        }
+        return dict.fromkeys(
+            (
+                "left_shoulder_pan.pos",
+                "left_shoulder_lift.pos",
+                "left_elbow_flex.pos",
+                "left_wrist_flex.pos",
+                "left_wrist_roll.pos",
+                "left_gripper.pos",
+                "right_shoulder_pan.pos",
+                "right_shoulder_lift.pos",
+                "right_elbow_flex.pos",
+                "right_wrist_flex.pos",
+                "right_wrist_roll.pos",
+                "right_gripper.pos",
+            ),
+            float,
+        )
 
     @cached_property
     def _state_order(self) -> tuple[str, ...]:
@@ -253,7 +266,7 @@ class SourcceyV3BetaClient(Robot):
         for cam_name, frame in frames.items():
             if frame is None:
                 logging.warning("Frame is None")
-                frame = np.zeros((320, 240, 3), dtype=np.uint8)
+                frame = np.zeros((640, 360, 3), dtype=np.uint8)
             obs_dict[cam_name] = frame
 
         return obs_dict

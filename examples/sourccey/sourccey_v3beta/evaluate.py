@@ -7,16 +7,16 @@ from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import _init_rerun
 from lerobot.record import record_loop
 
-NUM_EPISODES = 10
+NUM_EPISODES = 1
 FPS = 30
-EPISODE_TIME_SEC = 60
-TASK_DESCRIPTION = "Pick up the tape and put it in the cup"
+EPISODE_TIME_SEC = 30
+TASK_DESCRIPTION = "Grab the tape and put it in the cup"
 
 # Create the robot and teleoperator configurations
-robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v3beta")
+robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.219", id="sourccey_v3beta")
 robot = SourcceyV3BetaClient(robot_config)
 
-policy = ACTPolicy.from_pretrained("outputs/train/act__sourccey_v3beta-001__tape-a__set000/checkpoints/020000/pretrained_model")
+policy = ACTPolicy.from_pretrained("outputs/train/act__sourccey_v3beta-001__towel-a__set000__nickm/checkpoints/010000/pretrained_model")
 
 # Configure the dataset features
 action_features = hw_to_dataset_features(robot.action_features, "action")
@@ -25,7 +25,7 @@ dataset_features = {**action_features, **obs_features}
 
 # Create the dataset
 dataset = LeRobotDataset.create(
-    repo_id="local/eval__sourccey_v3beta-001__tape-a__set000",
+    repo_id="local/eval__sourccey_v3beta-001__towel-a__set000__nickm",
     fps=FPS,
     features=dataset_features,
     robot_type=robot.name,

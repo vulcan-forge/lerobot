@@ -24,3 +24,4 @@ from ...config import TeleoperatorConfig
 class SourcceyV3BetaLeaderConfig(TeleoperatorConfig):
     # Port to connect to the arm
     port: str
+    orientation: str

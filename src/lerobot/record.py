@@ -100,6 +100,7 @@ from lerobot.teleoperators import (  # noqa: F401
     BiSourcceyV3BetaLeader,
 )
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop
+from lerobot.teleoperators.sourccey_v3beta import bi_sourccey_v3beta_leader, sourccey_v3beta_leader
 from lerobot.utils.control_utils import (
     init_keyboard_listener,
     is_headless,
@@ -213,17 +214,15 @@ def record_loop(
             (
                 t
                 for t in teleop
-                if isinstance(t, (so100_leader.SO100Leader, so101_leader.SO101Leader, koch_leader.KochLeader))
+                if isinstance(t, (so100_leader.SO100Leader, so101_leader.SO101Leader, sourccey_v3beta_leader.SourcceyV3BetaLeader, bi_sourccey_v3beta_leader.BiSourcceyV3BetaLeader, koch_leader.KochLeader))
             ),
             None,
         )
 
-        # Keep the stricter check for LeKiwi, but don't block other robots
-        if robot.name == "lekiwi_client":
-            if not (teleop_arm and teleop_keyboard and len(teleop) == 2):
-                raise ValueError(
-                    "For multi-teleop on LeKiwi, provide exactly one KeyboardTeleop and one arm teleoperator."
-                )
+        # if not (teleop_arm and teleop_keyboard and len(teleop) == 2 and robot.name == "lekiwi_client"):
+        #     raise ValueError(
+        #         "For multi-teleop, the list must contain exactly one KeyboardTeleop and one arm teleoperator. Currently only supported for LeKiwi robot."
+        #     )
 
     # Reset policy if provided
     if policy is not None:
@@ -257,21 +256,10 @@ def record_loop(
                 robot_type=robot.robot_type,
             )
             action = {key: action_values[i].item() for i, key in enumerate(robot.action_features)}
-
-        elif isinstance(teleop, Teleoperator):
-            # --- Phone teleoperator needs observation for reset functionality (from OLD version) ---
-            teleop_type = getattr(getattr(teleop, "config", None), "type", None)
-            if teleop_type == "phone":
-                action = teleop.get_action(observation)
-            else:
-                action = teleop.get_action()
-
-        elif isinstance(teleop, list):
-            # Multiple teleops (arm + keyboard). Supports LeKiwi (and reuse for others if needed)
-            arm_action = teleop_arm.get_action() if teleop_arm is not None else {}
-            # Old code prefixed arm actions for LeKiwi; keep that behavior
-            if arm_action and robot.name == "lekiwi_client":
-                arm_action = {f"arm_{k}": v for k, v in arm_action.items()}
+        elif policy is None and isinstance(teleop, Teleoperator):
+            action = teleop.get_action()
+        elif policy is None and isinstance(teleop, list):
+            arm_action = teleop_arm.get_action()
 
             keyboard_action = teleop_keyboard.get_action() if teleop_keyboard is not None else {}
             base_action = robot._from_keyboard_to_base_action(keyboard_action) if keyboard_action else {}
@@ -413,5 +401,9 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
     return dataset
 
 
-if __name__ == "__main__":
+def main():
     record()
+
+
+if __name__ == "__main__":
+    main()

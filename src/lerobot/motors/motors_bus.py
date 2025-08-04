@@ -742,8 +742,50 @@ class MotorsBus(abc.ABC):
 
         return homing_offsets
 
+    def set_position_homings(self, positions: dict[NameOrID, Value]) -> None:
+        """Set homing offsets to make current positions match the specified target positions.
+
+        This function computes and writes homing offsets such that the present position of each motor
+        becomes exactly the specified target position.
+
+        Args:
+            positions: Dictionary mapping motor names/IDs to their target positions.
+        """
+        if not positions:
+            return
+
+        motors = list(positions.keys())
+
+        # Reset calibration first
+        self.reset_calibration(motors)
+        print(f"Resetting calibration for {motors}")
+
+        # Read positions AFTER resetting calibration (to get raw encoder positions)
+        actual_positions = self.sync_read("Present_Position", motors, normalize=False)
+
+        # Calculate homing offsets using the raw encoder positions
+        homing_offsets = self._get_position_homings(actual_positions, positions)
+
+        for motor, offset in homing_offsets.items():
+            self.write("Homing_Offset", motor, offset)
+
+        return homing_offsets
+
     @abc.abstractmethod
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        pass
+
+    @abc.abstractmethod
+    def _get_position_homings(self, actual_positions: dict[NameOrID, Value], target_positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        """Calculate homing offsets to move from actual positions to target positions.
+
+        Args:
+            actual_positions: Current positions of motors (from Present_Position)
+            target_positions: Desired positions for motors
+
+        Returns:
+            Dictionary mapping motor names/IDs to homing offset values
+        """
         pass
 
     def record_ranges_of_motion(
@@ -794,8 +836,10 @@ class MotorsBus(abc.ABC):
                 move_cursor_up(len(motors) + 3)
 
         same_min_max = [motor for motor in motors if mins[motor] == maxes[motor]]
-        if same_min_max:
-            raise ValueError(f"Some motors have the same min and max values:\n{pformat(same_min_max)}")
+        # We just need the offsets for many calibrations, so we don't neccesary need range of motion to
+        # be different if we are manually settings ranges. 7-28-2025
+        # if same_min_max:
+        #     raise ValueError(f"Some motors have the same min and max values:\n{pformat(same_min_max)}")
 
         return mins, maxes
 

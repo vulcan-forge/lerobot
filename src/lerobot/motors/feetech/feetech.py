@@ -306,6 +306,42 @@ class FeetechMotorsBus(MotorsBus):
 
         return half_turn_homings
 
+    def _get_position_homings(self, actual_positions: dict[NameOrID, Value], target_positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
+        """
+        Calculate homing offsets to move from actual positions to target positions.
+
+        On Feetech Motors:
+        Present_Position = Actual_Position - Homing_Offset
+        Therefore: Homing_Offset = Actual_Position - Present_Position
+
+        The homing offset must be within the range [-mid, mid] for the motor's resolution.
+        We use modulo to handle wrap-around cases.
+        """
+        homings = {}
+        for motor, pos in target_positions.items():
+            model = self._get_motor_model(motor)
+            max_res = self.model_resolution_table[model] - 1
+            encoder_range = max_res + 1
+            mid = max_res // 2
+
+            # Calculate the homing offset: Homing_Offset = Actual_Position - Target_Position
+            raw_offset = actual_positions[motor] - pos
+            offset = raw_offset % encoder_range
+
+            # Convert to signed range [-mid, mid]
+            if offset > mid:
+                offset -= encoder_range
+
+            # Handle edge case: if offset is exactly at boundary, wrap it around
+            if offset == mid + 1:
+                offset = -mid
+            elif offset == -(mid + 1):
+                offset = mid
+
+            homings[motor] = offset
+
+        return homings
+
     def disable_torque(self, motors: str | list[str] | None = None, num_retry: int = 10) -> None:
         for motor in self._get_motors_list(motors):
             self.write("Torque_Enable", motor, TorqueMode.DISABLED.value, num_retry=num_retry)

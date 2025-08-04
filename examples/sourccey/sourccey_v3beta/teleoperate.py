@@ -12,15 +12,14 @@ from lerobot.utils.visualization_utils import _init_rerun, log_rerun_data
 FPS = 30
 
 # Create the robot and teleoperator configurations
-robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.191", id="sourccey_v3beta")
-teleop_arm_config = BiSourcceyV3BetaLeaderConfig(left_arm_port="COM28", right_arm_port="COM29", id="bi_sourccey_v3beta_leader")
+robot_config = SourcceyV3BetaClientConfig(remote_ip="192.168.1.219", id="sourccey_v3beta")
+teleop_arm_config = BiSourcceyV3BetaLeaderConfig(left_arm_port="COM41", right_arm_port="COM42", id="bi_sourccey_v3beta_leader")
 keyboard_config = KeyboardTeleopConfig(id="my_laptop_keyboard")
 
 robot = SourcceyV3BetaClient(robot_config)
 leader_arm = BiSourcceyV3BetaLeader(teleop_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
-# To connect you already should have this script running on Sourccey V2 Beta: `python -m lerobot.common.robots.sourccey_v2beta.sourccey_v2beta_host --robot.id=sourccey_v2beta`
 robot.connect()
 leader_arm.connect()
 keyboard.connect()
@@ -30,6 +29,7 @@ _init_rerun(session_name="sourccey_v3beta_teleop")
 if not robot.is_connected or not leader_arm.is_connected or not keyboard.is_connected:
     raise ValueError("Robot, leader arm of keyboard is not connected!")
 
+print("Teleoperating Sourccey V3 Beta")
 while True:
     t0 = time.perf_counter()
 

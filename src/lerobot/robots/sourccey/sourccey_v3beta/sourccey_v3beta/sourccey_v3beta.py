@@ -54,7 +54,6 @@ class SourcceyV3Beta(Robot):
     def __init__(self, config: SourcceyV3BetaConfig):
         super().__init__(config)
         self.config = config
-        self.left_arm
 
         left_arm_config = SourcceyV3BetaFollowerConfig(
             id=f"{config.id}_left" if config.id else None,
@@ -69,6 +68,7 @@ class SourcceyV3Beta(Robot):
             id=f"{config.id}_right" if config.id else None,
             calibration_dir=config.calibration_dir,
             port=config.right_arm_port,
+            orientation="right",
             disable_torque_on_disconnect=config.right_arm_disable_torque_on_disconnect,
             max_relative_target=config.right_arm_max_relative_target,
             use_degrees=config.right_arm_use_degrees,
@@ -118,6 +118,10 @@ class SourcceyV3Beta(Robot):
         self.left_arm.calibrate()
         self.right_arm.calibrate()
 
+    def auto_calibrate(self, full_reset: bool = False) -> None:
+        self.left_arm.auto_calibrate(reversed=False, full_reset=full_reset)
+        self.right_arm.auto_calibrate(reversed=True, full_reset=full_reset)
+
     def configure(self) -> None:
         self.left_arm.configure()
         self.right_arm.configure()
@@ -127,37 +131,42 @@ class SourcceyV3Beta(Robot):
         self.right_arm.setup_motors()
 
     def get_observation(self) -> dict[str, Any]:
-        obs_dict = {}
+        try:
+            obs_dict = {}
 
-        left_obs = self.left_arm.get_observation()
-        obs_dict.update({f"left_{key}": value for key, value in left_obs.items()})
+            left_obs = self.left_arm.get_observation()
+            obs_dict.update({f"left_{key}": value for key, value in left_obs.items()})
 
-        right_obs = self.right_arm.get_observation()
-        obs_dict.update({f"right_{key}": value for key, value in right_obs.items()})
+            right_obs = self.right_arm.get_observation()
+            obs_dict.update({f"right_{key}": value for key, value in right_obs.items()})
 
-        for cam_key, cam in self.cameras.items():
-            obs_dict[cam_key] = cam.async_read()
+            for cam_key, cam in self.cameras.items():
+                obs_dict[cam_key] = cam.async_read()
 
-        return obs_dict
+            return obs_dict
+        except Exception as e:
+            print(f"Error getting observation: {e}")
+            return {}
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        # Remove "left_" prefix
-        left_action = {
-            key.removeprefix("left_"): value for key, value in action.items() if key.startswith("left_")
-        }
-        # Remove "right_" prefix
-        right_action = {
-            key.removeprefix("right_"): value for key, value in action.items() if key.startswith("right_")
-        }
+        try:
+            left_action = {
+                key.removeprefix("left_"): value for key, value in action.items() if key.startswith("left_")
+            }
+            right_action = {
+                key.removeprefix("right_"): value for key, value in action.items() if key.startswith("right_")
+            }
 
-        send_action_left = self.left_arm.send_action(left_action)
-        send_action_right = self.right_arm.send_action(right_action)
+            send_action_left = self.left_arm.send_action(left_action)
+            send_action_right = self.right_arm.send_action(right_action)
 
-        # Add prefixes back
-        prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
-        prefixed_send_action_right = {f"right_{key}": value for key, value in send_action_right.items()}
+            prefixed_send_action_left = {f"left_{key}": value for key, value in send_action_left.items()}
+            prefixed_send_action_right = {f"right_{key}": value for key, value in send_action_right.items()}
 
-        return {**prefixed_send_action_left, **prefixed_send_action_right}
+            return {**prefixed_send_action_left, **prefixed_send_action_right}
+        except Exception as e:
+            print(f"Error sending action: {e}")
+            return {}
 
     def disconnect(self):
         self.left_arm.disconnect()

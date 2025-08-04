@@ -24,16 +24,16 @@ from lerobot.constants import HF_LEROBOT_CONFIGURATION
 def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
     config = {
         "front_left": OpenCVCameraConfig(
-            index_or_path="/dev/video0", fps=30, width=640, height=480
+            index_or_path="/dev/cameraFrontLeft", fps=30, width=640, height=360
         ),
         "front_right": OpenCVCameraConfig(
-            index_or_path="/dev/video2", fps=30, width=640, height=480
+            index_or_path="/dev/cameraFrontRight", fps=30, width=640, height=360
         ),
         "wrist_left": OpenCVCameraConfig(
-            index_or_path="/dev/video4", fps=30, width=640, height=480
+            index_or_path="/dev/cameraWristLeft", fps=30, width=640, height=360
         ),
         "wrist_right": OpenCVCameraConfig(
-            index_or_path="/dev/video6", fps=30, width=640, height=480
+            index_or_path="/dev/cameraWristRight", fps=30, width=640, height=360
         ),
     }
     return config
@@ -41,8 +41,8 @@ def sourccey_v3beta_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("sourccey_v3beta")
 @dataclass
 class SourcceyV3BetaConfig(RobotConfig):
-    left_arm_port: str = "/dev/ttyACM0"
-    right_arm_port: str = "/dev/ttyACM1"
+    left_arm_port: str = "/dev/robotLeftArm"
+    right_arm_port: str = "/dev/robotRightArm"
 
     # Optional
     left_arm_disable_torque_on_disconnect: bool = True
