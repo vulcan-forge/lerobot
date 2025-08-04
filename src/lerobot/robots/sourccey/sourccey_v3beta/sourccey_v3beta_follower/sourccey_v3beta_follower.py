@@ -387,10 +387,6 @@ class SourcceyV3BetaFollower(Robot):
         reset_positions = start_positions.copy()
         reset_positions['shoulder_lift'] = 1792 if reversed else 2304 # Manually set shoulder_lift to half way position
 
-        print("--------------------------------")
-        print(f"Start positions: {start_positions}")
-        print("--------------------------------")
-
         # Initialize results dictionary
         detected_ranges = {}
 
@@ -445,9 +441,7 @@ class SourcceyV3BetaFollower(Robot):
                 max_steps = config["search_range"] // config["search_step"]
 
                 while steps_taken < max_steps:
-                    # Move motor
                     target_pos = current_pos + config["search_step"]
-                    print(f"Moving {motor_name} to {target_pos}")
                     self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
@@ -465,18 +459,15 @@ class SourcceyV3BetaFollower(Robot):
                     steps_taken += 1
                 else:
                     logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} positive direction")
-                    max_pos = current_pos
-
-                # Return to start position
-                logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
-                logger.info("")
+                    actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                    max_pos = actual_pos
 
                 self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
-                max_pos = start_pos
+                actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                max_pos = actual_pos
 
             # Test negative direction (decreasing position)
             if config["search_negative"]:
@@ -486,7 +477,6 @@ class SourcceyV3BetaFollower(Robot):
                 max_steps = config["search_range"] // config["search_step"]
 
                 while steps_taken < max_steps:
-                    # Move motor
                     target_pos = current_pos - config["search_step"]
                     self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
@@ -505,12 +495,8 @@ class SourcceyV3BetaFollower(Robot):
                     steps_taken += 1
                 else:
                     logger.info(f"    Reached search range limit ({config['search_range']}) for {motor_name} negative direction")
-                    min_pos = current_pos
-
-                # Return to start position
-                logger.info("")
-                logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
-                logger.info("")
+                    actual_pos = self.bus.read("Present_Position", motor_name, normalize=False)
+                    min_pos = actual_pos
 
                 self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
