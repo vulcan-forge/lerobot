@@ -443,9 +443,7 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos + config["search_step"]
-                    if not self.write_calibration_goal_position(motor_name, target_pos):
-                        logger.error(f"Failed to write goal position for {motor_name}, stopping search")
-                        break
+                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
                     time.sleep(settle_time)
@@ -468,8 +466,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
                 logger.info("")
 
-                if not self.reset_motor_safe(motor_name, reset_pos, duration=3.0):
-                    logger.error(f"Failed to reset {motor_name} to {reset_pos}")
+                self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping positive direction for {motor_name}")
@@ -485,15 +482,13 @@ class SourcceyV3BetaFollower(Robot):
                 while steps_taken < max_steps:
                     # Move motor
                     target_pos = current_pos - config["search_step"]
-                    if not self.write_calibration_goal_position(motor_name, target_pos):
-                        logger.error(f"Failed to write goal position for {motor_name}, stopping search")
-                        break
+                    self.bus.write("Goal_Position", motor_name, target_pos, normalize=False)
 
                     # Wait for movement to settle
                     time.sleep(settle_time)
 
                     # Check current draw with retry logic
-                    current = self.read_calibration_current(motor_name)
+                    current = self.bus.read("Present_Current", motor_name, normalize=False)
                     if current > config["max_current"]:
                         logger.info(f"    Hit negative limit for {motor_name} at position {current_pos} (current: {current}mA)")
                         min_pos = current_pos
@@ -510,8 +505,7 @@ class SourcceyV3BetaFollower(Robot):
                 logger.info(f"Resetting {motor_name} to {reset_pos} using slow movement")
                 logger.info("")
 
-                if not self.reset_motor_safe(motor_name, reset_pos, duration=3.0):
-                    logger.error(f"Failed to reset {motor_name} to {reset_pos}")
+                self.move_calibration_slow(motor_name, reset_pos, duration=3.0)
                 time.sleep(settle_time * 10)
             else:
                 logger.info(f"  Skipping negative direction for {motor_name}")
@@ -558,37 +552,6 @@ class SourcceyV3BetaFollower(Robot):
         # This should never be reached, but just in case
         return 1001
 
-    def write_calibration_goal_position(self, motor_name: str, position: float, max_retries: int = 3, base_delay: float = 0.1) -> bool:
-        """
-        Write the calibration goal position of the robot with exponential backoff retry.
-
-        Args:
-            motor_name: Name of the motor to write position to
-            position: Target position to write
-            max_retries: Maximum number of retry attempts (default: 3)
-            base_delay: Base delay in seconds for exponential backoff (default: 0.1s)
-
-        Returns:
-            True if write was successful, False if all retries failed
-        """
-        for attempt in range(max_retries + 1):  # +1 to include initial attempt
-            try:
-                self.bus.write("Goal_Position", motor_name, position, normalize=False)
-                return True
-            except Exception as e:
-                if attempt == max_retries:
-                    # Final attempt failed, log error and return False
-                    logger.error(f"Error writing calibration goal position for {motor_name} after {max_retries + 1} attempts: {e}")
-                    return False
-                else:
-                    # Calculate exponential backoff delay
-                    delay = base_delay * (2 ** attempt)
-                    logger.warning(f"Attempt {attempt + 1} failed for {motor_name}: {e}. Retrying in {delay:.3f}s...")
-                    time.sleep(delay)
-
-        # This should never be reached, but just in case
-        return False
-
     def move_calibration_slow(self, motor_name: str, target_position: float, duration: float = 3.0,
                              steps_per_second: float = 10.0, max_retries: int = 3) -> bool:
         """
@@ -626,9 +589,7 @@ class SourcceyV3BetaFollower(Robot):
                 interpolated_position = current_position + t * (target_position - current_position)
 
                 # Write position with retry logic
-                if not self.write_calibration_goal_position(motor_name, interpolated_position, max_retries):
-                    logger.error(f"Failed to write position {interpolated_position:.1f} for {motor_name} at step {step}")
-                    return False
+                self.bus.write("Goal_Position", motor_name, interpolated_position, normalize=False)
 
                 # Wait for next step (except on final step)
                 if step < total_steps:
@@ -641,20 +602,4 @@ class SourcceyV3BetaFollower(Robot):
             logger.error(f"Error during slow movement of {motor_name}: {e}")
             return False
 
-    def reset_motor_safe(self, motor_name: str, reset_position: float, duration: float = 3.0) -> bool:
-        """
-        Safely reset a motor to its reset position during calibration.
 
-        This is a convenience function that uses slow movement to reset
-        a motor to its calibration reset position.
-
-        Args:
-            motor_name: Name of the motor to reset
-            reset_position: Target reset position
-            duration: Time in seconds to complete the reset movement (default: 3.0s)
-
-        Returns:
-            True if reset was successful, False otherwise
-        """
-        logger.info(f"Resetting {motor_name} to {reset_position:.1f} using slow movement")
-        return self.move_calibration_slow(motor_name, reset_position, duration)
