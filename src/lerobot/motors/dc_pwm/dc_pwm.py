@@ -42,6 +42,11 @@ class PWMProtocolHandler(ProtocolHandler):
     - Better real-time performance
     - Lower latency
 
+    For 5+ motors:
+    - First 4 motors use hardware PWM (optimal performance)
+    - Additional motors use software PWM (acceptable performance)
+    - All motors can have direction, enable, and brake pins
+
     Configuration options:
     - pwm_pins: List of PWM pin numbers (use hardware PWM pins: 12,13,14,15,18,19,20,21)
     - direction_pins: List of direction pin numbers (any GPIO pin 2-41, excluding PWM pins)
@@ -70,6 +75,7 @@ class PWMProtocolHandler(ProtocolHandler):
         self.direction_channels = {}
         self.enable_channels = {}
         self.brake_channels = {}
+        self.software_pwm_channels = {}  # For motors beyond hardware PWM
 
         # Validate Pi 5 pins
         self._validate_pi5_pins()
@@ -120,6 +126,11 @@ class PWMProtocolHandler(ProtocolHandler):
         if len(all_used_pins) != len(self.pwm_pins + self.direction_pins + self.enable_pins + self.brake_pins):
             logger.warning("Duplicate pins detected in configuration")
 
+        # Validate motor count vs available pins
+        motor_count = len(self.pwm_pins)
+        if motor_count > 4:
+            logger.info(f"Configuring {motor_count} motors: {min(4, motor_count)} hardware PWM + {max(0, motor_count - 4)} software PWM")
+
     def _import_rpi_gpio(self):
         """Import RPi.GPIO with Pi 5 support."""
         try:
@@ -145,7 +156,6 @@ class PWMProtocolHandler(ProtocolHandler):
                 "RPi.GPIO not available. Install with: pip install RPi.GPIO>=0.7.1"
             )
 
-    # Connection and Disconnection Functions
     def connect(self) -> None:
         """Initialize GPIO and PWM channels for Pi 5."""
         self.GPIO.setmode(self.GPIO.BCM)
@@ -155,9 +165,20 @@ class PWMProtocolHandler(ProtocolHandler):
         for i, pin in enumerate(self.pwm_pins):
             motor_id = i + 1
             self.GPIO.setup(pin, self.GPIO.OUT)
-            pwm_channel = self.GPIO.PWM(pin, self.pwm_frequency)
-            pwm_channel.start(0)  # Start with 0% duty cycle
-            self.pwm_channels[motor_id] = pwm_channel
+
+            # Use hardware PWM for first 4 motors, software PWM for rest
+            if i < 4:
+                # Hardware PWM
+                pwm_channel = self.GPIO.PWM(pin, self.pwm_frequency)
+                pwm_channel.start(0)  # Start with 0% duty cycle
+                self.pwm_channels[motor_id] = pwm_channel
+                logger.debug(f"Motor {motor_id} using hardware PWM on pin {pin}")
+            else:
+                # Software PWM
+                pwm_channel = self.GPIO.PWM(pin, self.pwm_frequency)
+                pwm_channel.start(0)  # Start with 0% duty cycle
+                self.software_pwm_channels[motor_id] = pwm_channel
+                logger.debug(f"Motor {motor_id} using software PWM on pin {pin}")
 
             # Initialize direction pin if available
             if i < len(self.direction_pins):
@@ -187,12 +208,18 @@ class PWMProtocolHandler(ProtocolHandler):
             }
 
         total_pins = len(self.pwm_pins) + len(self.direction_pins) + len(self.enable_pins) + len(self.brake_pins)
-        logger.info(f"Pi 5 PWM protocol handler connected with {len(self.pwm_pins)} motors using {total_pins} GPIO pins at {self.pwm_frequency}Hz")
+        hw_pwm_count = min(4, len(self.pwm_pins))
+        sw_pwm_count = max(0, len(self.pwm_pins) - 4)
+        logger.info(f"Pi 5 PWM protocol handler connected with {len(self.pwm_pins)} motors using {total_pins} GPIO pins")
+        logger.info(f"Hardware PWM: {hw_pwm_count} motors, Software PWM: {sw_pwm_count} motors at {self.pwm_frequency}Hz")
 
     def disconnect(self) -> None:
         """Clean up GPIO and PWM channels."""
         # Stop all PWM channels
         for pwm_channel in self.pwm_channels.values():
+            pwm_channel.stop()
+
+        for pwm_channel in self.software_pwm_channels.values():
             pwm_channel.stop()
 
         # Clean up GPIO
@@ -265,9 +292,15 @@ class PWMProtocolHandler(ProtocolHandler):
 
         self.motor_states[motor_id]["pwm"] = duty_cycle
 
+        # Use appropriate PWM channel (hardware or software)
         if motor_id in self.pwm_channels:
-            # RPi.GPIO uses percentage (0-100)
+            # Hardware PWM
             self.pwm_channels[motor_id].ChangeDutyCycle(duty_cycle * 100)
+        elif motor_id in self.software_pwm_channels:
+            # Software PWM
+            self.software_pwm_channels[motor_id].ChangeDutyCycle(duty_cycle * 100)
+        else:
+            logger.warning(f"Motor {motor_id} not found in PWM channels")
 
         logger.debug(f"Motor {motor_id} PWM set to {duty_cycle:.3f}")
 

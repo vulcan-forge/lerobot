@@ -27,10 +27,12 @@ from lerobot.cameras.utils import make_cameras_from_configs
 from lerobot.constants import OBS_IMAGES, OBS_STATE
 from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.motors import Motor, MotorCalibration, MotorNormMode
+from lerobot.motors.dc_pwm.dc_pwm import PWMDCMotorsController, PWMProtocolHandler
 from lerobot.motors.feetech import (
     FeetechMotorsBus,
     OperatingMode,
 )
+from lerobot.motors.dc_motors_controller import DCMotor, MotorNormMode
 
 from lerobot.robots.robot import Robot
 from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta_follower.config_sourccey_v3beta_follower import SourcceyV3BetaFollowerConfig
@@ -43,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 class SourcceyV3Beta(Robot):
     """
-    The robot includes a four mecanum wheel mobile base and 2 remote follower arms.
+    The robot includes a four mecanum wheel mobile base, 1 DC actuator, and 2 remote follower arms.
     The leader arm is connected locally (on the laptop) and its joint positions are recorded and then
     forwarded to the remote follower arm (after applying a safety clamp).
     In parallel, keyboard teleoperation is used to generate raw velocity commands for the wheels.
@@ -76,9 +78,32 @@ class SourcceyV3Beta(Robot):
             cameras={},
         )
 
+        # Configure DC motors for mecanum wheels + actuator
+        self._setup_dc_motors()
+
         self.left_arm = SourcceyV3BetaFollower(left_arm_config)
         self.right_arm = SourcceyV3BetaFollower(right_arm_config)
         self.cameras = make_cameras_from_configs(config.cameras)
+
+    def _setup_dc_motors(self):
+        """Setup DC motors for mecanum wheel control + actuator."""
+        # Define the 5 DC motors: 4 wheels + 1 actuator
+        motors = {
+            # High precision wheels (hardware PWM)
+            "front_left": DCMotor(id=1, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "front_right": DCMotor(id=2, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "rear_left": DCMotor(id=3, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            "rear_right": DCMotor(id=4, model="mecanum_wheel", norm_mode=MotorNormMode.RANGE_M100_100),
+            # Lower precision actuator (software PWM)
+            "actuator": DCMotor(id=5, model="linear_actuator", norm_mode=MotorNormMode.RANGE_M100_100),
+        }
+
+        # Create DC motors controller with configuration
+        self.dc_motors_controller = PWMDCMotorsController(
+            motors=motors,
+            protocol="pwm",
+            config=self.config.dc_motors_config
+        )
 
     @property
     def _state_ft(self) -> dict[str, type]:
@@ -102,11 +127,19 @@ class SourcceyV3Beta(Robot):
 
     @property
     def is_connected(self) -> bool:
-        return self.left_arm.is_connected and self.right_arm.is_connected and all(cam.is_connected for cam in self.cameras.values())
+        return (
+            self.left_arm.is_connected and
+            self.right_arm.is_connected and
+            self.dc_motors_controller.is_connected and
+            all(cam.is_connected for cam in self.cameras.values())
+        )
 
     def connect(self, calibrate: bool = True) -> None:
         self.left_arm.connect(calibrate)
         self.right_arm.connect(calibrate)
+
+        # Connect DC motors
+        self.dc_motors_controller.connect()
 
         for cam in self.cameras.values():
             cam.connect()
@@ -190,7 +223,83 @@ class SourcceyV3Beta(Robot):
     def disconnect(self):
         self.left_arm.disconnect()
         self.right_arm.disconnect()
+        self.dc_motors_controller.disconnect()
 
         for cam in self.cameras.values():
             cam.disconnect()
+
+    # High precision wheel control methods
+    def set_mecanum_velocity(self, linear_x: float, linear_y: float, angular_z: float):
+        """
+        Set mecanum wheel velocities for holonomic movement (high precision).
+
+        Args:
+            linear_x: Forward/backward velocity (-1 to 1)
+            linear_y: Left/right velocity (-1 to 1)
+            angular_z: Rotational velocity (-1 to 1)
+        """
+        # Mecanum wheel kinematic equations
+        wheel_radius = 0.05  # 5cm wheel radius
+        wheelbase = 0.2      # 20cm between wheels
+        track_width = 0.2    # 20cm track width
+
+        # Calculate individual wheel velocities
+        v_fl = linear_x + linear_y + angular_z * (wheelbase + track_width) / 2
+        v_fr = linear_x - linear_y - angular_z * (wheelbase + track_width) / 2
+        v_rl = linear_x - linear_y + angular_z * (wheelbase + track_width) / 2
+        v_rr = linear_x + linear_y - angular_z * (wheelbase + track_width) / 2
+
+        # Normalize to [-1, 1] range
+        max_vel = max(abs(v_fl), abs(v_fr), abs(v_rl), abs(v_rr))
+        if max_vel > 1.0:
+            v_fl /= max_vel
+            v_fr /= max_vel
+            v_rl /= max_vel
+            v_rr /= max_vel
+
+        # Set wheel velocities (hardware PWM - high precision)
+        self.dc_motors_controller.set_velocity("front_left", v_fl)
+        self.dc_motors_controller.set_velocity("front_right", v_fr)
+        self.dc_motors_controller.set_velocity("rear_left", v_rl)
+        self.dc_motors_controller.set_velocity("rear_right", v_rr)
+
+    # Lower precision actuator control methods
+    def set_actuator_velocity(self, velocity: float):
+        """
+        Set actuator velocity (software PWM - lower precision).
+
+        Args:
+            velocity: Actuator velocity (-1 to 1, negative=retract, positive=extend)
+        """
+        self.dc_motors_controller.set_velocity("actuator", velocity)
+
+    def set_actuator_position(self, position: float):
+        """
+        Set actuator position (0 to 1, simplified control).
+
+        Args:
+            position: Actuator position (0=fully retracted, 1=fully extended)
+        """
+        self.dc_motors_controller.set_position("actuator", position)
+
+    def get_actuator_position(self) -> float:
+        """Get current actuator position estimate."""
+        return self.dc_motors_controller.get_position("actuator") or 0.0
+
+    def stop_motors(self):
+        """Stop all motors."""
+        # Stop wheels
+        self.dc_motors_controller.set_velocity("front_left", 0.0)
+        self.dc_motors_controller.set_velocity("front_right", 0.0)
+        self.dc_motors_controller.set_velocity("rear_left", 0.0)
+        self.dc_motors_controller.set_velocity("rear_right", 0.0)
+        # Stop actuator
+        self.dc_motors_controller.set_velocity("actuator", 0.0)
+
+    def stop_wheels_only(self):
+        """Stop only the wheels, leave actuator running."""
+        self.dc_motors_controller.set_velocity("front_left", 0.0)
+        self.dc_motors_controller.set_velocity("front_right", 0.0)
+        self.dc_motors_controller.set_velocity("rear_left", 0.0)
+        self.dc_motors_controller.set_velocity("rear_right", 0.0)
 

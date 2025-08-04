@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from lerobot.cameras.configs import CameraConfig, Cv2Rotation
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.motors.dc_motors_controller import DCMotor, MotorNormMode
 
 from lerobot.robots.config import RobotConfig
 from lerobot.constants import HF_LEROBOT_CONFIGURATION
@@ -51,6 +52,15 @@ class SourcceyV3BetaConfig(RobotConfig):
     right_arm_disable_torque_on_disconnect: bool = True
     right_arm_max_relative_target: int | None = None
     right_arm_use_degrees: bool = False
+
+    # DC Motors Configuration: 4 wheels (hardware PWM) + 1 actuator (software PWM)
+    dc_motors_config: dict = field(default_factory=lambda: {
+        "pwm_pins": [12, 13, 14, 15, 18],  # 4 hardware PWM + 1 software PWM
+        "direction_pins": [2, 3, 4, 5, 6],  # Direction control for all motors
+        "enable_pins": [7, 8, 9, 10, 11],   # Enable pins for all motors
+        "pwm_frequency": 25000,              # 25kHz for optimal performance
+        "invert_direction": False,           # Adjust if motors spin wrong direction
+    })
 
     cameras: dict[str, CameraConfig] = field(default_factory=sourccey_v3beta_cameras_config)
 
