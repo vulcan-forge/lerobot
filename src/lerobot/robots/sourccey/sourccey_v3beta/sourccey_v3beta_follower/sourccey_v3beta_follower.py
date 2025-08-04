@@ -169,14 +169,11 @@ class SourcceyV3BetaFollower(Robot):
             # the homing offsets are set in the _initialize_calibration function
             # Manually get range of motions from the default calibration file
             default_calibration = self._load_default_calibration(reversed)
-            print(f"Default calibration: {default_calibration}")
             for motor, m in self.bus.motors.items():
                 detected_ranges[motor] = {
-                    "min": default_calibration[motor].range_min,
-                    "max": default_calibration[motor].range_max,
+                    "min": default_calibration[motor]["range_min"],
+                    "max": default_calibration[motor]["range_max"],
                 }
-            print(f"Default calibration: {default_calibration}")
-            print(f"Detected ranges: {detected_ranges}")
 
         # Step 4: Create calibration dictionary
         self.calibration = {}
