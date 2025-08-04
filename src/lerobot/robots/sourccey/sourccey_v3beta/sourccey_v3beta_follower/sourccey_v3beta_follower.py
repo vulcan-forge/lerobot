@@ -411,8 +411,8 @@ class SourcceyV3BetaFollower(Robot):
                 "search_range": 1536,
                 "search_step": base_step_size,
                 "max_current": self.config.max_current_safety_threshold,
-                "search_positive": reversed,
-                "search_negative": not reversed
+                "search_positive": False,
+                "search_negative": True
             }
         }
 
