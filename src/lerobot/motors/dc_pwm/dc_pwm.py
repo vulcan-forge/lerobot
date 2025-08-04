@@ -145,6 +145,7 @@ class PWMProtocolHandler(ProtocolHandler):
                 "RPi.GPIO not available. Install with: pip install RPi.GPIO>=0.7.1"
             )
 
+    # Connection and Disconnection Functions
     def connect(self) -> None:
         """Initialize GPIO and PWM channels for Pi 5."""
         self.GPIO.setmode(self.GPIO.BCM)
@@ -199,6 +200,13 @@ class PWMProtocolHandler(ProtocolHandler):
 
         logger.info("Pi 5 PWM protocol handler disconnected")
 
+    # Position Functions
+    def get_position(self, motor_id: int) -> Optional[float]:
+        """Get current motor position if encoder available."""
+        # For PWM-only control, we can only estimate position
+        # In a real implementation, you'd read from an encoder
+        return self.motor_states.get(motor_id, {}).get("position", 0.0)
+
     def set_position(self, motor_id: int, position: float) -> None:
         """
         Set motor position (0 to 1).
@@ -216,6 +224,11 @@ class PWMProtocolHandler(ProtocolHandler):
         # Convert position to PWM (simple linear mapping)
         pwm_duty = position
         self.set_pwm(motor_id, pwm_duty)
+
+    # Velocity Functions
+    def get_velocity(self, motor_id: int) -> float:
+        """Get current motor velocity."""
+        return self.motor_states.get(motor_id, {}).get("velocity", 0.0)
 
     def set_velocity(self, motor_id: int, velocity: float) -> None:
         """
@@ -238,6 +251,11 @@ class PWMProtocolHandler(ProtocolHandler):
         # Set PWM duty cycle
         self.set_pwm(motor_id, abs_velocity)
 
+    # PWM Functions
+    def get_pwm(self, motor_id: int) -> float:
+        """Get current PWM duty cycle."""
+        return self.motor_states.get(motor_id, {}).get("pwm", 0.0)
+
     def set_pwm(self, motor_id: int, duty_cycle: float) -> None:
         """
         Set PWM duty cycle (0 to 1).
@@ -253,6 +271,27 @@ class PWMProtocolHandler(ProtocolHandler):
 
         logger.debug(f"Motor {motor_id} PWM set to {duty_cycle:.3f}")
 
+    # Enable/Disable Functions
+    def enable_motor(self, motor_id: int) -> None:
+        """Enable motor."""
+        self.motor_states[motor_id]["enabled"] = True
+        self._set_enable(motor_id, True)
+        logger.debug(f"Motor {motor_id} enabled")
+
+    def disable_motor(self, motor_id: int) -> None:
+        """Disable motor by setting PWM to 0 and disabling enable pin."""
+        self.set_pwm(motor_id, 0.0)
+        self.motor_states[motor_id]["enabled"] = False
+        self._set_enable(motor_id, False)
+        logger.debug(f"Motor {motor_id} disabled")
+
+    # Helper methods for PWM-specific functionality
+    def _get_direction(self, motor_id: int) -> bool:
+        """Get motor direction."""
+        if motor_id not in self.direction_channels:
+            return False
+        return self.GPIO.input(self.direction_channels[motor_id]) == self.GPIO.HIGH
+
     def _set_direction(self, motor_id: int, forward: bool) -> None:
         """Set motor direction."""
         if motor_id not in self.direction_channels:
@@ -264,6 +303,7 @@ class PWMProtocolHandler(ProtocolHandler):
 
         self.GPIO.output(self.direction_channels[motor_id], self.GPIO.HIGH if forward else self.GPIO.LOW)
 
+    # Enable/Disable Functions
     def _set_enable(self, motor_id: int, enabled: bool) -> None:
         """Set motor enable state."""
         if motor_id not in self.enable_channels:
@@ -287,33 +327,7 @@ class PWMProtocolHandler(ProtocolHandler):
         self.GPIO.output(self.brake_channels[motor_id], self.GPIO.HIGH if brake_active else self.GPIO.LOW)
         self.motor_states[motor_id]["brake_active"] = brake_active
 
-    def get_position(self, motor_id: int) -> Optional[float]:
-        """Get current motor position if encoder available."""
-        # For PWM-only control, we can only estimate position
-        # In a real implementation, you'd read from an encoder
-        return self.motor_states.get(motor_id, {}).get("position", 0.0)
-
-    def get_velocity(self, motor_id: int) -> float:
-        """Get current motor velocity."""
-        return self.motor_states.get(motor_id, {}).get("velocity", 0.0)
-
-    def get_pwm(self, motor_id: int) -> float:
-        """Get current PWM duty cycle."""
-        return self.motor_states.get(motor_id, {}).get("pwm", 0.0)
-
-    def enable_motor(self, motor_id: int) -> None:
-        """Enable motor."""
-        self.motor_states[motor_id]["enabled"] = True
-        self._set_enable(motor_id, True)
-        logger.debug(f"Motor {motor_id} enabled")
-
-    def disable_motor(self, motor_id: int) -> None:
-        """Disable motor by setting PWM to 0 and disabling enable pin."""
-        self.set_pwm(motor_id, 0.0)
-        self.motor_states[motor_id]["enabled"] = False
-        self._set_enable(motor_id, False)
-        logger.debug(f"Motor {motor_id} disabled")
-
+    # PWM-specific convenience methods (not part of base ProtocolHandler)
     def activate_brake(self, motor_id: int) -> None:
         """Activate motor brake."""
         self._set_brake(motor_id, True)

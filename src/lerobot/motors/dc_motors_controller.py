@@ -7,7 +7,6 @@ from typing import Protocol, TypeAlias
 from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 
 NameOrID: TypeAlias = str | int
-Value: TypeAlias = int | float
 
 logger = logging.getLogger(__name__)
 
@@ -20,32 +19,11 @@ class MotorNormMode(str, Enum):
 
 
 @dataclass
-class DCMotorCalibration:
-    id: int
-    min_velocity: float
-    max_velocity: float
-    min_pwm: float
-    max_pwm: float
-    encoder_resolution: int | None = None  # Pulses per revolution if encoder present
-
-
-@dataclass
 class DCMotor:
     id: int
     model: str
     norm_mode: MotorNormMode
     protocol: str = "pwm"  # pwm, i2c, can, serial
-
-
-class OperatingMode(Enum):
-    VELOCITY = "velocity"
-    PWM = "pwm"
-    POSITION = "position"  # If using encoders
-
-
-class ControlMode(Enum):
-    OPEN_LOOP = "open_loop"
-    CLOSED_LOOP = "closed_loop"
 
 
 class ProtocolHandler(Protocol):
@@ -105,12 +83,10 @@ class BaseDCMotorsController(abc.ABC):
         motors: dict[str, DCMotor],
         protocol: str = "pwm",
         config: dict | None = None,
-        calibration: dict[str, DCMotorCalibration] | None = None,
     ):
         self.motors = motors
         self.protocol = protocol
         self.config = config or {}
-        self.calibration = calibration or {}
 
         self._id_to_name_dict = {m.id: motor for motor, m in self.motors.items()}
         self._name_to_id_dict = {motor: m.id for motor, m in self.motors.items()}
@@ -183,23 +159,6 @@ class BaseDCMotorsController(abc.ABC):
 
         self._is_connected = False
         logger.info(f"{self} disconnected.")
-
-    # Direction Functions
-    def get_direction(self, motor: NameOrID) -> bool:
-        """Get motor direction (True for forward, False for reverse)."""
-        if not self._is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected.")
-
-        motor_id = self._get_motor_id(motor)
-        return self.protocol_handler.get_direction(motor_id)
-
-    def set_direction(self, motor: NameOrID, direction: bool) -> None:
-        """Set motor direction (True for forward, False for reverse)."""
-        if not self._is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected.")
-
-        motor_id = self._get_motor_id(motor)
-        self.protocol_handler.set_direction(motor_id, direction)
 
     # Position Functions
     def get_position(self, motor: NameOrID) -> float | None:
