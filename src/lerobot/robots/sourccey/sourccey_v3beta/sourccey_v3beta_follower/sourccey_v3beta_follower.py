@@ -172,6 +172,8 @@ class SourcceyV3BetaFollower(Robot):
                     "min": default_calibration[motor].range_min,
                     "max": default_calibration[motor].range_max,
                 }
+            print(f"Default calibration: {default_calibration}")
+            print(f"Detected ranges: {detected_ranges}")
 
         # Step 4: Create calibration dictionary
         self.calibration = {}
