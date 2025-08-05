@@ -24,23 +24,25 @@ from packaging import version
 from safetensors.torch import load_file
 
 from lerobot import available_policies
-from lerobot.common.datasets.factory import make_dataset
-from lerobot.common.datasets.utils import cycle, dataset_to_policy_features
-from lerobot.common.envs.factory import make_env, make_env_config
-from lerobot.common.envs.utils import preprocess_observation
-from lerobot.common.optim.factory import make_optimizer_and_scheduler
-from lerobot.common.policies.act.modeling_act import ACTTemporalEnsembler
-from lerobot.common.policies.factory import (
+from lerobot.configs.default import DatasetConfig
+from lerobot.configs.train import TrainPipelineConfig
+from lerobot.configs.types import FeatureType, NormalizationMode, PolicyFeature
+from lerobot.constants import ACTION, OBS_STATE
+from lerobot.datasets.factory import make_dataset
+from lerobot.datasets.utils import cycle, dataset_to_policy_features
+from lerobot.envs.factory import make_env, make_env_config
+from lerobot.envs.utils import preprocess_observation
+from lerobot.optim.factory import make_optimizer_and_scheduler
+from lerobot.policies.act.configuration_act import ACTConfig
+from lerobot.policies.act.modeling_act import ACTTemporalEnsembler
+from lerobot.policies.factory import (
     get_policy_class,
     make_policy,
     make_policy_config,
 )
-from lerobot.common.policies.normalize import Normalize, Unnormalize
-from lerobot.common.policies.pretrained import PreTrainedPolicy
-from lerobot.common.utils.random_utils import seeded_context
-from lerobot.configs.default import DatasetConfig
-from lerobot.configs.train import TrainPipelineConfig
-from lerobot.configs.types import FeatureType, NormalizationMode, PolicyFeature
+from lerobot.policies.normalize import Normalize, Unnormalize
+from lerobot.policies.pretrained import PreTrainedPolicy
+from lerobot.utils.random_utils import seeded_context
 from tests.artifacts.policies.save_policy_to_safetensors import get_policy_stats
 from tests.utils import DEVICE, require_cpu, require_env, require_x86_64_kernel
 
@@ -142,9 +144,10 @@ def test_policy(ds_repo_id, env_name, env_kwargs, policy_name, policy_kwargs):
     train_cfg = TrainPipelineConfig(
         # TODO(rcadene, aliberts): remove dataset download
         dataset=DatasetConfig(repo_id=ds_repo_id, episodes=[0]),
-        policy=make_policy_config(policy_name, **policy_kwargs),
+        policy=make_policy_config(policy_name, push_to_hub=False, **policy_kwargs),
         env=make_env_config(env_name, **env_kwargs),
     )
+    train_cfg.validate()
 
     # Check that we can make the policy object.
     dataset = make_dataset(train_cfg)
@@ -213,7 +216,7 @@ def test_act_backbone_lr():
     cfg = TrainPipelineConfig(
         # TODO(rcadene, aliberts): remove dataset download
         dataset=DatasetConfig(repo_id="lerobot/aloha_sim_insertion_scripted", episodes=[0]),
-        policy=make_policy_config("act", optimizer_lr=0.01, optimizer_lr_backbone=0.001),
+        policy=make_policy_config("act", optimizer_lr=0.01, optimizer_lr_backbone=0.001, push_to_hub=False),
     )
     cfg.validate()  # Needed for auto-setting some parameters
 
@@ -362,6 +365,54 @@ def test_normalize(insert_temporal_dim):
     unnormalize(output_batch)
 
 
+@pytest.mark.parametrize("multikey", [True, False])
+def test_multikey_construction(multikey: bool):
+    """
+    Asserts that multiple keys with type State/Action are correctly processed by the policy constructor,
+    preventing erroneous creation of the policy object.
+    """
+    input_features = {
+        "observation.state": PolicyFeature(
+            type=FeatureType.STATE,
+            shape=(10,),
+        ),
+    }
+    output_features = {
+        "action": PolicyFeature(
+            type=FeatureType.ACTION,
+            shape=(5,),
+        ),
+    }
+
+    if multikey:
+        """Simulates the complete state/action is constructed from more granular multiple
+        keys, of the same type as the overall state/action"""
+        input_features = {}
+        input_features["observation.state.subset1"] = PolicyFeature(type=FeatureType.STATE, shape=(5,))
+        input_features["observation.state.subset2"] = PolicyFeature(type=FeatureType.STATE, shape=(5,))
+        input_features["observation.state"] = PolicyFeature(type=FeatureType.STATE, shape=(10,))
+
+        output_features = {}
+        output_features["action.first_three_motors"] = PolicyFeature(type=FeatureType.ACTION, shape=(3,))
+        output_features["action.last_two_motors"] = PolicyFeature(type=FeatureType.ACTION, shape=(2,))
+        output_features["action"] = PolicyFeature(
+            type=FeatureType.ACTION,
+            shape=(5,),
+        )
+
+    config = ACTConfig(input_features=input_features, output_features=output_features)
+
+    state_condition = config.robot_state_feature == input_features[OBS_STATE]
+    action_condition = config.action_feature == output_features[ACTION]
+
+    assert state_condition, (
+        f"Discrepancy detected. Robot state feature is {config.robot_state_feature} but policy expects {input_features[OBS_STATE]}"
+    )
+    assert action_condition, (
+        f"Discrepancy detected. Action feature is {config.action_feature} but policy expects {output_features[ACTION]}"
+    )
+
+
 @pytest.mark.parametrize(
     "ds_repo_id, policy_name, policy_kwargs, file_name_extra",
     [
@@ -415,6 +466,7 @@ def test_backward_compatibility(ds_repo_id: str, policy_name: str, policy_kwargs
     https://github.com/huggingface/lerobot/pull/1127.
 
     """
+
     # NOTE: ACT policy has different randomness, after PyTorch 2.7.0
     if policy_name == "act" and version.parse(torch.__version__) < version.parse("2.7.0"):
         pytest.skip(f"Skipping act policy test with PyTorch {torch.__version__}. Requires PyTorch >= 2.7.0")
