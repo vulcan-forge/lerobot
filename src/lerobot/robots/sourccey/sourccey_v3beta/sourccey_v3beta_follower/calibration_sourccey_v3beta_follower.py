@@ -7,12 +7,11 @@ from venv import logger
 from lerobot.motors.feetech.feetech import OperatingMode
 from lerobot.motors.motors_bus import MotorCalibration
 from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta_follower.config_sourccey_v3beta_follower import SourcceyV3BetaFollowerConfig
-from lerobot.robots.sourccey.sourccey_v3beta.sourccey_v3beta_follower.sourccey_v3beta_follower import SourcceyV3BetaFollower
 
 class SourcceyV3BetaCalibrator:
     """Handles calibration operations for Sourccey V3Beta robots."""
 
-    def __init__(self, robot: SourcceyV3BetaFollower):
+    def __init__(self, robot):
         self.robot = robot
 
     def manual_calibrate(self) -> Dict[str, MotorCalibration]:

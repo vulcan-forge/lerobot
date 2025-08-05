@@ -129,6 +129,16 @@ hilserl = ["lerobot[transformers-dep]", "gym-hil>=0.1.9", "lerobot[grpcio-dep]",
 # Features
 async = ["lerobot[grpcio-dep]", "matplotlib>=3.10.3"]
 
+# Teleop
+teleop-phone = [
+    "pyroki @ git+https://github.com/chungmin99/pyroki.git@f234516",  # lightweight IK library
+    "viser>=0.2",          # 3-D visualiser (optional but used in demo)
+    "yourdfpy>=0.0.57",    # URDF parsing
+    "scipy>=1.7",          # quaternion helpers with scalar_first support
+    "pyzmq>=26.2.1",       # ZeroMQ for robot communication
+    "grpcio>=1.56",        # gRPC for phone teleop communication
+]
+
 # Development
 dev = ["pre-commit>=3.7.0", "debugpy>=1.8.1", "lerobot[grpcio-dep]", "grpcio-tools==1.73.1"]
 test = ["pytest>=8.1.0", "pytest-timeout>=2.4.0", "pytest-cov>=5.0.0", "mock-serial>=0.0.1 ; sys_platform != 'win32'"]
